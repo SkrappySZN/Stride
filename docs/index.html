@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Running tracker: FIT upload, test-route trends and the 8-week build.">
+<meta name="description" content="Running tracker: automatic Garmin import, heart-rate trends, body metrics and a plan that adapts week to week.">
 <title>Stride</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,50 +84,34 @@ button{font:inherit;color:inherit}
 }
 .num{font-variant-numeric:tabular-nums}
 
-/* ── Shell ────────────────────────────────────────────────────────── */
-.shell{display:grid; grid-template-columns:220px 1fr; min-height:100vh}
-.rail{
-  position:sticky; top:0; height:100vh;
-  padding:22px 14px; display:flex; flex-direction:column; gap:4px;
-  border-right:1px solid var(--line); background:var(--surface);
+/* ── Shell: top bar + full-bleed poster bands ─────────────────────── */
+.topbar{position:sticky; top:0; z-index:30; background:color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1240px; margin:0 auto; padding:0 28px; height:62px; display:flex; align-items:center; gap:28px}
+.brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; flex:none}
+.brand-mark{width:30px; height:30px; border-radius:8px; background:var(--accent); display:grid; place-items:center; transform:skewX(-8deg)}
+.brand-name{font-size:26px}
+.tabs{display:flex; gap:2px; flex:1; min-width:0}
+.tab{
+  display:flex; align-items:center; gap:7px; padding:8px 13px; border:0; border-radius:999px; background:none;
+  font-weight:650; font-size:14px; color:var(--ink-2); cursor:pointer; white-space:nowrap
 }
-.brand{display:flex; align-items:center; gap:10px; padding:0 8px 22px}
-.brand-mark{
-  width:30px; height:30px; border-radius:8px; background:var(--accent);
-  display:grid; place-items:center;
-}
-.brand-name{font-size:24px}
-.nav-btn{
-  display:flex; align-items:center; gap:10px; width:100%;
-  padding:10px 12px; border:0; border-radius:10px; background:none;
-  font-weight:600; color:var(--ink-2); cursor:pointer; text-align:left;
-}
-.nav-btn:hover{background:var(--surface-2); color:var(--ink)}
-.nav-btn[aria-current="page"]{background:var(--ink); color:var(--surface)}
-.nav-btn[aria-current="page"] svg{color:var(--accent)}
-:root[data-theme="dark"] .nav-btn[aria-current="page"]{background:var(--accent); color:var(--accent-ink)}
-:root[data-theme="dark"] .nav-btn[aria-current="page"] svg{color:var(--accent-ink)}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .nav-btn[aria-current="page"]{background:var(--accent); color:var(--accent-ink)}
-  :root:not([data-theme="light"]) .nav-btn[aria-current="page"] svg{color:var(--accent-ink)}
-}
-.nav-btn[disabled]{opacity:.45; cursor:default}
-.nav-btn[disabled]:hover{background:none; color:var(--ink-2)}
-.nav-btn .soon{margin-left:auto; font-size:10px; font-weight:700; letter-spacing:.08em; color:var(--muted)}
-.nav-btn svg{width:18px; height:18px; flex:none}
-.rail-foot{margin-top:auto; padding:8px; display:flex; flex-direction:column; gap:10px}
-.theme-btn{
-  border:1px solid var(--line); background:var(--surface-2); border-radius:10px;
-  padding:8px 10px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink-2);
-}
-.mock-note{font-size:12px; color:var(--muted); line-height:1.4}
-#syncbox{display:flex; flex-direction:column; gap:6px}
-#syncbox .mock-note{overflow-wrap:anywhere}
+.tab svg{width:17px; height:17px; flex:none}
+.tab:hover{background:var(--surface-2); color:var(--ink)}
+.tab[aria-current="page"]{background:var(--ink); color:var(--surface)}
+.tab[aria-current="page"] svg{color:var(--accent)}
+.top-right{display:flex; align-items:center; gap:10px; flex:none}
+.icon-btn{width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:var(--surface); display:grid; place-items:center; cursor:pointer; color:var(--ink-2)}
+.icon-btn:hover{color:var(--ink); border-color:var(--ink-2)}
+.icon-btn svg{width:17px; height:17px}
+#syncbox{display:flex; align-items:center}
+.sync-pill{display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:999px; border:1px solid var(--line); background:var(--surface); font-size:12.5px; font-weight:650; color:var(--ink-2); cursor:pointer; text-decoration:none; white-space:nowrap}
+.sync-pill.signin{background:var(--accent); color:var(--accent-ink); border-color:transparent}
 .sync-line{display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:650; color:var(--ink-2)}
 .sync-line .dot{width:8px; height:8px; border-radius:50%; flex:none; background:var(--good)}
 .sync-busy .dot,.sync-signedout .dot,.sync-off .dot{background:none; box-shadow:0 0 0 1.5px var(--muted) inset}
 .sync-error,.sync-conflict{color:var(--crit-text)}
 .sync-error .dot,.sync-conflict .dot{background:var(--crit)}
+@media (max-width:720px){ .sync-pill .sync-txt{display:none} .sync-pill.sync-line{padding:10px} }
 dialog#choose{
   max-width:min(440px, calc(100vw - 32px)); padding:24px; border:1px solid var(--line); border-radius:var(--radius);
   background:var(--surface); color:var(--ink); box-shadow:0 12px 40px rgba(0,0,0,.25)
@@ -136,16 +120,55 @@ dialog#choose::backdrop{background:rgba(10,11,13,.55)}
 dialog#choose h2{font-size:32px; margin:0 0 10px}
 dialog#choose p{margin:0 0 18px; color:var(--ink-2); font-size:14.5px}
 
-main{padding:30px 36px 80px; max-width:1180px; width:100%; min-width:0}
+main{min-width:0; padding-bottom:80px}
 .page{display:none}
 .page.active{display:block}
-.page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap}
-.page-head h1{margin:6px 0 0; font-size:52px}
-.chip{
-  display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
-  background:var(--surface); border:1px solid var(--line); font-size:12.5px; font-weight:600; color:var(--ink-2);
+.wrap{max-width:1240px; margin:0 auto; padding:0 28px}
+
+.band{position:relative; overflow:hidden; background:var(--ink); color:var(--surface); margin-bottom:28px}
+:root[data-theme="dark"] .band{background:var(--surface); color:var(--ink); border-bottom:3px solid var(--accent)}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .band{background:var(--surface); color:var(--ink); border-bottom:3px solid var(--accent)} }
+.band-in{position:relative; z-index:1; max-width:1240px; margin:0 auto; padding:34px 28px 30px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:20px 40px; align-items:end}
+.band .eyebrow{color:var(--accent)}
+.band-title{font-size:clamp(56px, 9vw, 112px); margin:10px 0 0; line-height:.86}
+.band-title em{font-style:inherit; color:var(--accent)}
+.band-sub{margin:14px 0 0; max-width:60ch; opacity:.8; font-size:15.5px}
+.band-stats{display:flex; gap:30px; flex-wrap:wrap; justify-content:flex-end}
+.bstat-v{font-size:52px; line-height:.9}
+.bstat-v small{font-size:16px; font-style:normal; font-weight:700; opacity:.6; margin-left:4px; font-stretch:90%; text-transform:none}
+.bstat-l{font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; opacity:.6; margin-top:6px}
+.band-wide{grid-column:1 / -1}
+.band-stripes{
+  position:absolute; right:-60px; top:0; bottom:0; width:42%; opacity:.13; pointer-events:none;
+  background:repeating-linear-gradient(115deg, var(--accent) 0 18px, transparent 18px 44px);
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 60%); mask-image:linear-gradient(90deg, transparent, #000 60%)
 }
-.chip .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+.band .task{background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12)}
+:root[data-theme="dark"] .band .task{background:var(--surface-2); border-color:var(--line)}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .band .task{background:var(--surface-2); border-color:var(--line)} }
+.band .task-list{grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); margin-top:20px}
+.band .btn{color:var(--ink)}
+.band .link-btn{color:inherit; opacity:.75}
+.section-label{font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:30px 0 12px; display:flex; align-items:center; gap:10px}
+.section-label::after{content:""; flex:1; height:1px; background:var(--line)}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:20px; box-shadow:var(--shadow); min-width:0;
+}
+.card h2{margin:0; font-size:15px; font-weight:750}
+.card-head{display:flex; justify-content:space-between; align-items:baseline; gap:6px 12px; margin-bottom:14px; flex-wrap:wrap}
+.card-sub{color:var(--muted); font-size:13px}
+.grid{display:grid; gap:16px}
+.today-grid{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); align-items:start}
+.col{display:grid; gap:16px; min-width:0}
+
+.task-list{grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); margin-top:20px}
+.band .btn{color:var(--ink)}
+.band .link-btn{color:inherit; opacity:.75}
+.section-label{font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:30px 0 12px; display:flex; align-items:center; gap:10px}
+.section-label::after{content:""; flex:1; height:1px; background:var(--line)}
 
 /* ── Cards ────────────────────────────────────────────────────────── */
 .card{
@@ -181,7 +204,7 @@ main{padding:30px 36px 80px; max-width:1180px; width:100%; min-width:0}
   padding:11px 12px; border-radius:10px; cursor:pointer;
   background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
 }
-.card:not(.hero) .task{background:var(--surface-2); border:1px solid var(--line)}
+.card .task{background:var(--surface-2); border:1px solid var(--line)}
 .task .box{
   width:22px; height:22px; flex:none; border-radius:7px; border:2px solid currentColor; opacity:.55;
   display:grid; place-items:center;
@@ -277,6 +300,27 @@ details.protocol[open] summary .caret{transform:rotate(180deg)}
 .te-cell i{width:9px; height:9px; border-radius:50%; display:inline-block}
 
 .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.three{grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start}
+.card-link{display:block; text-decoration:none; color:inherit}
+.mini-stats{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 12px}
+.ms-l{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.ms-v{font-size:34px; margin-top:4px}
+.ms-v small{font-size:13px; font-style:normal; font-weight:700; color:var(--muted); margin-left:3px; font-stretch:90%; text-transform:none}
+.delta{display:block; font-size:12px; font-weight:650; color:var(--muted); margin-top:2px}
+.delta.good{color:var(--good-text)} .delta.bad{color:var(--warn-text)}
+.band .delta{display:inline; margin-left:4px; color:inherit; opacity:.75}
+.band-deltas{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; opacity:.85}
+.band-deltas:empty{display:none}
+.filter-row{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap}
+.plan-card{text-align:left; cursor:pointer; font:inherit; color:inherit; display:flex; flex-direction:column; gap:8px; transition:border-color .12s, transform .12s}
+.plan-card:hover{border-color:var(--ink-2)}
+.plan-card[aria-pressed="true"]{border-color:var(--ink); box-shadow:0 0 0 2px var(--accent)}
+.plan-card p{margin:0; font-size:14px; color:var(--ink-2)}
+.pc-name{font-size:38px; margin:2px 0 4px}
+.pc-goal{padding-top:10px; border-top:1px solid var(--line)}
+.pc-goal b{display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.btn[disabled]{opacity:.45; cursor:default}
+.card-link:hover{border-color:var(--ink-2)}
 .chart{width:100%; position:relative}
 .chart svg{display:block; width:100%; overflow:visible}
 .chart text{font-family:var(--font); font-size:11px; fill:var(--muted)}
@@ -307,28 +351,31 @@ details.stored summary::-webkit-details-marker{display:none}
 
 /* ── Mobile ───────────────────────────────────────────────────────── */
 @media (max-width:900px){
-  .today-grid,.two{grid-template-columns:minmax(0,1fr)}
+  .today-grid,.two,.three{grid-template-columns:minmax(0,1fr)}
   .kpis{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:720px){
-  .shell{grid-template-columns:minmax(0,1fr)}
   .days{gap:4px}
   .day .d-tag{font-size:9.5px}
   .task .t-meta{display:none}
-  .rail{
-    position:fixed; top:auto; bottom:0; left:0; right:0; height:auto; z-index:20;
-    flex-direction:row; padding:6px 8px calc(6px + env(safe-area-inset-bottom)); gap:2px;
-    border-right:0; border-top:1px solid var(--line); justify-content:space-around;
+  .topbar{backdrop-filter:none; -webkit-backdrop-filter:none; background:var(--bg)}   /* a filter would trap the fixed dock inside the bar */
+  .topbar-in{padding:0 16px; height:56px; gap:12px}
+  .brand{flex:1}
+  .tabs{
+    position:fixed; left:0; right:0; bottom:0; z-index:40; justify-content:space-around; gap:0;
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom)); background:var(--surface); border-top:1px solid var(--line)
   }
-  .brand,.rail-foot,.nav-btn .soon,.nav-btn[data-optional]{display:none}
-  .nav-btn{flex-direction:column; gap:3px; font-size:11px; padding:7px 4px; align-items:center; text-align:center}
-  main{padding:18px 16px 110px}
-  .page-head h1{font-size:40px}
-  .hero-title{font-size:52px}
+  .tab{flex-direction:column; gap:3px; font-size:10.5px; padding:6px 2px; border-radius:10px; flex:1; min-width:0}
+  .tab span{overflow:hidden; text-overflow:ellipsis; max-width:100%}
+  .wrap{padding:0 16px}
+  .band-in{padding:24px 16px 22px; grid-template-columns:minmax(0,1fr)}
+  .band-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px 12px}
+  .bstat-v{font-size:32px}
+  .bstat-l{font-size:10px; letter-spacing:.08em}
+  .band-title{font-size:58px}
+  main{padding-bottom:110px}
   .kpi .k-val{font-size:54px}
-  .mobile-theme{display:inline-flex !important}
 }
-.mobile-theme{display:none}
 
 /* ── App additions ────────────────────────────────────────────────── */
 :root{
@@ -459,38 +506,36 @@ textarea.felt{
 <div class="toast" id="toast" role="status"></div>
 <dialog id="choose"></dialog>
 
-<div class="shell">
-  <nav class="rail" aria-label="Sections">
-    <div class="brand">
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#today" aria-label="Stride home">
       <div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0c0d0e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/></svg></div>
       <span class="brand-name display">Stride</span>
-    </div>
-    <button class="nav-btn" data-page="today">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Today</button>
-    <button class="nav-btn" data-page="progress">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 16l4-5 4 3 6-8"/></svg>Progress</button>
-    <button class="nav-btn" data-page="runs">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Runs</button>
-    <button class="nav-btn" data-page="plan">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plan</button>
-    <button class="nav-btn" disabled data-optional>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>Body<span class="soon">SOON</span></button>
-    <button class="nav-btn" data-page="upload">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>Upload</button>
-    <div class="rail-foot">
-      <button class="theme-btn" data-theme-toggle>Toggle light / dark</button>
+    </a>
+    <nav class="tabs" aria-label="Sections">
+      <button class="tab" data-page="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Today</span></button>
+      <button class="tab" data-page="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 16l4-5 4 3 6-8"/></svg><span>Progress</span></button>
+      <button class="tab" data-page="runs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Runs</span></button>
+      <button class="tab" data-page="body"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg><span>Body</span></button>
+      <button class="tab" data-page="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Plan</span></button>
+      <button class="tab" data-page="setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Setup</span></button>
+    </nav>
+    <div class="top-right">
       <div id="syncbox"></div>
+      <button class="icon-btn" data-theme-toggle aria-label="Toggle light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
     </div>
-  </nav>
+  </div>
+</header>
 
-  <main>
-    <section class="page" id="page-today"></section>
-    <section class="page" id="page-progress"></section>
-    <section class="page" id="page-runs"></section>
-    <section class="page" id="page-plan"></section>
-    <section class="page" id="page-upload"></section>
-  </main>
-</div>
+<main>
+  <section class="page" id="page-today"></section>
+  <section class="page" id="page-progress"></section>
+  <section class="page" id="page-runs"></section>
+  <section class="page" id="page-body"></section>
+  <section class="page" id="page-plan"></section>
+  <section class="page" id="page-setup"></section>
+  <section class="page" id="page-welcome"></section>
+</main>
 
 <script type="module">
 /* ═══════════════════════════════════════════════════════════════════
@@ -502,17 +547,51 @@ textarea.felt{
 const FITSDK_URL = 'https://cdn.jsdelivr.net/npm/@garmin/fitsdk@21.217.0/+esm';
 const JSZIP_URL  = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
-/* ── The 8-week build ─────────────────────────────────────────────── */
-const PLAN = [
-  { w:1, phase:'Base',      session:'9–10 min jog',       detail:'Flat route, walk breaks as needed',                       add:'Nothing — just no calf pain the next day' },
-  { w:2, phase:'Base',      session:'9–10 min jog',       detail:'Flat route, walk breaks as needed',                       add:'Nothing — just no calf pain the next day' },
-  { w:3, phase:'Full mile', session:'Full mile',          detail:'Same route, work toward the full mile continuous',        add:'4 × 20 sec strides after one run', strides:1 },
-  { w:4, phase:'Full mile', session:'Full mile',          detail:'Same route, work toward the full mile continuous',        add:'4 × 20 sec strides after one run', strides:1 },
-  { w:5, phase:'Extend',    session:'1.25–1.5 mi easy',   detail:'Same easy pace. Keep one run a week on the test route',   add:'Strides after two runs a week', strides:2 },
-  { w:6, phase:'Extend',    session:'1.25–1.5 mi easy',   detail:'Same easy pace. Keep one run a week on the test route',   add:'Strides after two runs a week', strides:2 },
-  { w:7, phase:'Speed',     session:'1.5 mi easy',        detail:'Two easy runs at 1.5 mi, one speed run',                  add:'Speed run: warm up, 4 × 2 min harder / 2 min walk, cool down', speed:true },
-  { w:8, phase:'Speed',     session:'1.5 mi easy',        detail:'Two easy runs at 1.5 mi, one speed run',                  add:'Speed run: warm up, 4 × 2 min harder / 2 min walk, cool down', speed:true },
-];
+/* ── Plans ──────────────────────────────────────────────────────────
+   Each plan is weeks of three runs. Slot 3 can be a long run, a speed run or
+   a time trial. 'track' has no weeks: Stride just logs and charts. */
+const PLANS = {
+  build: {
+    name:'Run/walk build', short:'Run/walk', who:'Coming back from a break, or new to running. Starts at 9–10 minutes of jogging with walk breaks.',
+    goal:'A continuous 1.5 miles, then a little speed',
+    weeks: [
+      { phase:'Base',      session:'9–10 min jog',     detail:'Flat route, walk breaks as needed',                     add:'Nothing — just no calf pain the next day' },
+      { phase:'Base',      session:'9–10 min jog',     detail:'Flat route, walk breaks as needed',                     add:'Nothing — just no calf pain the next day' },
+      { phase:'Full mile', session:'Full mile',        detail:'Same route, work toward the full mile continuous',      add:'4 × 20 sec strides after one run', strides:1 },
+      { phase:'Full mile', session:'Full mile',        detail:'Same route, work toward the full mile continuous',      add:'4 × 20 sec strides after one run', strides:1 },
+      { phase:'Extend',    session:'1.25–1.5 mi easy', detail:'Same easy pace. Keep one run a week on the test route', add:'Strides after two runs a week', strides:2 },
+      { phase:'Extend',    session:'1.25–1.5 mi easy', detail:'Same easy pace. Keep one run a week on the test route', add:'Strides after two runs a week', strides:2 },
+      { phase:'Speed',     session:'1.5 mi easy',      detail:'Two easy runs at 1.5 mi, one speed run',                add:'Speed run: warm up, 4 × 2 min harder / 2 min walk, cool down',
+        third:['Speed run', 'Warm up, 4 × 2 min harder with 2 min walk, cool down'] },
+      { phase:'Speed',     session:'1.5 mi easy',      detail:'Two easy runs at 1.5 mi, one speed run',                add:'Speed run: warm up, 4 × 2 min harder / 2 min walk, cool down',
+        third:['Speed run', 'Warm up, 4 × 2 min harder with 2 min walk, cool down'] },
+    ],
+  },
+  '5k': {
+    name:'Build to 5K', short:'5K', who:'You can already jog about 20 minutes without stopping. Ends with a 5K time trial.',
+    goal:'Run 5K (3.1 mi) continuously, then race it',
+    weeks: [
+      { phase:'Base',    session:'20 min easy', detail:'Conversational pace the whole way',          add:'Nothing new — settle into three runs a week' },
+      { phase:'Base',    session:'22 min easy', detail:'Conversational pace the whole way',          add:'4 × 20 sec strides after one run', strides:1 },
+      { phase:'Build',   session:'25 min easy', detail:'One run a week longer than the others',      add:'Long run: 30 min easy', strides:1, third:['Long run', '30 min easy — slower than you think'] },
+      { phase:'Build',   session:'25 min easy', detail:'One run a week longer than the others',      add:'Long run: 32 min easy', strides:2, third:['Long run', '32 min easy'] },
+      { phase:'Extend',  session:'28 min easy', detail:'Keep one run a week on the test route',      add:'Long run: 35 min easy', strides:2, third:['Long run', '35 min easy'] },
+      { phase:'Sharpen', session:'25 min easy', detail:'Two easy runs and one with some speed',      add:'Speed run: 5 × 3 min at 5K effort, 2 min jog between',
+        third:['Speed run', 'Warm up 10 min, 5 × 3 min at 5K effort with 2 min easy jog, cool down'] },
+      { phase:'Sharpen', session:'28 min easy', detail:'Two easy runs and one with some speed',      add:'Speed run: 4 × 5 min at 5K effort, 2 min jog between',
+        third:['Speed run', 'Warm up 10 min, 4 × 5 min at 5K effort with 2 min easy jog, cool down'] },
+      { phase:'Race',    session:'20 min easy', detail:'Ease off so the legs are fresh',             add:'5K time trial on run 3 — run it, then celebrate',
+        third:['5K time trial', 'Warm up 10 min, then run 5K as evenly as you can'] },
+    ],
+  },
+  track: {
+    name:'Just track', short:'Tracking', who:'You already have your own training. No plan, no weekly gate — Stride logs every run and charts the trends.',
+    goal:null, weeks:[],
+  },
+};
+const activePlan = () => PLANS[doc.planId] ?? PLANS.build;
+const planLen = () => activePlan().weeks.length;
+const coached = () => planLen() > 0;
 
 const PROTOCOL = p => [
   ['p1','Start where the test route starts','Not from home if there’s a hill on the way — a climb contaminates every average'],
@@ -834,8 +913,8 @@ function freshDoc(){
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], decisions:{}, redClearedAt:null, ...d,
-    profile: { weights:[], ...(d.profile ?? freshDoc().profile) } };
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], decisions:{}, redClearedAt:null, body:{}, ...d,
+    profile: { weights:[], comps:[], ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
 // Sync bookkeeping writes through here so it never looks like an edit and
@@ -1079,9 +1158,10 @@ function syncLine(){
 }
 function paintSync(){
   const box = $('#syncbox'); if (!box) return;
-  if (!syncOn()){ box.innerHTML = '<div class="mock-note">Everything is stored in this browser only. Back it up from Upload.</div>'; return; }
-  if (!SESSION){ box.innerHTML = `<button class="theme-btn" data-action="goto-signin">Sign in to sync</button><div class="mock-note">Runs stay in this browser until you sign in.</div>`; return; }
-  box.innerHTML = `<div class="sync-line sync-${SYNC.status}"><span class="dot"></span>${esc(syncLine())}</div><div class="mock-note">${esc(SESSION.email)}</div>`;
+  if (!syncOn()){ box.innerHTML = ''; return; }
+  if (!SESSION){ box.innerHTML = `<button class="sync-pill signin" data-action="goto-signin">Sign in</button>`; return; }
+  const short = syncLine().replace(/ ago$/, '').replace(' min', 'm').replace(' hr', 'h').replace(' d', 'd');
+  box.innerHTML = `<a class="sync-pill sync-line sync-${SYNC.status}" href="#setup" title="${esc(SESSION.email)} · ${esc(syncLine())}"><span class="dot"></span><span class="sync-txt">${esc(short)}</span></a>`;
   document.querySelectorAll('[data-sync-line]').forEach(e => { e.className = `sync-line sync-${SYNC.status}`; e.innerHTML = `<span class="dot"></span>${esc(syncLine())}`; });
 }
 
@@ -1090,7 +1170,7 @@ const authUi = { stage:'email', email:'', busy:false };
 async function sendLink(){
   const email = $('#si-email')?.value.trim() || authUi.email;
   if (!/^\S+@\S+\.\S+$/.test(email || '')){ toast('Enter your email'); return; }
-  authUi.email = email; authUi.busy = true; renderUpload();
+  authUi.email = email; authUi.busy = true; renderSetup();
   try {
     const back = encodeURIComponent(location.origin + location.pathname);
     const r = await sb('/auth/v1/otp?redirect_to=' + back, { method:'POST', body:JSON.stringify({ email, create_user:true }) }, false);
@@ -1098,7 +1178,7 @@ async function sendLink(){
     else if (!r.ok) toast('Couldn’t send — ' + r.status);
     else { authUi.stage = 'code'; toast('Check your email'); }
   } catch { toast('Network error'); }
-  authUi.busy = false; renderUpload();
+  authUi.busy = false; renderSetup();
 }
 async function verifyCode(){
   const token = $('#si-code')?.value.replace(/\s/g, '');
@@ -1152,7 +1232,18 @@ const testRoute = () => doc.routes.find(r => r.isTest);
 const isTest = r => r.testOverride ?? (!!r.routeId && !!doc.routes.find(x => x.id === r.routeId)?.isTest);
 const isClean = r => isTest(r) && (r.idleSec ?? 0) <= IDLE_TOLERANCE;
 const hrMetric = r => r.jogHr ?? r.avgHr;
-const currentWeight = () => doc.profile.weights.at(-1)?.lbs ?? null;
+// Weight per day: a manual weigh-in beats Garmin's number for the same day.
+function weightSeries(){
+  const m = {};
+  for (const [d, v] of Object.entries(doc.body ?? {})) if (v.weight != null) m[d] = { date:d, v:v.weight, src:'garmin' };
+  for (const w of doc.profile.weights) m[w.date] = { date:w.date, v:w.lbs, src:'manual', note:w.note };
+  return Object.values(m).sort((a, b) => a.date < b.date ? -1 : 1);
+}
+const bodySeries = k => Object.entries(doc.body ?? {}).filter(([, v]) => v[k] != null).map(([date, v]) => ({ date, v:v[k] })).sort((a, b) => a.date < b.date ? -1 : 1);
+const currentWeight = () => weightSeries().at(-1)?.v ?? null;
+const avgOf = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+// Mean of the series over the n days ending at `end` (inclusive).
+const windowAvg = (pts, n, end = todayYmd()) => avgOf(pts.filter(p => p.date <= end && diffDays(p.date, end) < n).map(p => p.v));
 
 function exclusionReasons(r){
   const why = [];
@@ -1249,14 +1340,14 @@ function planState(){
     if (!w.current){
       const ov = doc.decisions[ws];
       w.decision = ov || w.gate.auto; w.overridden = !!ov;
-      pw = w.decision === 'advance' ? Math.min(9, pw + 1) : w.decision === 'back' ? Math.max(1, pw - 1) : pw;
+      pw = w.decision === 'advance' ? Math.min(planLen() + 1, pw + 1) : w.decision === 'back' ? Math.max(1, pw - 1) : pw;
     }
     weeks.push(w);
     ws = addDays(ws, 7);
   }
   return weeks;
 }
-const planWeekObj = pw => PLAN[Math.min(pw, 8) - 1];
+const planWeekObj = pw => activePlan().weeks[Math.min(pw, planLen()) - 1];
 
 // Next N days: rest between runs, three a week, rest before a sport day.
 function schedule(from, n){
@@ -1281,7 +1372,7 @@ function schedule(from, n){
 }
 function sessionFor(pw, slot){
   const p = planWeekObj(pw);
-  if (p.speed && slot === 3) return { title:'Speed run', detail:'Warm up, 4 × 2 min harder with 2 min walk, cool down', extra:'' };
+  if (p.third && slot === 3) return { title:p.third[0], detail:p.third[1], extra:'' };
   return { title:p.session, detail:p.detail, extra: slot && p.strides && slot <= p.strides ? 'Then 4 × 20 sec strides at ~80% — a full minute of walking between' : '' };
 }
 
@@ -1333,11 +1424,13 @@ function chartHrTrend(host, runs){
   const H = 260, m = { t:14, r:58, b:30, l:40 };
   const [svg, W] = svgFor(host, H);
   const p = doc.profile;
+  // Plan weeks when there's a plan; otherwise weeks since the first run.
+  const origin = coached() && !(runs[0]?.date < doc.planStart) ? doc.planStart : weekStart(runs[0]?.date ?? todayYmd());
   const vals = runs.map(hrMetric).filter(v => v != null);
   const lo = Math.min(140, ...vals.map(v => Math.floor((v - 5) / 10) * 10));
   const hi = Math.max(190, ...vals.map(v => Math.ceil((v + 5) / 10) * 10));
-  const last = runs.length ? runs.at(-1).date : doc.planStart;
-  const span = Math.max(56, Math.ceil((diffDays(doc.planStart, last) + 8) / 7) * 7);
+  const last = runs.length ? runs.at(-1).date : origin;
+  const span = Math.max(56, Math.ceil((diffDays(origin, last) + 8) / 7) * 7);
   const x = d => m.l + d / span * (W - m.l - m.r);
   const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
 
@@ -1352,19 +1445,19 @@ function chartHrTrend(host, runs){
   el('line', { x1:m.l, x2:W - m.r, y1:y(p.lthr), y2:y(p.lthr), stroke:css('--crit'), 'stroke-width':1.5 }, svg);
   el('text', { x:W - m.r + 6, y:y(p.lthr) + 4 }, svg).textContent = 'LT ' + p.lthr;
   el('text', { x:W - m.r + 6, y:y(p.zones.easy) + 4 }, svg).textContent = 'Easy';
-  const td = diffDays(doc.planStart, todayYmd());
+  const td = diffDays(origin, todayYmd());
   if (td >= 0 && td <= span){
     el('line', { x1:x(td), x2:x(td), y1:m.t, y2:H - m.b, stroke:css('--ink'), opacity:.35 }, svg);
     el('text', { x:x(td) + 5, y:m.t + 10, style:'font-weight:700' }, svg).textContent = 'Today';
   }
   const clean = runs.filter(isClean);
   if (clean.length > 1){
-    el('path', { d: clean.map((r, i) => `${i ? 'L' : 'M'}${x(diffDays(doc.planStart, r.date))},${y(hrMetric(r))}`).join(' '),
+    el('path', { d: clean.map((r, i) => `${i ? 'L' : 'M'}${x(diffDays(origin, r.date))},${y(hrMetric(r))}`).join(' '),
       fill:'none', stroke:css('--series-1'), 'stroke-width':2, 'stroke-linejoin':'round', 'stroke-linecap':'round' }, svg);
   }
   runs.forEach(r => {
     const v = hrMetric(r); if (v == null) return;
-    const cx = x(diffDays(doc.planStart, r.date)), cy = y(v), ok = isClean(r);
+    const cx = x(diffDays(origin, r.date)), cy = y(v), ok = isClean(r);
     if (ok) el('circle', { cx, cy, r:6, fill:css('--series-1'), stroke:css('--surface'), 'stroke-width':2 }, svg);
     else el('circle', { cx, cy, r:5, fill:css('--surface'), stroke:css('--muted'), 'stroke-width':2 }, svg);
     if (ok && (r === clean.at(-1) || r === clean[0])) el('text', { x:cx + 10, y:cy - 8, class:'lbl num' }, svg).textContent = Math.round(v);
@@ -1545,21 +1638,94 @@ function taskHTML(key, main, sub, meta){
 }
 const tasksFor = (date, ids) => ids.map(id => taskHTML(`${date}|${id}`, ...TASKS[id])).join('');
 
+// Shared poster band at the top of every page.
+function band({ eyebrow, title, sub = '', stats = [], extra = '' }){
+  return `<section class="band"><div class="band-stripes"></div><div class="band-in">
+    <div><div class="eyebrow">${eyebrow}</div><h1 class="band-title display">${title}</h1>${sub ? `<p class="band-sub">${sub}</p>` : ''}</div>
+    ${stats.length ? `<div class="band-stats">${stats.map(([l, v, u]) => `<div class="bstat"><div class="bstat-v display num">${v}${u ? `<small>${u}</small>` : ''}</div><div class="bstat-l">${l}</div></div>`).join('')}</div>` : ''}
+    ${extra ? `<div class="band-wide">${extra}</div>` : ''}
+  </div></section>`;
+}
+
+function checkinCards(){
+  const pc = pendingCheckin();
+  let html = '';
+  if (pc){
+    const dn = DOW_LONG[parseYmd(pc.run.date).getDay()];
+    html = `<div class="card">
+      <div class="card-head"><h2>How are the legs after ${dn}’s run?</h2><span class="card-sub">${pc.stage === '48' ? '48-hour check' : '~' + Math.round(pc.hours) + ' hrs after'}</span></div>
+      <div class="pill-row">${Object.entries(SORE).map(([k, l]) => `<button class="pill${k === 'red' ? ' flag' : ''}" data-checkin="${k}" data-run="${pc.run.id}" data-stage="${pc.stage}">${l}</button>`).join('')}</div>
+    </div>`;
+  }
+  if (lastResponse){
+    html += `<div class="card"><div class="card-head"><h2>Logged</h2><button class="link-btn" data-action="undo-checkin">Undo</button></div>
+      <div class="response show${lastResponse.alarm ? ' alarm' : ''}" style="margin-top:0">${lastResponse.html}</div></div>`;
+  }
+  return html ? `<div class="grid" style="margin-bottom:16px">${html}</div>` : '';
+}
+
+function todayNotes(today){
+  const notes = [];
+  const recent = sortedRuns().filter(r => diffDays(r.date, today) <= 7);
+  if (coached()) for (let i = 1; i < recent.length; i++){
+    if (diffDays(recent[i - 1].date, recent[i].date) === 1){
+      notes.push(`<b>${DOW[parseYmd(recent[i - 1].date).getDay()]} and ${DOW[parseYmd(recent[i].date).getDay()]} were back-to-back.</b> The plan wants a rest or walk day between runs — the schedule keeps a gap from here.`);
+      break;
+    }
+  }
+  const manual = doc.runs.filter(r => r.source === 'manual').length;
+  if (manual) notes.push(`<b>${manual} run${manual > 1 ? 's are' : ' is'} from your notes, not FIT files.</b> <a href="#setup">Upload ${manual > 1 ? 'them' : 'it'}</a> for jogging-only HR, zones and time above ${doc.profile.lthr}.`);
+  if (!doc.runs.length) notes.push(`<b>No runs yet.</b> ${doc.intervals?.key ? 'Your next run will appear here once your watch syncs.' : `<a href="#setup">Connect intervals.icu</a> so runs arrive on their own, or upload a FIT file.`}${syncOn() && !SESSION ? ' Sign in under Setup to keep your runs on every device.' : ''}`);
+  if (doc.profile.zonesSet === false){
+    const glt = sortedRuns().reverse().find(r => r.garminLthr)?.garminLthr;
+    notes.push(`<b>These are placeholder heart-rate zones.</b> ${glt ? `Your watch puts your threshold at ${glt} bpm. ` : ''}<a href="#setup">Set your own in Setup</a> — every number here is anchored to them.`);
+  }
+  if (!testRoute() && doc.runs.some(r => r.source === 'fit')) notes.push('<b>No test route set yet.</b> Open a run on a flat route you’ll repeat and tap “Make this the test route” — it’s what makes the heart-rate trend fair.');
+  return notes.map(n => `<div class="note">${WARN_SVG}<div>${n}</div></div>`).join('');
+}
+
 function renderToday(){
   const today = todayYmd(), now = new Date();
-  const weeks = planState(), cur = weeks.at(-1), pw = cur.planWeek;
-  const days = schedule(today, 7), t = days[0];
+  const dateLine = `${DOW_LONG[now.getDay()]} · ${MON_LONG[now.getMonth()]} ${now.getDate()}`;
   const red = redFlagActive();
   const ranYesterday = runsOn(addDays(today, -1)).length > 0;
   const todayRuns = runsOn(today);
-  const pwo = planWeekObj(pw);
+  const ws = weekStart(today);
+  const weekRuns = doc.runs.filter(r => r.date >= ws);
+  const weekMi = weekRuns.reduce((a, r) => a + (r.distMi ?? 0), 0);
 
-  let eyebrow = 'Today’s assignment', title, copy, tasks;
+  if (!coached()){
+    const last = sortedRuns().at(-1);
+    const title = todayRuns.length ? 'Run <em>logged</em>' : red ? 'Get it <em>checked</em>' : 'This <em>week</em>';
+    const sub = red ? 'A hard-stop symptom is logged. No running until a doctor or physical therapist has looked at it.'
+      : last ? `Last run ${fmtRel(last.date).toLowerCase()}: ${fmtMi(last.distMi)} mi in ${fmtDur(last.timerSec)}, ${last.jogHr != null ? `jogging HR ${Math.round(last.jogHr)}` : `avg HR ${num(last.avgHr)}`}.`
+      : 'Nothing logged yet. Runs show up here as soon as your watch syncs.';
+    const strip = `<div class="card"><div class="card-head"><h2>Last 7 days</h2><span class="card-sub">tap a run to open it</span></div>
+      <div class="days">${Array.from({ length:7 }, (_, i) => addDays(today, i - 6)).map((d, i) => {
+        const rr = runsOn(d), dd = parseYmd(d);
+        return `<${rr.length ? `a href="#runs/${rr[0].id}"` : 'div'} class="day${i === 6 ? ' today' : ''}" style="text-decoration:none;color:inherit">
+          <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div>
+          <div class="d-tag ${rr.length ? 'tag-run' : 'tag-rest'}">${rr.length ? fmtMi(rr.reduce((a, r) => a + r.distMi, 0)) : '—'}</div></${rr.length ? 'a' : 'div'}>`;
+      }).join('')}</div></div>`;
+    $('#page-today').innerHTML = band({
+      eyebrow: `${dateLine} · just tracking`, title, sub,
+      stats: [['Runs this week', weekRuns.length], ['Miles', weekMi.toFixed(1)], ['Jogging', Math.round(weekRuns.reduce((a, r) => a + (r.runSec ?? 0), 0) / 60), 'min']],
+      extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
+    }) + `<div class="wrap">${checkinCards()}
+      <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
+      <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
+    return;
+  }
+
+  const weeks = planState(), cur = weeks.at(-1), pw = cur.planWeek, len = planLen();
+  const days = schedule(today, 7), t = days[0];
+  const pwo = planWeekObj(pw);
+  let eyebrow = `${dateLine} · today’s assignment`, title, copy, tasks;
   if (red){
-    eyebrow = 'Today’s assignment · plan paused';
+    eyebrow = `${dateLine} · plan paused`;
     title = 'Get it <em>checked</em>';
     copy = 'A hard-stop symptom is logged. No running until a doctor or physical therapist has looked at it. Walking and the hip stretch are fine if they don’t hurt.';
-    tasks = tasksFor(today, ['hip']) + `<li><button class="btn small" data-action="clear-red" style="margin-top:6px">I’ve been cleared to run</button></li>`;
+    tasks = tasksFor(today, ['hip']) + `<li><button class="btn small" data-action="clear-red">I’ve been cleared to run</button></li>`;
   } else if (t.kind === 'done'){
     const r = todayRuns.at(-1);
     title = 'Run <em>done</em>';
@@ -1571,45 +1737,29 @@ function renderToday(){
     tasks = tasksFor(today, ['sporthip', 'calf']);
   } else if (t.kind === 'run'){
     const s = sessionFor(pw, t.slot);
-    eyebrow = `Today’s assignment · week ${Math.min(pw, 8)}, run ${t.slot}`;
-    title = `Run <em>day</em>`;
-    copy = `${s.title} — ${s.detail.toLowerCase()}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''} The protocol is below.`;
+    eyebrow = `${dateLine} · week ${Math.min(pw, len)}, run ${t.slot}`;
+    title = esc(s.title).replace(/^(\S+)/, '$1 <em>') + '</em>';
+    copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''} The protocol is below.`;
     tasks = tasksFor(today, ['hip', 'calf']);
   } else {
     title = 'Rest <em>day</em>';
     copy = isRef(addDays(today, 1)) ? 'Sport day tomorrow — rest today and go in fresh. Mobility only.'
-      : ranYesterday ? 'You ran yesterday. Calves take the brunt when the stride shortens and 24–48 hours after is the peak — let them settle. Mobility only.'
+      : ranYesterday ? 'You ran yesterday. The 24–48 hours after a run are when soreness peaks — let the legs settle. Mobility only.'
       : t.note === 'Week’s runs are in' ? 'This week’s three runs are in. A walk is fine; keep the stretching going.'
       : 'Mobility only today.';
     tasks = tasksFor(today, ranYesterday ? ['hip', 'calf', 'roll', 'bridge'] : ['hip', 'bridge']);
-  }
-
-  // Check-in
-  const pc = pendingCheckin();
-  let checkin = '';
-  if (pc){
-    const dn = DOW_LONG[parseYmd(pc.run.date).getDay()];
-    checkin = `<div class="card">
-      <div class="card-head"><h2>How are the legs after ${dn}’s run?</h2><span class="card-sub">${pc.stage === '48' ? '48-hour check' : '~' + Math.round(pc.hours) + ' hrs after'}</span></div>
-      <div class="pill-row">${Object.entries(SORE).map(([k, l]) => `<button class="pill${k === 'red' ? ' flag' : ''}" data-checkin="${k}" data-run="${pc.run.id}" data-stage="${pc.stage}">${l}</button>`).join('')}</div>
-    </div>`;
-  }
-  if (lastResponse){
-    checkin += `<div class="card"><div class="card-head"><h2>Logged</h2><button class="link-btn" data-action="undo-checkin">Undo</button></div>
-      <div class="response show${lastResponse.alarm ? ' alarm' : ''}" style="margin-top:0">${lastResponse.html}</div></div>`;
   }
 
   // Next run
   const nr = days.find(d => d.kind === 'run');
   let next;
   if (red) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><div class="next-run-big display">On hold</div><p class="card-sub" style="margin:0">Resume at the week you were on once you’re cleared.</p></div>`;
-  else if (!nr) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><p class="card-sub" style="margin:0">Nothing scheduled in the next 7 days — tap a day below to change sport days.</p></div>`;
+  else if (!nr) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><p class="card-sub" style="margin:0">Nothing scheduled in the next 7 days — tap a day in “Next 7 days” to change sport days.</p></div>`;
   else {
-    const nwk = diffDays(cur.start, nr.date) >= 7 ? Math.min(cur.gate.auto === 'advance' ? pw + 1 : pw, 8) : Math.min(pw, 8);
+    const nwk = diffDays(cur.start, nr.date) >= 7 ? Math.min(cur.gate.auto === 'advance' ? pw + 1 : pw, len) : Math.min(pw, len);
     const s = sessionFor(nwk, nr.slot);
     next = `<div class="card">
-      <div class="card-head"><h2>${nr.date === today ? 'Today’s run' : 'Next run'}</h2><span class="card-sub">Tap a day in “Next 7 days” to mark a sport day</span></div>
-      <div class="eyebrow">${fmtRel(nr.date)}${fmtRel(nr.date).includes(',') ? '' : ' · ' + fmtDate(nr.date)} · week ${nwk}, run ${nr.slot}${nr.note ? ' · ' + nr.note.toLowerCase() : ''}</div>
+      <div class="card-head"><h2>${nr.date === today ? 'Today’s run' : 'Next run'}</h2><span class="card-sub">${fmtRel(nr.date)}${fmtRel(nr.date).includes(',') ? '' : ' · ' + fmtDate(nr.date)} · week ${nwk}, run ${nr.slot}</span></div>
       <div class="next-run-big display">${esc(s.title)}</div>
       <div class="card-sub">${esc(s.detail)}${s.extra ? '. ' + esc(s.extra) : ''}</div>
       <div class="kv">
@@ -1626,76 +1776,46 @@ function renderToday(){
     </div>`;
   }
 
-  // Gate
   const g = cur.gate;
   const gate = `<div class="card">
-    <div class="card-head"><h2>Week ${Math.min(pw, 8)} → ${pw >= 8 ? 'done' : 'Week ' + (pw + 1)} gate</h2><span class="card-sub">Decides Sun night</span></div>
-    <ul class="status-list">${g.items.map(([s, mm, sub]) => `<li class="status-row">${statusIcon(s)}<span><div class="s-main">${mm}</div><div class="s-sub">${sub}</div></span></li>`).join('')}</ul>
+    <div class="card-head"><h2>Week ${Math.min(pw, len)} gate</h2><span class="card-sub">decides Sunday night</span></div>
+    <ul class="status-list">${g.items.map(([st, mm, sub]) => `<li class="status-row">${statusIcon(st)}<span><div class="s-main">${mm}</div><div class="s-sub">${sub}</div></span></li>`).join('')}</ul>
     <div class="verdict">${statusIcon(g.verdict[0])}<span><strong>${g.verdict[1]}</strong> ${g.verdict[2]}</span></div>
   </div>`;
 
-  // Days
   const TAG = { run:['run', 'Run'], done:['done', 'Done'], ref:['ref', 'Sport'], rest:['rest', 'Rest'] };
   const strip = `<div class="card">
-    <div class="card-head"><h2>Next 7 days</h2><span class="card-sub">Tap a day you have another sport or a hard day on your feet</span></div>
+    <div class="card-head"><h2>Next 7 days</h2><span class="card-sub">tap a day with another sport</span></div>
     <div class="days">${days.map((d, i) => {
       const dd = parseYmd(d.date), [k, l] = TAG[d.kind];
       return `<button class="day${i === 0 ? ' today' : ''}" data-refday="${d.date}" ${d.kind === 'done' ? 'disabled' : ''} style="cursor:${d.kind === 'done' ? 'default' : 'pointer'};font:inherit;color:inherit" ${d.note ? `data-tip="${esc(d.note)}"` : ''}>
         <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div><div class="d-tag tag-${k}">${l}${d.kind === 'run' && d.note ? '?' : ''}</div></button>`;
     }).join('')}</div>
+    <div class="plan-bar" style="grid-template-columns:repeat(${len},1fr);margin-top:18px">${activePlan().weeks.map((_, i) => `<div class="plan-seg${i + 1 < pw ? ' done' : i + 1 === pw ? ' now' : ''}"></div>`).join('')}</div>
+    <p class="card-sub" style="margin:10px 0 0">${pw < len ? `Week ${pw + 1}: ${esc(planWeekObj(pw + 1).detail.toLowerCase())}. ${esc(planWeekObj(pw + 1).add)}.` : 'Final week. After this, re-test on the flat route and pick what’s next on the Plan tab.'}</p>
   </div>`;
 
-  // Build bar
-  const build = `<div class="card">
-    <div class="card-head"><h2>8-week build</h2><span class="card-sub">Week ${Math.min(pw, 8)}: ${esc(pwo.phase.toLowerCase())}</span></div>
-    <div class="plan-bar">${PLAN.map(p => `<div class="plan-seg${p.w < pw ? ' done' : p.w === pw ? ' now' : ''}"></div>`).join('')}</div>
-    <div class="plan-labels">${PLAN.map(p => `<span>${p.w}</span>`).join('')}</div>
-    <p class="card-sub" style="margin:12px 0 0">${pw < 8 ? `Up next in week ${pw + 1}: ${esc(planWeekObj(pw + 1).detail.toLowerCase())}. ${esc(planWeekObj(pw + 1).add)}.` : 'Final week. After this, re-test on the flat route and plan the next block.'}</p>
+  const runsDone = weekRuns.length;
+  $('#page-today').innerHTML = band({
+    eyebrow, title, sub: copy,
+    stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), '/3'], ['Miles this week', weekMi.toFixed(1)]],
+    extra: `<ul class="task-list">${tasks}</ul>`,
+  }) + `<div class="wrap">${checkinCards()}
+    <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
+    <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}</div><div class="col">${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
+}
 
-  // Notes
-  const notes = [];
-  const recent = sortedRuns().filter(r => diffDays(r.date, today) <= 7);
-  for (let i = 1; i < recent.length; i++){
-    if (diffDays(recent[i - 1].date, recent[i].date) === 1){
-      notes.push(`<b>${DOW[parseYmd(recent[i - 1].date).getDay()]} and ${DOW[parseYmd(recent[i].date).getDay()]} were back-to-back.</b> The plan wants a rest or walk day between runs — the schedule keeps a gap from here.`);
-      break;
-    }
-  }
-  const manual = doc.runs.filter(r => r.source === 'manual').length;
-  if (manual) notes.push(`<b>${manual} run${manual > 1 ? 's are' : ' is'} from your notes, not FIT files.</b> <a href="#upload">Upload ${manual > 1 ? 'them' : 'it'}</a> for jogging-only HR, zones and time above ${doc.profile.lthr}.`);
-  if (!doc.runs.length) notes.push(`<b>Welcome to Stride.</b> After each run, <a href="#upload">upload the FIT file</a> from your watch — it’s parsed in this browser.${syncOn() && !SESSION ? ' Sign in on Upload to keep your runs on every device.' : ''}`);
-  if (doc.profile.zonesSet === false){
-    const glt = sortedRuns().reverse().find(r => r.garminLthr)?.garminLthr;
-    notes.push(`<b>These are placeholder heart-rate zones.</b> ${glt ? `Your watch puts your threshold at ${glt} bpm. ` : ''}<a href="#upload">Set your own on Upload</a> — every number here is anchored to them.`);
-  }
-  if (!testRoute() && doc.runs.some(r => r.source === 'fit')) notes.push('<b>No test route set yet.</b> Open your flat-route run in Runs and tap “Make this the test route”.');
-
-  const d = now;
-  $('#page-today').innerHTML = `
-    <div class="page-head">
-      <div><div class="eyebrow">${DOW_LONG[d.getDay()]} · ${MON_LONG[d.getMonth()]} ${d.getDate()}</div><h1 class="display">Today</h1></div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span class="chip"><span class="dot"></span>Week ${Math.min(pw, 8)} of 8 · ${esc(pwo.phase)}</span>
-        <button class="chip mobile-theme" data-theme-toggle2 style="cursor:pointer">Light / dark</button>
-      </div>
-    </div>
-    <div class="grid today-grid">
-      <div class="col">
-        <div class="card hero"><div class="hero-stripes"></div>
-          <div class="eyebrow">${eyebrow}</div>
-          <div class="hero-title display">${title}</div>
-          <p>${copy}</p>
-          <ul class="task-list">${tasks}</ul>
-        </div>
-        ${checkin}
-        ${next}
-      </div>
-      <div class="col">
-        ${gate}${strip}${build}
-        ${notes.map(n => `<div class="note">${WARN_SVG}<div>${n}</div></div>`).join('')}
-      </div>
-    </div>`;
+function lastRunCard(r){
+  if (!r) return '';
+  return `<a class="card card-link" href="#runs/${r.id}">
+    <div class="card-head"><h2>Last run</h2><span class="card-sub">${fmtRel(r.date)}</span></div>
+    <div class="next-run-big display num">${fmtMi(r.distMi)}<span style="font-size:.45em"> mi</span></div>
+    <div class="kv">
+      <div>Time<b class="num">${fmtDur(r.timerSec)}</b></div>
+      <div>${r.jogHr != null ? 'Jog HR' : 'Avg HR'}<b class="num">${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}</b></div>
+      <div>Pace<b class="num">${fmtDur(r.avgPaceSec)}</b></div>
+    </div></a>`;
 }
 
 /* ═══ PROGRESS ═══════════════════════════════════════════════════════ */
@@ -1703,8 +1823,8 @@ function renderProgress(){
   const runs = sortedRuns(), p = doc.profile;
   const page = $('#page-progress');
   if (!runs.length){
-    page.innerHTML = `<div class="page-head"><div><div class="eyebrow">No runs yet</div><h1 class="display">Progress</h1></div></div>
-      <div class="empty"><b>Nothing to chart yet.</b><br>Upload a FIT file to get started. <a href="#upload">Go to Upload</a></div>`;
+    page.innerHTML = band({ eyebrow:'No runs yet', title:'Progress' }) + `<div class="wrap">
+      <div class="empty"><b>Nothing to chart yet.</b><br>Runs appear once your watch syncs, or upload a FIT file. <a href="#setup">Go to Setup</a></div></div>`;
     return;
   }
   const clean = runs.filter(isClean);
@@ -1737,11 +1857,13 @@ function renderProgress(){
   const recent = runs.slice(-12);
   const latest = k => [...runs].reverse().find(r => r[k] != null)?.[k];
 
-  page.innerHTML = `
-    <div class="page-head">
-      <div><div class="eyebrow">Since ${fmtDate(runs[0].date).slice(4)} · ${runs.length} run${runs.length > 1 ? 's' : ''} · ${clean.length} clean</div><h1 class="display">Progress</h1></div>
-      ${firstClean ? `<span class="chip"><span class="dot"></span>Baseline set ${fmtDate(firstClean.date).slice(4)}</span>` : ''}
-    </div>
+  const totMi = runs.reduce((a, r) => a + (r.distMi ?? 0), 0), totJog = runs.reduce((a, r) => a + (r.runSec ?? 0), 0);
+  page.innerHTML = band({
+    eyebrow: `Since ${fmtDate(runs[0].date).slice(4)}${firstClean ? ` · baseline ${fmtDate(firstClean.date).slice(4)}` : ''}`,
+    title: 'Pro<em>gress</em>',
+    sub: 'The question every chart answers: is the same effort costing fewer heartbeats?',
+    stats: [['Runs', runs.length], ['Clean on test route', clean.length], ['Miles', totMi.toFixed(1)], ['Hours jogging', (totJog / 3600).toFixed(1)]],
+  }) + `<div class="wrap">
     <div class="grid kpis">
       <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · test route</div>${kpiHr}</div>
       <div class="card kpi"><div class="eyebrow">Recovery HR · 2-min drop</div>${kpiRec}</div>
@@ -1781,11 +1903,11 @@ function renderProgress(){
           <tr><td>Stride length</td><td>${num(latest('stride'), 2)} m</td><td>Holding it while pace dropped was the overstriding fix</td></tr>
           <tr><td>Vertical ratio</td><td>${num(latest('vertRatio'), 1)}%</td><td>Already in a good range</td></tr>
           <tr><td>Ground contact</td><td>${num(latest('gct'))} ms</td><td>Rises as you slow down — pace-dependent</td></tr>
-          <tr><td>VO2 max</td><td>${p.vo2 ?? '—'}</td><td>Too noisy yet. Revisit after 4–6 weeks</td></tr>
+          <tr><td>VO2 max</td><td>${bodySeries('vo2').at(-1)?.v ?? p.vo2 ?? '—'}</td><td>Charted on the Body tab</td></tr>
           <tr><td>Avg power</td><td>${num(latest('avgPower'))} W</td><td>Weight-dependent; jumps whenever the weight setting changes</td></tr>
         </table>
       </details>
-    </div>`;
+    </div></div>`;
 
   const openRun = c => { location.hash = 'runs/' + c.id; };
   chartHrTrend($('#c-hr'), runs);
@@ -1828,14 +1950,17 @@ function renderRunsList(){
   const runs = sortedRuns().reverse();
   const page = $('#page-runs');
   if (!runs.length){
-    page.innerHTML = `<div class="page-head"><div><div class="eyebrow">No runs yet</div><h1 class="display">Runs</h1></div></div>
-      <div class="empty"><b>No runs yet.</b><br><a href="#upload">Upload a FIT file</a> to get started.</div>`;
+    page.innerHTML = band({ eyebrow:'No runs yet', title:'Runs' }) + `<div class="wrap">
+      <div class="empty"><b>No runs yet.</b><br>They appear once your watch syncs — <a href="#setup">set that up</a>, or upload a FIT file.</div></div>`;
     return;
   }
   const dotColor = { crit:'var(--crit)', warn:'var(--warn)', wait:'var(--axis)' };
-  page.innerHTML = `
-    <div class="page-head"><div><div class="eyebrow">${runs.length} run${runs.length > 1 ? 's' : ''} · ${runs.filter(isClean).length} clean on the test route</div><h1 class="display">Runs</h1></div>
-      <a class="btn primary" href="#upload" style="text-decoration:none">Upload FIT</a></div>
+  const last30 = runs.filter(r => diffDays(r.date, todayYmd()) < 30);
+  page.innerHTML = band({
+    eyebrow: `${runs.length} run${runs.length > 1 ? 's' : ''} · ${runs.filter(isClean).length} clean on the test route`,
+    title: 'Runs',
+    stats: [['Last 30 days', last30.length, 'runs'], ['Miles · 30 days', last30.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)], ['All-time miles', runs.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)]],
+  }) + `<div class="wrap">
     <div class="card"><div class="table-wrap"><table class="runs">
       <thead><tr><th>Date</th><th>Route</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
       <tbody>${runs.map(r => {
@@ -1854,13 +1979,14 @@ function renderRunsList(){
           <td><span class="flags" data-tip="${esc(fl.map(f => f[1]).join(' · ') || 'Clean')}">${fl.length ? fl.map(f => `<i class="flag-dot" style="background:${dotColor[f[0]]}"></i>`).join('') : `<span style="color:var(--good-text);font-weight:700">✓</span>`}</span></td>
         </tr>`;
       }).join('')}</tbody>
-    </table></div></div>`;
+    </table></div></div>
+    <p class="card-sub" style="margin-top:12px">Missing one? <a href="#setup">Upload its FIT file</a>.</p></div>`;
 }
 
 async function renderRunDetail(id){
   const r = runById(id);
   const page = $('#page-runs');
-  if (!r){ page.innerHTML = `<div class="empty"><b>That run isn’t here.</b><br><a href="#runs">Back to runs</a></div>`; return; }
+  if (!r){ page.innerHTML = band({ eyebrow:'Runs', title:'Not <em>found</em>' }) + `<div class="wrap"><div class="empty"><b>That run isn’t here.</b><br><a href="#runs">Back to runs</a></div></div>`; return; }
   const s = r.hasSamples ? await getSamples(r.id) : null;
   if (location.hash.slice(1) !== 'runs/' + id) return;   // navigated away while loading
   const p = doc.profile, flags = flagsFor(r), tr = testRoute();
@@ -1874,15 +2000,12 @@ async function renderRunDetail(id){
   else if (r.startLL && tr) routeCtl = `<button class="btn small" data-action="count-test">Count as test route</button> <button class="btn small" data-action="make-test">Replace the test route with this one</button>`;
   else routeCtl = `<button class="btn small" data-action="count-test">Count as test route</button>`;
 
-  page.innerHTML = `
-    <div class="detail-head">
-      <div>
-        <button class="link-btn" data-action="back">← All runs</button>
-        <h1 class="display num">${fmtMi(r.distMi)} <span style="font-size:.5em">mi</span></h1>
-        <div class="eyebrow">${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''} · ${r.source === 'fit' ? 'FIT file' : 'from notes'}</div>
-      </div>
-      <div class="btn-row">${routeCtl}</div>
-    </div>
+  page.innerHTML = band({
+    eyebrow: `<button class="link-btn" data-action="back" style="color:inherit;opacity:.8">← All runs</button> &nbsp;·&nbsp; ${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''}`,
+    title: `${fmtMi(r.distMi)}<em> mi</em>`,
+    stats: [['Time', fmtDur(r.timerSec)], [r.jogHr != null ? 'Jog HR' : 'Avg HR', r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr), 'bpm'], ['Pace', fmtDur(r.avgPaceSec), '/mi']],
+    extra: `<div class="btn-row">${routeCtl}</div>`,
+  }) + `<div class="wrap">
     <div class="stat-grid">
       ${stat('Timer', fmtDur(r.timerSec))}
       ${stat('Jog / walk', `${fmtDur(r.runSec)}`, `/ ${fmtDur(r.walkSec)}`)}
@@ -1941,7 +2064,7 @@ async function renderRunDetail(id){
           <span class="confirm" id="del-confirm">Delete for good? <button class="btn small danger" data-action="delete-yes">Delete</button><button class="btn small" data-action="delete-no">Keep</button></span>
         </div>
       </div>
-    </div>`;
+    </div></div>`;
 
   if (s) chartTrace($('#c-trace'), s);
   $('#rec-in').addEventListener('change', async e => {
@@ -1954,26 +2077,174 @@ async function renderRunDetail(id){
   page.dataset.run = r.id;
 }
 
+/* ═══ BODY ═══════════════════════════════════════════════════════════ */
+// A daily series on a real date axis, so missed days leave gaps instead of
+// squeezing the line. `smooth` draws raw days as faint dots under a 7-day mean.
+function chartDaily(host, pts, { days, unit = '', step, dec = 0, smooth = false, bars = false, gapDays = 10 }){
+  const H = 200, m = { t:22, r:44, b:28, l:38 };
+  const [svg, W] = svgFor(host, H);
+  const end = todayYmd(), start = addDays(end, -days + 1);
+  pts = pts.filter(p => p.date >= start);
+  if (!pts.length){ host.innerHTML = '<div class="pending-box">Nothing in this range yet.</div>'; return; }
+  const vals = pts.map(p => p.v);
+  let lo = bars ? 0 : Math.floor((Math.min(...vals) - step / 2) / step) * step, hi = Math.ceil((Math.max(...vals) + step / 2) / step) * step;
+  if (hi - lo < step * 2) hi = lo + step * 2;
+  const x = d => m.l + (diffDays(start, d) + .5) / days * (W - m.l - m.r);
+  const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+  const f = v => Number(v).toFixed(dec);
+  hGrid(svg, niceTicks(lo, hi, step), y, m.l, W - m.r, v => step < 1 ? f(v) : String(Math.round(v)));
+  el('line', { x1:m.l, x2:W - m.r, y1:H - m.b, y2:H - m.b, stroke:css('--axis') }, svg);
+  const tickEvery = days <= 31 ? 7 : days <= 92 ? 14 : 61;
+  for (let d = 0; d < days; d += tickEvery){
+    const dd = addDays(start, d);
+    el('text', { x:x(dd), y:H - m.b + 18, 'text-anchor':'middle' }, svg).textContent = `${MON[parseYmd(dd).getMonth()]} ${parseYmd(dd).getDate()}`;
+  }
+  const c = css('--series-1'), surf = css('--surface');
+  const band = (W - m.l - m.r) / days;
+  let line = pts;
+  if (bars){
+    const bw = Math.max(2, Math.min(14, band - 2));
+    pts.forEach(p => el('path', { d:colPath(x(p.date) - bw / 2, y(p.v), bw, y(lo)), fill:c }, svg));
+  } else if (smooth){
+    pts.forEach(p => el('circle', { cx:x(p.date), cy:y(p.v), r:3, fill:c, 'fill-opacity':.28 }, svg));
+    line = pts.map(p => ({ date:p.date, v:windowAvg(pts, 7, p.date) }));
+  }
+  if (!bars && line.length > 1){
+    let d = '';
+    line.forEach((p, i) => { const gap = i && diffDays(line[i - 1].date, p.date) > gapDays; d += `${!i || gap ? 'M' : 'L'}${x(p.date).toFixed(1)},${y(p.v).toFixed(1)}`; });
+    el('path', { d, fill:'none', stroke:c, 'stroke-width':2, 'stroke-linejoin':'round', 'stroke-linecap':'round' }, svg);
+  }
+  if (!bars && !smooth) pts.forEach(p => el('circle', { cx:x(p.date), cy:y(p.v), r:pts.length > 40 ? 2.5 : 4, fill:c, stroke:surf, 'stroke-width':pts.length > 40 ? 0 : 2 }, svg));
+  const lastP = line.at(-1);
+  el('circle', { cx:x(lastP.date), cy:y(lastP.v), r:5, fill:c, stroke:surf, 'stroke-width':2 }, svg);
+  el('text', { x:x(lastP.date) + 8, y:y(lastP.v) + 4, class:'lbl num' }, svg).textContent = f(lastP.v);
+  // hover: nearest day
+  const cross = el('line', { y1:m.t, y2:H - m.b, stroke:css('--ink'), opacity:0 }, svg);
+  const hit = el('rect', { x:m.l, y:m.t, width:W - m.l - m.r, height:H - m.t - m.b, fill:'transparent' }, svg);
+  hit._tip = e => {
+    const r = svg.getBoundingClientRect(), dx = (e.clientX - r.left - m.l) / (W - m.l - m.r) * days;
+    const want = addDays(start, Math.round(dx - .5));
+    const p = pts.reduce((a, b) => Math.abs(diffDays(b.date, want)) < Math.abs(diffDays(a.date, want)) ? b : a);
+    cross.setAttribute('x1', x(p.date)); cross.setAttribute('x2', x(p.date)); cross.setAttribute('opacity', .3);
+    const avg = smooth ? windowAvg(pts, 7, p.date) : null;
+    return `<b>${fmtDate(p.date)}</b><br>${f(p.v)} ${unit}${avg != null ? ` · 7-day avg ${f(avg)}` : ''}${p.src === 'manual' ? ' · weigh-in' : ''}`;
+  };
+  hit._tipOut = () => cross.setAttribute('opacity', 0);
+}
+
+function bodyStat(label, pts, { unit = '', dec = 0, days = 7, lowerBetter = null } = {}){
+  const now = windowAvg(pts, days), before = windowAvg(pts, days, addDays(todayYmd(), -28));
+  let delta = '';
+  if (now != null && before != null && Math.abs(now - before) >= Math.pow(10, -dec)){
+    const d = now - before, good = lowerBetter == null ? null : lowerBetter ? d < 0 : d > 0;
+    delta = `<span class="delta${good == null ? '' : good ? ' good' : ' bad'}">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(dec)} vs 4 wks ago</span>`;
+  }
+  return { label, value: now == null ? '—' : now.toFixed(dec), unit, delta };
+}
+function bodyStats(){
+  return {
+    weight: bodyStat('Weight · 7-day avg', weightSeries(), { unit:'lbs', dec:1 }),
+    rhr: bodyStat('Resting HR', bodySeries('rhr'), { unit:'bpm', lowerBetter:true }),
+    hrv: bodyStat('HRV · overnight', bodySeries('hrv'), { unit:'ms', lowerBetter:false }),
+    sleep: bodyStat('Sleep · 7-night avg', bodySeries('sleepH'), { unit:'hrs', dec:1, lowerBetter:false }),
+  };
+}
+
+function bodyTodayCard(){
+  const st = bodyStats(), any = Object.values(st).some(x => x.value !== '—');
+  return `<a class="card card-link" href="#body"><div class="card-head"><h2>Body</h2><span class="card-sub">${any ? '7-day averages ›' : 'set it up ›'}</span></div>
+    ${any ? `<div class="mini-stats">${Object.values(st).map(x => `<div><div class="ms-l">${x.label.split(' · ')[0]}</div><div class="ms-v display num">${x.value}<small>${x.value === '—' ? '' : x.unit}</small></div>${x.delta}</div>`).join('')}</div>`
+      : `<p class="card-sub" style="margin:0">${doc.intervals?.key ? 'Garmin’s daily data (weight, resting HR, HRV, sleep) will show up here after the next sync.' : 'Connect intervals.icu in Setup and Garmin’s daily weight, resting HR, HRV and sleep fill in on their own. Or add a weigh-in on the Body tab.'}</p>`}
+  </a>`;
+}
+
+const BODY_RANGES = [[30, '30 days'], [90, '90 days'], [365, '1 year']];
+function renderBody(){
+  const days = prefs.get('bodyRange', 90);
+  const st = bodyStats();
+  const ws = weightSeries(), rhr = bodySeries('rhr'), hrv = bodySeries('hrv'), sleep = bodySeries('sleepH'), vo2 = bodySeries('vo2');
+  const comps = [...(doc.profile.comps ?? [])].sort((a, b) => a.date < b.date ? 1 : -1);
+  const fatG = bodySeries('bodyFat').at(-1);
+  const has = ws.length || rhr.length || hrv.length || sleep.length;
+  const chartCard = (id, title, sub, pts) => `<div class="card"><div class="card-head"><h2>${title}</h2><span class="card-sub">${sub}</span></div>
+    ${pts.length ? `<div class="chart" id="${id}"></div>` : `<div class="pending-box">${doc.intervals?.key ? 'None from Garmin yet. Some watches only record this overnight.' : 'Comes from Garmin through intervals.icu — connect it in Setup.'}</div>`}</div>`;
+  const vo2Now = vo2.at(-1)?.v ?? comps.find(c => c.vo2)?.vo2 ?? doc.profile.vo2;
+
+  $('#page-body').innerHTML = band({
+    eyebrow: doc.intervals?.key ? 'Body · daily from Garmin via intervals.icu' : 'Body · weigh-ins and measurements',
+    title: 'Body',
+    stats: Object.values(st).map(x => [x.label.split(' · ')[0], x.value, x.value === '—' ? '' : x.unit]),
+    extra: `<div class="band-deltas">${Object.values(st).map(x => x.delta ? `<span>${x.label.split(' · ')[0]} ${x.delta}</span>` : '').join('')}</div>`,
+  }) + `<div class="wrap">
+    ${has ? '' : `<div class="note" style="margin-bottom:16px">${WARN_SVG}<div><b>Nothing here yet.</b> ${doc.intervals?.key ? 'Garmin’s daily data arrives with the next sync — usually the morning after you wear the watch overnight.' : '<a href="#setup">Connect intervals.icu</a> and Garmin’s daily weight, resting HR, HRV and sleep fill this page on their own.'} You can also add a weigh-in below.</div></div>`}
+    <div class="filter-row">${BODY_RANGES.map(([d, l]) => `<button class="pill" data-body-range="${d}" aria-pressed="${d === days}">${l}</button>`).join('')}</div>
+    <div class="grid two">
+      ${chartCard('c-weight', 'Weight', 'dots are days · line is the 7-day average', ws)}
+      ${chartCard('c-rhr', 'Resting heart rate', 'drifts down as fitness builds · lower is better', rhr)}
+      ${chartCard('c-hrv', 'HRV', 'overnight · a sudden drop can mean run down', hrv)}
+      ${chartCard('c-sleep', 'Sleep', 'hours per night', sleep)}
+    </div>
+    <div class="section-label">Fitness & composition</div>
+    <div class="grid two">
+      <div class="card"><div class="card-head"><h2>VO2 max</h2><span class="card-sub">${vo2.length ? 'Garmin’s estimate · moves slowly' : 'Garmin’s estimate'}</span></div>
+        ${vo2.length > 1 ? '<div class="chart" id="c-vo2"></div>' : `<div class="next-run-big display num">${vo2Now ?? '—'}</div><p class="card-sub" style="margin:0">${vo2Now ? 'Only one reading so far — the trend fills in over weeks.' : 'Comes from Garmin when your watch estimates it, or add it below.'}</p>`}
+      </div>
+      <div class="card"><div class="card-head"><h2>Add a measurement</h2><span class="card-sub">a weigh-in, a DEXA scan, a lab test</span></div>
+        <div class="field-row">
+          <div class="field"><label for="m-date">Date</label><input id="m-date" type="date" value="${todayYmd()}"></div>
+          <div class="field"><label for="m-w">Weight (lbs)</label><input id="m-w" type="number" step="0.1" inputmode="decimal"></div>
+          <div class="field"><label for="m-fat">Body fat %</label><input id="m-fat" type="number" step="0.1" inputmode="decimal"></div>
+          <div class="field"><label for="m-vo2">VO2 max</label><input id="m-vo2" type="number" step="1" inputmode="numeric"></div>
+          <div class="field" style="grid-column:1 / -1"><label for="m-note">Note</label><input id="m-note" type="text" placeholder="e.g. DEXA scan"></div>
+        </div>
+        <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="add-measure">Save</button></div>
+        ${comps.length || doc.profile.weights.length ? `<table class="quiet" style="margin-top:16px">
+          ${[...doc.profile.weights.map(w => ({ date:w.date, txt:`${w.lbs} lbs`, note:w.note ?? '', kind:'w' })),
+             ...comps.map(c => ({ date:c.date, txt:[c.bodyFat != null && c.bodyFat + '% fat', c.vo2 != null && 'VO2 ' + c.vo2].filter(Boolean).join(' · '), note:c.note ?? '', kind:'c' }))]
+            .sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 8)
+            .map(r => `<tr><td>${fmtDate(r.date)}</td><td>${esc(r.txt)}</td><td>${esc(r.note)} <button class="link-btn" data-del-measure="${r.kind}|${r.date}">remove</button></td></tr>`).join('')}
+        </table>` : ''}
+        ${fatG ? `<p class="card-sub" style="margin:12px 0 0">Garmin last reported ${fatG.v}% body fat on ${fmtDate(fatG.date)}.</p>` : ''}
+      </div>
+    </div>
+  </div>`;
+
+  if (ws.length) chartDaily($('#c-weight'), ws, { days, unit:'lbs', step: days > 90 ? 5 : 2, dec:1, smooth:true });
+  if (rhr.length) chartDaily($('#c-rhr'), rhr, { days, unit:'bpm', step:5 });
+  if (hrv.length) chartDaily($('#c-hrv'), hrv, { days, unit:'ms', step:10 });
+  if (sleep.length) chartDaily($('#c-sleep'), sleep, { days, unit:'hrs', step:2, dec:1, bars:true });
+  if (vo2.length > 1) chartDaily($('#c-vo2'), vo2, { days:Math.max(days, 90), unit:'', step:2, gapDays:60 });
+}
+
 /* ═══ PLAN ═══════════════════════════════════════════════════════════ */
 function renderPlan(){
+  const plan = activePlan(), len = planLen();
+  if (!coached()){
+    $('#page-plan').innerHTML = band({ eyebrow:'Plan', title:'Just <em>tracking</em>', sub:'No plan, no weekly gate. Stride logs every run and charts the trends. Want structure? Pick a plan — your runs stay as they are.',
+      extra:`<a class="btn small" href="#welcome" style="text-decoration:none">Choose a plan</a>` }) + `<div class="wrap">${planChoices(doc.planId)}</div>`;
+    return;
+  }
   const weeks = planState(), cur = weeks.at(-1), pw = cur.planWeek;
   const past = weeks.filter(w => !w.current).reverse();
   const DEC = { advance:'Advanced', repeat:'Repeated', back:'Went back a week' };
-  $('#page-plan').innerHTML = `
-    <div class="page-head"><div><div class="eyebrow">Three runs a week · rest day between</div><h1 class="display">Plan</h1></div>
-      <span class="chip"><span class="dot"></span>Week ${Math.min(pw, 8)} of 8</span></div>
-    <div class="grid today-grid">
+  $('#page-plan').innerHTML = band({
+    eyebrow: `${esc(plan.name)} · three runs a week, rest day between`,
+    title: pw > len ? 'Plan <em>done</em>' : `Week <em>${pw}</em>`,
+    sub: `Goal: ${esc(plan.goal)}. Each week has to pass its gate before the next one unlocks.`,
+    stats: [['Plan length', len, 'wks'], ['Started', fmtDate(doc.planStart).slice(4)], ['Phase', esc(planWeekObj(pw).phase)]],
+    extra: `<a class="btn small" href="#welcome" style="text-decoration:none">Change plan</a>`,
+  }) + `<div class="wrap"><div class="grid today-grid">
       <div class="col"><div class="plan-list">
-        ${PLAN.map(p => `<div class="plan-row${p.w === Math.min(pw, 8) ? ' now' : ''}" style="${p.w < pw ? 'opacity:.55' : ''}">
-          <div class="wk display num">${p.w}</div>
+        ${plan.weeks.map((p, i) => { const w = i + 1; return `<div class="plan-row${w === Math.min(pw, len) ? ' now' : ''}" style="${w < pw ? 'opacity:.55' : ''}">
+          <div class="wk display num">${w}</div>
           <div><div class="p-t">${p.phase === p.session ? esc(p.session) : `${esc(p.phase)} · ${esc(p.session)}`}</div><div class="p-s">${esc(p.detail)}</div></div>
           <div class="p-s" style="max-width:240px">${esc(p.add)}</div>
-        </div>`).join('')}
+        </div>`; }).join('')}
       </div></div>
       <div class="col">
         <div class="card"><div class="card-head"><h2>Week history</h2><span class="card-sub">decided by the gate; override if needed</span></div>
           ${past.length ? `<ul class="hist">${past.map((w, i) => `<li>
-            <span><b>${fmtDate(w.start).slice(4)} – ${fmtDate(w.end).slice(4)}</b> · week ${Math.min(w.planWeek, 8)} · ${w.runs.length} run${w.runs.length === 1 ? '' : 's'}</span>
+            <span><b>${fmtDate(w.start).slice(4)} – ${fmtDate(w.end).slice(4)}</b> · week ${Math.min(w.planWeek, len)} · ${w.runs.length} run${w.runs.length === 1 ? '' : 's'}</span>
             <span>${DEC[w.decision]}${w.overridden ? ' (you)' : ''}
               ${i === 0 ? `· <button class="link-btn" data-decide="${w.start}" data-val="${w.decision === 'advance' ? 'repeat' : 'advance'}">${w.decision === 'advance' ? 'Repeat instead' : 'Advance instead'}</button>${w.overridden ? ` · <button class="link-btn" data-decide="${w.start}" data-val="">Use gate</button>` : ''}` : ''}</span>
           </li>`).join('')}</ul>` : '<p class="card-sub" style="margin:0">First week in progress.</p>'}
@@ -1985,39 +2256,61 @@ function renderPlan(){
             <li><b>Miss a week:</b> go back one week, don’t jump ahead.</li>
             <li><b>One calf much worse, shin-bone pain, or Achilles tightness out of bed:</b> stop and get it looked at.</li>
             <li><b>Knee pain that turns sharp, swells, or causes a limp:</b> see a doctor or PT.</li>
-            <li>Don’t add more than a couple of minutes of jogging a week. When in doubt, repeat the week.</li>
+            <li>Don’t add more than about 10% a week. When in doubt, repeat the week.</li>
           </ul>
         </div>
         <div class="card"><div class="card-head"><h2>Pacing</h2></div>
           <p class="card-sub" style="margin:0">Run slow enough to hold a conversation. If that’s barely faster than a walk, don’t shuffle — control effort with <b>interval length, not pace</b>: jog 2 min, walk 90 sec, × 5, walking until HR is back under ${doc.profile.zones.easy}. If HR passes ~${doc.profile.zones.mod}, take a walk break.</p>
         </div>
       </div>
-    </div>`;
+    </div></div>`;
+}
+
+/* ═══ WELCOME / CHOOSE A PLAN ════════════════════════════════════════ */
+const welcomeUi = { plan:null, start:null };
+function planChoices(sel){
+  return `<div class="grid three plan-pick">${Object.entries(PLANS).map(([id, pl]) => `
+    <button class="card plan-card" data-pick-plan="${id}" aria-pressed="${sel === id}">
+      <div class="eyebrow">${pl.weeks.length ? pl.weeks.length + ' weeks · 3 runs a week' : 'No plan'}</div>
+      <div class="pc-name display">${esc(pl.name)}</div>
+      <p>${esc(pl.who)}</p>
+      ${pl.goal ? `<p class="pc-goal"><b>Goal</b> ${esc(pl.goal)}</p>` : '<p class="pc-goal"><b>You get</b> runs, trends and body data — no assignments</p>'}
+    </button>`).join('')}</div>`;
+}
+function renderWelcome(){
+  const first = !doc.planId;
+  welcomeUi.plan ??= doc.planId ?? (doc.runs.length ? 'build' : null);
+  const thisMon = weekStart(todayYmd()), nextMon = addDays(thisMon, 7);
+  const keep = doc.planStart && doc.planStart < thisMon && doc.runs.length ? doc.planStart : null;
+  welcomeUi.start ??= keep ?? thisMon;
+  const opts = [...(keep ? [[keep, `Keep my start · ${fmtDate(keep).slice(4)}`]] : []), [thisMon, `This week · ${fmtDate(thisMon).slice(4)}`], [nextMon, `Next Monday · ${fmtDate(nextMon).slice(4)}`]];
+  const coachedPick = welcomeUi.plan && PLANS[welcomeUi.plan].weeks.length;
+  $('#page-welcome').innerHTML = band({
+    eyebrow: first ? 'Welcome to Stride' : 'Change plan',
+    title: first ? 'Pick your <em>plan</em>' : 'Switch <em>plans</em>',
+    sub: first ? 'Stride turns your watch’s runs into a plan that adapts week to week — or just a clean log, if you already have your own training. You can change this any time.'
+      : 'Your runs, check-ins and body data stay exactly as they are. Only the weekly assignments change.',
+  }) + `<div class="wrap">
+    ${planChoices(welcomeUi.plan)}
+    ${coachedPick ? `<div class="section-label">Start</div>
+      <div class="filter-row">${opts.map(([d, l]) => `<button class="pill" data-pick-start="${d}" aria-pressed="${welcomeUi.start === d}">${esc(l)}</button>`).join('')}</div>` : ''}
+    <div class="btn-row" style="margin-top:22px">
+      <button class="btn primary" data-action="welcome-go"${welcomeUi.plan ? '' : ' disabled'}>${first ? 'Let’s go' : 'Switch'}</button>
+      ${first && syncOn() && !SESSION ? `<span class="card-sub">Already use Stride on another device? <a href="#setup">Sign in first</a> and your plan comes with you.</span>` : ''}
+      ${first ? '' : '<a class="link-btn" href="#plan">Cancel</a>'}
+    </div>
+  </div>`;
 }
 
 /* ═══ UPLOAD ═════════════════════════════════════════════════════════ */
 const importLog = [];
-function renderUpload(){
-  const p = doc.profile, w = p.weights.at(-1);
-  $('#page-upload').innerHTML = `
-    <div class="page-head"><div><div class="eyebrow">FIT files · parsed in this browser, never uploaded anywhere</div><h1 class="display">Upload</h1></div></div>
-    <div class="grid today-grid">
-      <div class="col">
-        <label class="drop" id="drop">
-          <input type="file" id="file-in" accept=".fit,.FIT,.zip" multiple hidden>
-          <span class="drop-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0c0d0e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
-          <div class="display">Drop FIT files</div>
-          <div class="card-sub">.fit or Garmin’s .zip — as many as you like. Or click to choose.</div>
-        </label>
-        <ul class="log" id="log">${importLog.map(logItem).join('')}</ul>
-        <div class="card"><div class="card-head"><h2>Getting the file off the watch</h2><span class="card-sub">~15 seconds a run</span></div>
-          <ol class="how">
-            <li><span><b>From Garmin Connect on the web</b>Open the activity → gear icon, top right → <i>Export Original</i>. Drop the .zip straight in.</span></li>
-            <li><span><b>Straight off the watch (best for several)</b>Plug the watch in by USB; it mounts as a drive. Open <code>GARMIN/Activity</code> — files are named by time, like <code>2026-09-24-22-05-13.fit</code>.</span></li>
-            <li><span><b>Everything at once</b>Garmin Connect → Account Settings → Data Management → Export Your Data. Arrives by email within a day or two.</span></li>
-          </ol>
-        </div>
-      </div>
+function renderSetup(){
+  const p = doc.profile;
+  $('#page-setup').innerHTML = band({
+    eyebrow: 'Setup', title: 'Your <em>setup</em>',
+    sub: 'Your account, automatic import from your watch, heart-rate zones and your data.',
+    stats: [['Runs', doc.runs.length], ['Threshold', p.lthr, 'bpm'], ['Easy below', p.zones.easy, 'bpm']],
+  }) + `<div class="wrap"><div class="grid two" style="align-items:start">
       <div class="col">
         ${accountCard()}
         ${intervalsCard()}
@@ -2029,15 +2322,24 @@ function renderUpload(){
             <div class="field"><label for="s-guard">Max HR guardrail</label><input id="s-guard" type="number" value="${p.guardHr}"></div>
           </div>
           <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="save-zones">Save zones</button></div>
+          <p class="card-sub" style="margin:12px 0 0">Not sure? Garmin estimates your lactate threshold after a few runs (Performance Stats → Lactate Threshold). Easy and moderate are roughly 85% and 93% of it.</p>
         </div>
-        <div class="card"><div class="card-head"><h2>Weight</h2><span class="card-sub">${w ? `${w.lbs} lbs since ${fmtDate(w.date).slice(4)}` : 'not set'}</span></div>
-          <div class="field-row">
-            <div class="field"><label for="s-w">Weight (lbs)</label><input id="s-w" type="number" step="0.1" value="${w?.lbs ?? ''}"></div>
-            <div class="field"><label for="s-wd">As of</label><input id="s-wd" type="date" value="${todayYmd()}"></div>
-          </div>
-          <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="add-weight">Add weigh-in</button></div>
-          <p class="card-sub" style="margin:12px 0 0">Runs computed by the watch at a different weight get flagged, since their power and calories are off.</p>
-        </div>
+      </div>
+      <div class="col">
+        <label class="drop" id="drop">
+          <input type="file" id="file-in" accept=".fit,.FIT,.zip" multiple hidden>
+          <span class="drop-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0c0d0e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
+          <div class="display">Drop FIT files</div>
+          <div class="card-sub">Or click to choose. For runs that didn’t come in automatically.</div>
+        </label>
+        <ul class="log" id="log">${importLog.map(logItem).join('')}</ul>
+        <details class="card"><summary class="card-head" style="margin:0;cursor:pointer"><h2>Getting a file off the watch</h2><span class="card-sub">~15 seconds a run ›</span></summary>
+          <ol class="how" style="margin-top:14px">
+            <li><span><b>From Garmin Connect on the web</b>Open the activity → gear icon, top right → <i>Export Original</i>. Drop the .zip straight in.</span></li>
+            <li><span><b>Straight off the watch</b>Plug the watch in by USB and open <code>GARMIN/Activity</code> — files are named by time, like <code>2026-09-24-22-05-13.fit</code>.</span></li>
+            <li><span><b>Everything at once</b>Garmin Connect → Account Settings → Data Management → Export Your Data. Arrives by email within a day or two.</span></li>
+          </ol>
+        </details>
         <div class="card"><div class="card-head"><h2>Your data</h2><span class="card-sub">${doc.runs.length} runs ${signedIn() ? 'on your account' : 'in this browser'}</span></div>
           <p class="card-sub" style="margin:0 0 12px">${signedIn() ? 'Synced to your account. A backup file is still a good idea now and then.' : 'It lives only in this browser. Export a backup to move it to another device or keep it safe.'}</p>
           <div class="btn-row">
@@ -2048,7 +2350,7 @@ function renderUpload(){
           </div>
         </div>
       </div>
-    </div>`;
+    </div></div>`;
 
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
@@ -2085,7 +2387,7 @@ function logItem(it){
 addEventListener('dragover', e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); });
 addEventListener('drop', e => {
   if (!e.dataTransfer?.files?.length || e.target.closest?.('#drop')) return;
-  e.preventDefault(); location.hash = 'upload'; handleFiles([...e.dataTransfer.files]);
+  e.preventDefault(); location.hash = 'setup'; handleFiles([...e.dataTransfer.files]);
 });
 
 let sdkP, zipP;
@@ -2094,7 +2396,7 @@ const loadZip = () => zipP ??= import(JSZIP_URL).then(m => m.default);
 
 async function handleFiles(files){
   if (!files.length) return;
-  if (location.hash !== '#upload') location.hash = 'upload';
+  if (location.hash !== '#setup') location.hash = 'setup';
   const jobs = [];
   for (const f of files){
     const lower = f.name.toLowerCase();
@@ -2116,7 +2418,7 @@ async function handleFiles(files){
     catch (err){ importLog.unshift({ status:'crit', title:esc(name), sub:`Couldn’t read it: ${esc(err.message)}` }); }
   }
   await save();
-  if (location.hash === '#upload') $('#log').innerHTML = importLog.map(logItem).join('');
+  if (location.hash === '#setup') $('#log').innerHTML = importLog.map(logItem).join('');
 }
 
 function matchRoute(r){
@@ -2243,17 +2545,37 @@ async function checkIntervals({ manual = false } = {}){
       }
       if (!/Already imported/.test(it.sub)) importLog.unshift({ ...it, sub:'From intervals.icu · ' + it.sub });
     }
+    // Daily body data Garmin sends to intervals.icu: weight, resting HR, HRV, sleep, VO2 max.
+    let bodyChanged = false;
+    try {
+      const wFrom = loc.wellnessAt ? addDays(ymd(new Date(loc.wellnessAt)), -3) : addDays(todayYmd(), -180);
+      const wl = await (await icuGet(`/athlete/0/wellness?oldest=${wFrom}&newest=${todayYmd()}`, key)).json();
+      doc.body ??= {};
+      for (const w of wl){
+        const rec = {
+          weight: w.weight ? Math.round(w.weight * 2.20462 * 10) / 10 : null,   // the API is metric
+          rhr: w.restingHR ?? null, hrv: w.hrv != null ? Math.round(w.hrv) : null,
+          sleepH: w.sleepSecs ? Math.round(w.sleepSecs / 360) / 10 : null, sleepScore: w.sleepScore ?? null,
+          vo2: w.vo2max ?? null, bodyFat: w.bodyFat ?? null,
+        };
+        for (const k of Object.keys(rec)) if (rec[k] == null) delete rec[k];
+        if (!w.id || !Object.keys(rec).length) continue;
+        if (stableStringify(doc.body[w.id] ?? {}) !== stableStringify(rec)){ doc.body[w.id] = rec; bodyChanged = true; }
+      }
+      loc.wellnessAt = new Date().toISOString();
+    } catch (err){ if (err.auth) throw err; }
     setIcuLocal({ ...loc, seen:[...seen].slice(-500), lastChecked:new Date().toISOString() });
     icuUi.status = 'idle';
     icuUi.msg = added ? `${added} new run${added > 1 ? 's' : ''} just now` : problems ? `${problems} couldn’t be imported — see the log` : '';
     if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); }
+    else if (bodyChanged){ await save(); if (['', '#today', '#body'].includes(location.hash)) render(); }
     else if (manual) toast(problems ? 'Some runs couldn’t be imported' : 'No new runs');
   } catch (err){
     icuUi.status = 'error'; icuUi.msg = err.message;
     if (manual || err.auth) toast(err.message);
   } finally {
     icuBusy = false; paintIcu();
-    if (location.hash.startsWith('#upload') && importLog.length) $('#log') && ($('#log').innerHTML = importLog.map(logItem).join(''));
+    if (location.hash.startsWith('#setup') && importLog.length) $('#log') && ($('#log').innerHTML = importLog.map(logItem).join(''));
   }
 }
 async function connectIntervals(){
@@ -2316,6 +2638,19 @@ async function importBackup(file){
 
 /* ── Actions ─────────────────────────────────────────────────────── */
 document.addEventListener('click', async e => {
+  const pk = e.target.closest('[data-pick-plan]');
+  if (pk){ welcomeUi.plan = pk.dataset.pickPlan; if (location.hash !== '#welcome' && doc.planId) location.hash = 'welcome'; else renderWelcome(); return; }
+  const ps = e.target.closest('[data-pick-start]');
+  if (ps){ welcomeUi.start = ps.dataset.pickStart; renderWelcome(); return; }
+  const br = e.target.closest('[data-body-range]');
+  if (br){ prefs.set('bodyRange', +br.dataset.bodyRange); renderBody(); return; }
+  const dm = e.target.closest('[data-del-measure]');
+  if (dm){
+    const [kind, date] = dm.dataset.delMeasure.split('|');
+    if (kind === 'w') doc.profile.weights = doc.profile.weights.filter(w => w.date !== date);
+    else doc.profile.comps = (doc.profile.comps ?? []).filter(c => c.date !== date);
+    await save(); renderBody(); return;
+  }
   const task = e.target.closest('[data-task]');
   if (task){
     const k = task.dataset.task;
@@ -2381,6 +2716,26 @@ document.addEventListener('click', async e => {
       doc.profile.weights = [...doc.profile.weights.filter(w => w.date !== date), { date, lbs }].sort((a, b) => a.date < b.date ? -1 : 1);
       await save(); toast('Weigh-in saved'); render(); break;
     }
+    case 'welcome-go': {
+      if (!welcomeUi.plan) break;
+      const changed = doc.planId !== welcomeUi.plan;
+      doc.planId = welcomeUi.plan;
+      if (PLANS[doc.planId].weeks.length && (changed || welcomeUi.start !== doc.planStart)){
+        if (welcomeUi.start !== doc.planStart) doc.decisions = {};   // a new start date means a fresh week history
+        doc.planStart = welcomeUi.start;
+      }
+      welcomeUi.plan = welcomeUi.start = null;
+      await save(); location.hash = 'today'; render(); break;
+    }
+    case 'add-measure': {
+      const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
+      if (!date || !(lbs || fat || vo2)){ toast('Enter at least one number'); break; }
+      if (lbs && !(lbs > 50 && lbs < 600)){ toast('That weight looks off'); break; }
+      if (lbs) doc.profile.weights = [...doc.profile.weights.filter(w => w.date !== date), { date, lbs, ...(note ? { note } : {}) }].sort((a, b) => a.date < b.date ? -1 : 1);
+      if (fat || vo2) doc.profile.comps = [...(doc.profile.comps ?? []).filter(c => c.date !== date),
+        { date, ...(fat ? { bodyFat:fat } : {}), ...(vo2 ? { vo2 } : {}), ...(note ? { note } : {}) }];
+      await save(); toast('Saved'); renderBody(); break;
+    }
     case 'export': exportBackup(); break;
     case 'icu-connect': connectIntervals(); break;
     case 'icu-check': checkIntervals({ manual:true }); break;
@@ -2391,10 +2746,10 @@ document.addEventListener('click', async e => {
       { const { sync } = doc; doc = freshDoc(); if (sync) doc.sync = sync; }
       memSamples.clear(); importLog.length = 0; setUnsent([]);
       await idb.clear('samples').catch(() => {}); dropSamples(); await save(); toast('Reset to the starting data'); render(); break;
-    case 'goto-signin': location.hash = 'upload'; setTimeout(() => $('#si-email, #si-code')?.focus(), 50); break;
+    case 'goto-signin': location.hash = 'setup'; setTimeout(() => $('#si-email, #si-code')?.focus(), 50); break;
     case 'send-link': sendLink(); break;
     case 'verify-code': verifyCode(); break;
-    case 'change-email': authUi.stage = 'email'; renderUpload(); break;
+    case 'change-email': authUi.stage = 'email'; renderSetup(); break;
     case 'signout': signOut(); break;
     case 'sync-now': if (doc.sync?.dirty) pushRow().catch(e => setSync('error', e.message)); else { await refreshFromRemote(); setSync(SYNC.status === 'off' ? 'ok' : SYNC.status); toast('Up to date'); } break;
   }
@@ -2405,30 +2760,35 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.id === 'icu-key'){ connectIntervals(); return; }
   if (e.key === 'Enter' && e.target.matches('tr[data-run]')) location.hash = 'runs/' + e.target.dataset.run;
   if (e.target.closest('input,textarea') || e.metaKey || e.ctrlKey) return;
-  const pages = { 1:'today', 2:'progress', 3:'runs', 4:'plan', 5:'upload' };
+  const pages = { 1:'today', 2:'progress', 3:'runs', 4:'body', 5:'plan', 6:'setup' };
   if (pages[e.key]) location.hash = pages[e.key];
 });
 
 /* ── Routing ─────────────────────────────────────────────────────── */
-document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.page; }));
+document.querySelectorAll('.tab[data-page]').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.page; }));
 function render(){
-  const [page, arg] = (location.hash.slice(1) || 'today').split('/');
-  const pg = ['today', 'progress', 'runs', 'plan', 'upload'].includes(page) ? page : 'today';
-  document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.dataset.page === pg ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  let [page, arg] = (location.hash.slice(1) || 'today').split('/');
+  if (page === 'upload') page = 'setup';   // older links
+  let pg = ['today', 'progress', 'runs', 'body', 'plan', 'setup', 'welcome'].includes(page) ? page : 'today';
+  // No plan chosen yet: everything but Setup (where you can sign in) waits on the welcome screen.
+  if (!doc.planId && pg !== 'setup') pg = 'welcome';
+  document.querySelectorAll('.tab[data-page]').forEach(b => b.dataset.page === pg ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + pg));
   tip.classList.remove('show');
+  if (pg === 'welcome') renderWelcome();
   if (pg === 'today') renderToday();
   if (pg === 'progress') renderProgress();
   if (pg === 'runs'){ $('#page-runs').dataset.run = ''; arg ? renderRunDetail(arg) : renderRunsList(); }
+  if (pg === 'body') renderBody();
   if (pg === 'plan') renderPlan();
-  if (pg === 'upload') renderUpload();
+  if (pg === 'setup') renderSetup();
 }
 let lastRoute = null;
 addEventListener('hashchange', () => { render(); if (location.hash !== lastRoute) scrollTo(0, 0); lastRoute = location.hash; });
 let rt, lastW = innerWidth;
 addEventListener('resize', () => {
   if (innerWidth === lastW) return; lastW = innerWidth;
-  clearTimeout(rt); rt = setTimeout(() => { if (!/upload/.test(location.hash)) render(); }, 120);
+  clearTimeout(rt); rt = setTimeout(() => { if (!/setup/.test(location.hash)) render(); }, 120);
 });
 
 /* ── Boot ────────────────────────────────────────────────────────── */

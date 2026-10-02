@@ -10,24 +10,42 @@ No build step to use it, no server of its own. FIT files are parsed in the page
 (Garmin's official FIT SDK, loaded from jsDelivr on first upload) and stored in this
 browser's IndexedDB. Sign in, and your runs also sync to your account.
 
+## Layout
+
+No sidebar: a slim top bar with the tabs (a bottom dock on phones), and every page opens
+with a full-width poster band — the page's headline in giant condensed type and its key
+numbers — over a grid of cards. `1`–`6` switch tabs.
+
+## Plans
+
+The first visit asks which plan to follow; switch any time from the Plan tab. Runs,
+check-ins and body data never change when you switch.
+
+- **Run/walk build** — 8 weeks from 9–10 minutes of jogging with walk breaks to a continuous
+  1.5 miles, then some speed.
+- **Build to 5K** — 8 weeks for people who can already jog 20 minutes; long runs, then
+  5K-effort intervals, then a time trial.
+- **Just track** — no plan, no gate. Today becomes a weekly summary.
+
+Coached plans are three runs a week with a rest day between; each week has to pass its
+gate (3 runs, no soreness past 48 hours, HR under the guardrail) before the next unlocks.
+
 ## Tabs
 
-- **Today** — the assignment (run / rest / ref day / get it checked), a mobility
-  checklist, the soreness check-in at ~24 and ~48 hrs after the latest run, the next
-  run with the 6-step protocol, this week's gate, and the next 7 days. Tap a day to
-  mark a sport day (another sport, a big day on your feet); the schedule moves runs
-  around them.
-- **Progress** — heart rate on the test route (jogging-only when there's a FIT file),
-  recovery HR, anaerobic TE, then jog/walk time, max HR, time above threshold, load,
-  cardiac drift.
+- **Today** — the assignment (or this week's summary when just tracking), the soreness
+  check-in, the week's gate, the next 7 days (tap a day with another sport and the runs
+  move around it), today's body numbers, and the next run with the 6-step protocol.
+- **Progress** — heart rate on the test route, recovery HR, anaerobic TE, then jog/walk
+  time, max HR, time above threshold, load, cardiac drift.
 - **Runs** — every run, and a page per run: HR trace over threshold-anchored zones with
-  the jog/walk/standing strip, the protocol check, route shape, form metrics, notes,
-  and a recovery HR box.
-- **Plan** — the 8-week build, week history (gate decides; you can override the last
-  week), and the rules.
-- **Upload** — FIT or Garmin .zip, sign-in, zones, weigh-ins, backup export/import.
-
-`1`–`5` switch tabs.
+  the jog/walk/standing strip, the protocol check, route shape, form metrics, notes.
+- **Body** — weight (with a 7-day average), resting HR, HRV, sleep and VO2 max over 30
+  days, 90 days or a year, filled daily from Garmin through intervals.icu, plus weigh-ins
+  and body-composition entries (DEXA and the like) added by hand. A manual weigh-in wins
+  over Garmin's number for the same day.
+- **Plan** — the active plan's weeks, week history (the gate decides; you can override the
+  last week), the rules, and switching plans.
+- **Setup** — sign-in, intervals.icu, zones, manual FIT upload, backup export/import.
 
 ## Automatic import (intervals.icu)
 
@@ -38,7 +56,8 @@ file and imports it exactly as if it had been dropped in. Set it up on Upload wi
 intervals.icu API key (Settings → Developer Settings).
 
 - Checks run when the app opens or comes back into view (at most every 5 min), or on
-  *Check now*. The first check reaches back 30 days.
+  *Check now*. The first check reaches back 30 days for runs and 180 days for body data
+  (intervals.icu's wellness endpoint; weight arrives in kg and is stored in lbs).
 - The key lives in the synced doc so every signed-in device imports. It's left out of
   backup files. What each device has already checked stays on that device, so a check
   only writes to the account when it finds a run.
