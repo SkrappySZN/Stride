@@ -296,10 +296,11 @@ details.protocol[open] summary .caret{transform:rotate(180deg)}
 .kpi .k-dir{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; padding:4px 9px; border-radius:999px; background:var(--surface-2); color:var(--ink-2)}
 .kpi .k-foot{margin-top:12px; font-size:13px; color:var(--muted)}
 .kpi .k-foot b{color:var(--ink); font-weight:650}
-.te-strip{display:flex; gap:6px; margin-top:10px}
-.te-cell{flex:1; border-radius:8px; padding:7px 8px; background:var(--surface-2); border:1px solid var(--line); font-size:12px; color:var(--muted)}
-.te-cell b{display:flex; align-items:center; gap:5px; font-size:16px; color:var(--ink)}
-.te-cell i{width:9px; height:9px; border-radius:50%; display:inline-block}
+/* equal columns that always fit the card, however many runs are shown */
+.te-strip{display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:5px; margin-top:10px}
+.te-cell{min-width:0; border-radius:8px; padding:7px 4px; background:var(--surface-2); border:1px solid var(--line); font-size:11.5px; color:var(--muted); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.te-cell b{display:flex; align-items:center; justify-content:center; gap:4px; font-size:15px; color:var(--ink)}
+.te-cell i{width:8px; height:8px; border-radius:50%; display:inline-block; flex:none}
 
 .two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .three{grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start}
