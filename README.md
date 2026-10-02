@@ -1,4 +1,4 @@
-# Stride
+# Evil Stride
 
 A running tracker in one HTML file. Drop in FIT files from the Garmin; it tells you
 what to do today, whether the week passed, and whether the same pace is costing
