@@ -874,7 +874,7 @@ async function putSamples(id, s){
    second-by-second samples), written compare-and-set on `version` so a
    stale device fails instead of overwriting. stride_samples is one
    write-once row per run, fetched only when a run page needs it. */
-const SUPABASE = { url:'', key:'' };
+const SUPABASE = { url:'https://fqtmbqwfcgblkaqkhjkq.supabase.co', key:'sb_publishable_E4gLoI0nEo7obY-eJE_g_A_3K1oHYtb' };
 
 const syncOn = () => !!(SUPABASE.url && SUPABASE.key);
 const SESSKEY = 'stride.session', UNSENTKEY = 'stride.unsent';
