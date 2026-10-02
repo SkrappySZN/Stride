@@ -9,23 +9,21 @@ data runs through it, so treat changes to data handling with care.
 
 | File | What it is |
 |---|---|
-| `index.html` | The app. Edit this. |
-| `docs/index.html` | What GitHub Pages serves. Built from `index.html` by `build.py`. Never edit it by hand. |
-| `build.py` | Copies `index.html` → `docs/index.html`. Neil's machine also runs a personal-data check. |
-| `.githooks/pre-commit` | Runs the build when `index.html` is staged, then the leak check. |
+| `index.html` | The app. GitHub Pages serves it straight from `main`. |
+| `.githooks/pre-commit` | Refuses commits containing personal data (only active on Neil's machine). |
 | `supabase-setup.sql` | The database schema and row-level security. |
 
 ## Workflow
 
-1. Run `git config core.hooksPath .githooks` once per clone, so commits rebuild `docs/`.
-2. Work on a branch and open a pull request into `main`. Merging to `main` deploys to
-   every user within about a minute, so Neil reviews first.
-3. To test locally, run `python3 -m http.server 8000` and open http://localhost:8000/.
+1. Push to `main` and it's live for every user within about a minute. There's no build
+   step and no review gate, so test before you push. Use a branch for anything
+   half-finished.
+2. To test locally, run `python3 -m http.server 8000` and open http://localhost:8000/.
    - Sign-in only works on the live site, because the emailed link redirects there.
      Test signed-out: data stays in that browser's IndexedDB.
    - To get data in: import a backup (Setup → Import backup), drop FIT files on Setup, or
      connect your own intervals.icu API key.
-4. Before a PR, check every page you touched in light and dark mode and at phone width
+3. Before pushing, check every page you touched in light and dark mode and at phone width
    (~390px), with no console errors.
 
 ## How it fits together (sections of `index.html`, in order)

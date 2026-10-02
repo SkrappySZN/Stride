@@ -1,18 +1,12 @@
 #!/bin/sh
-# Before every commit: rebuild docs/index.html (what GitHub Pages serves) from
-# index.html, then refuse anything carrying personal data. The repo is public
-# and the site deploys from main.
+# Refuse to commit personal data. The repo is public and GitHub Pages serves
+# index.html straight from main, so whatever is committed goes live.
 #
 # .leakwords is gitignored: the list IS the sensitive data, and it only exists
-# on Neil's machine. Without it there's nothing personal to check, so that step
-# is skipped.
+# on Neil's machine. Without it there's nothing personal to check, so the hook
+# passes.
 # Enable once per clone:  git config core.hooksPath .githooks
 set -eu
-
-if git diff --cached --name-only | grep -qx 'index.html'; then
-  python3 build.py >/dev/null || { echo "pre-commit: build.py failed — see above"; exit 1; }
-  git add docs/index.html
-fi
 
 LW=".leakwords"
 [ -r "$LW" ] || exit 0

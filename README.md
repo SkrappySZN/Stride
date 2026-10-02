@@ -125,9 +125,8 @@ custom SMTP sender (Authentication → Emails → SMTP).
 
 ## Working on it
 
-`index.html` is the source; `docs/index.html` is what GitHub Pages serves, built from it
-by `build.py`. Run `git config core.hooksPath .githooks` once per clone and the pre-commit
-hook rebuilds `docs/` whenever `index.html` is staged, then refuses anything containing a
-string from `.leakwords` (a gitignored list that only exists on Neil's machine). Nobody's
-personal data lives in the repo: it's in each person's Stride account. Work on a branch and
-open a pull request; merging to `main` deploys. `CLAUDE.md` has the architecture and rules.
+`index.html` is the whole app, and GitHub Pages serves it straight from `main`: push and
+it's live. Nobody's personal data lives in the repo; it's in each person's Stride account.
+On Neil's machine, `git config core.hooksPath .githooks` turns on a pre-commit check that
+refuses anything containing a string from `.leakwords` (a gitignored list). `CLAUDE.md`
+has the architecture and rules.
