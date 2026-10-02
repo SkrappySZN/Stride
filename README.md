@@ -125,13 +125,9 @@ custom SMTP sender (Authentication → Emails → SMTP).
 
 ## Working on it
 
-`index.html` is the local copy and its `SEED` block holds personal data. The published
-copy is built from it with the seed emptied:
-
-```
-python3 build.py      # index.html -> docs/index.html, SEED stripped
-```
-
-The build refuses to write an output that still contains a string from `.leakwords`,
-and the pre-commit hook (`git config core.hooksPath .githooks`) blocks the same thing at
-commit time. `index.html` is gitignored.
+`index.html` is the source; `docs/index.html` is what GitHub Pages serves, built from it
+by `build.py`. Run `git config core.hooksPath .githooks` once per clone and the pre-commit
+hook rebuilds `docs/` whenever `index.html` is staged, then refuses anything containing a
+string from `.leakwords` (a gitignored list that only exists on Neil's machine). Nobody's
+personal data lives in the repo: it's in each person's Stride account. Work on a branch and
+open a pull request; merging to `main` deploys. `CLAUDE.md` has the architecture and rules.

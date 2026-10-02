@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Build the publishable copy.
+Build the published copy: index.html -> docs/index.html (what GitHub Pages
+serves). The commit hook runs this for you whenever index.html is staged.
 
-index.html holds your real data in its SEED block (profile, weigh-ins, the
-first runs from your notes). docs/index.html is the same app with that block
-emptied, so the published page carries nothing personal. It refuses to write
-a file that still has your data in it.
+The SEED block is kept empty in the source; personal data lives in your Stride
+account, never in the repo. On a machine with .leakwords, the build also
+refuses to write a file containing any of those strings.
 
     python3 build.py
 """
@@ -24,18 +24,16 @@ BLANK   = "/* SEED:START — empty in the published copy. */\nconst SEED = {};\n
 def load_leakwords():
     p = HERE / ".leakwords"
     if not p.exists():
-        sys.exit("build: REFUSING — .leakwords is missing, so nothing can be checked.")
+        return []   # only Neil's machine has the list; the source holds no personal data
     words = [l.strip() for l in p.read_text().splitlines() if l.strip() and not l.startswith("#")]
-    if not words:
-        sys.exit("build: REFUSING — .leakwords is empty.")
     return words
 
 def main():
     src = SRC.read_text()
     blocks = SEED_RE.findall(src)
-    if len(blocks) != 1:
-        sys.exit(f"build: expected one SEED:START … SEED:END block, found {len(blocks)}")
-    out = SEED_RE.sub(lambda _: BLANK, src)
+    if len(blocks) > 1:
+        sys.exit(f"build: expected at most one SEED:START … SEED:END block, found {len(blocks)}")
+    out = SEED_RE.sub(lambda _: BLANK, src)   # a no-op unless an old seed block is pasted back in
 
     hits = sorted({w for w in load_leakwords() if w in out})
     if hits:
@@ -49,8 +47,8 @@ def main():
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(out)
     print(f"source : {SRC.name}  {len(src):,} bytes")
-    print(f"wrote  : docs/{OUT.name}  {len(out):,} bytes  ({len(src) - len(out):,} bytes of seed data removed)")
-    print("checked: nothing from .leakwords in the published copy")
+    print(f"wrote  : docs/{OUT.name}  {len(out):,} bytes")
+    print("checked: nothing from .leakwords in the published copy" if (HERE / ".leakwords").exists() else "checked: no .leakwords on this machine — leak check skipped")
 
 if __name__ == "__main__":
     main()

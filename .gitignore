@@ -1,9 +1,8 @@
-# Your actual runs. Never commit these.
-# Anchored with a leading slash so docs/index.html — the stripped copy — still ships.
-/index.html
+# Personal data. Never commit these.
+/personal/
 /index.html.bak-*
 /mockup.html
-# The leak-detection word list is itself the sensitive data.
-/.leakwords
 stride-backup-*.json
+# The leak-detection word list is itself personal data (only on Neil's machine).
+/.leakwords
 .DS_Store
