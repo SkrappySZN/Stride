@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Running tracker: automatic Garmin import, heart-rate trends, body metrics and a plan that adapts week to week.">
 <title>Stride</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='48' height='48' rx='11' fill='%23131416'/%3E%3Cg transform='translate%284 4%29 scale%280.83%29 rotate%28-18 24 24%29'%3E%3Crect x='4' y='12' width='40' height='24' rx='12' fill='none' stroke='%23F4F4F0' stroke-width='5'/%3E%3Cpath d='M24 30 H18 a6 6 0 0 1 0 -12 H30 a6 6 0 0 1 0 12' fill='none' stroke='%23d4ff3a' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='24' r='5' fill='%23d4ff3a'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
@@ -27,6 +28,7 @@
   --accent:#d4ff3a;          /* brand volt — fills only, never text on light */
   --accent-ink:#0c0d0e;      /* text that sits on the volt fill */
   --accent-text:#4b6a00;     /* volt-family text that reads on the surface */
+  --logo-accent:#8fb800;     /* the logo's volt, darkened so it holds on light */
 
   --series-1:#2a78d6;
   --series-1-wash:rgba(42,120,214,.08);
@@ -46,7 +48,7 @@
     --bg:#0a0b0d; --surface:#14161a; --surface-2:#1b1e22;
     --ink:#f3f4f0; --ink-2:#b8bbb3; --muted:#7f838a;
     --line:#24272c; --grid:#22252a; --axis:#393d43;
-    --accent-text:#d4ff3a;
+    --accent-text:#d4ff3a; --logo-accent:#d4ff3a;
     --series-1:#3987e5; --series-1-wash:rgba(57,135,229,.10);
     --walk:#4a4e55;
     --good-text:#3fcf3f; --warn-text:#fab219; --crit-text:#ff7a7a;
@@ -58,7 +60,7 @@
   --bg:#0a0b0d; --surface:#14161a; --surface-2:#1b1e22;
   --ink:#f3f4f0; --ink-2:#b8bbb3; --muted:#7f838a;
   --line:#24272c; --grid:#22252a; --axis:#393d43;
-  --accent-text:#d4ff3a;
+  --accent-text:#d4ff3a; --logo-accent:#d4ff3a;
   --series-1:#3987e5; --series-1-wash:rgba(57,135,229,.10);
   --walk:#4a4e55;
   --good-text:#3fcf3f; --warn-text:#fab219; --crit-text:#ff7a7a;
@@ -88,7 +90,7 @@ button{font:inherit;color:inherit}
 .topbar{position:sticky; top:0; z-index:30; background:color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid var(--line)}
 .topbar-in{max-width:1240px; margin:0 auto; padding:0 28px; height:62px; display:flex; align-items:center; gap:28px}
 .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; flex:none}
-.brand-mark{width:30px; height:30px; border-radius:8px; background:var(--accent); display:grid; place-items:center; transform:skewX(-8deg)}
+.brand-mark{width:32px; height:32px; flex:none; color:var(--ink)}
 .brand-name{font-size:26px}
 .tabs{display:flex; gap:2px; flex:1; min-width:0}
 .tab{
@@ -519,7 +521,13 @@ textarea.felt{
 <header class="topbar">
   <div class="topbar-in">
     <a class="brand" href="#today" aria-label="Stride home">
-      <div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0c0d0e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/></svg></div>
+      <svg class="brand-mark" viewBox="-1 -1 50 50" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g transform="rotate(-18 24 24)">
+          <rect x="4" y="12" width="40" height="24" rx="12" fill="none" stroke="currentColor" stroke-width="4"/>
+          <path d="M24 30 H18 a6 6 0 0 1 0 -12 H30 a6 6 0 0 1 0 12" fill="none" stroke="var(--logo-accent)" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="44" cy="24" r="4.5" fill="var(--logo-accent)"/>
+        </g>
+      </svg>
       <span class="brand-name display">Stride</span>
     </a>
     <nav class="tabs" aria-label="Sections">
