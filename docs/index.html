@@ -312,6 +312,7 @@ details.protocol[open] summary .caret{transform:rotate(180deg)}
 .band-deltas{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; opacity:.85}
 .band-deltas:empty{display:none}
 .filter-row{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap}
+.plan-pick{grid-template-columns:repeat(auto-fit, minmax(230px, 1fr))}
 .plan-card{text-align:left; cursor:pointer; font:inherit; color:inherit; display:flex; flex-direction:column; gap:8px; transition:border-color .12s, transform .12s}
 .plan-card:hover{border-color:var(--ink-2)}
 .plan-card[aria-pressed="true"]{border-color:var(--ink); box-shadow:0 0 0 2px var(--accent)}
@@ -320,6 +321,15 @@ details.protocol[open] summary .caret{transform:rotate(180deg)}
 .pc-goal{padding-top:10px; border-top:1px solid var(--line)}
 .pc-goal b{display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .btn[disabled]{opacity:.45; cursor:default}
+.mara-sum{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:16px}
+.mara-sum b{display:block; font-size:34px; line-height:1}
+.mara-sum span{font-size:11.5px; color:var(--muted); font-weight:650}
+.mara-strip{display:flex; align-items:flex-end; gap:3px; height:90px; border-bottom:1px solid var(--axis)}
+.mara-strip i{flex:1; background:var(--series-1); border-radius:4px 4px 0 0; min-width:4px}
+.mara-strip i.cut{opacity:.45}
+.mara-strip i.taper{background:var(--walk)}
+.mara-strip i.race{background:var(--accent); box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+@media (max-width:720px){ .mara-sum{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .card-link:hover{border-color:var(--ink-2)}
 .chart{width:100%; position:relative}
 .chart svg{display:block; width:100%; overflow:visible}
@@ -583,6 +593,11 @@ const PLANS = {
       { phase:'Race',    session:'20 min easy', detail:'Ease off so the legs are fresh',             add:'5K time trial on run 3 — run it, then celebrate',
         third:['5K time trial', 'Warm up 10 min, then run 5K as evenly as you can'] },
     ],
+  },
+  marathon: {
+    name:'Marathon', short:'Marathon', who:'You already run a few times a week and have a race on the calendar. Built backward from race day and from what you can run now.',
+    goal:'Get to the start line healthy, and finish',
+    get weeks(){ return marathonWeeks(); },
   },
   track: {
     name:'Just track', short:'Tracking', who:'You already have your own training. No plan, no weekly gate — Stride logs every run and charts the trends.',
@@ -1284,25 +1299,147 @@ function pendingCheckin(){
   return null;
 }
 
+/* ── Marathon: generated backward from race day ─────────────────────
+   Weeks run from the plan start to race week. The long run climbs ~1.5–2 mi a
+   week from the longest run you can do now, with an easier week every fourth
+   week, peaks at no more than 20, then tapers for 2–3 weeks. Because race day
+   can't move, a missed week isn't repeated: the next long run is instead
+   capped at your longest recent long run + 2 mi (see longCap). */
+const LONG_STEP_MAX = 2, PEAK_MAX = 20;
+// Run days as offsets from the long-run day; race week counts back from race day.
+const MARA_DAYS = { 3:[-4, -2, 0], 4:[-4, -3, -1, 0], 5:[-5, -4, -3, -1, 0] };
+const RACE_WEEK_DAYS = [-5, -3, -1, 0];
+const half = v => Math.round(v * 2) / 2;
+const clampMi = (v, lo, hi) => half(Math.min(hi, Math.max(lo, v)));
+function marathonWeeks(race = doc.race, start = doc.planStart){
+  if (!race?.date || !start) return [];
+  const N = Math.max(1, diffDays(weekStart(start), weekStart(race.date)) / 7 + 1);
+  const taper = N >= 12 ? 3 : N >= 7 ? 2 : 1, B = N - taper, per = race.perWeek ?? 4;
+  const longs = [];
+  let base = Math.max(4, race.longest || 4);
+  for (let i = 1; i <= B; i++){
+    if (B >= 6 && i % 4 === 0 && i < B - 1) longs.push({ mi:half(base * .75), cut:true });
+    else { if (i > 1) base = Math.min(PEAK_MAX, base + (base < 10 ? 1.5 : LONG_STEP_MAX)); longs.push({ mi:half(base), cut:false }); }
+  }
+  const peak = Math.max(...longs.map(l => l.mi), race.longest || 4);
+  const taperLongs = taper === 3 ? [.7, .5] : taper === 2 ? [.6] : [];
+  const weeks = [];
+  longs.forEach((l, i) => {
+    const phase = l.cut ? 'Recovery' : i >= B - 2 ? 'Peak' : i < B / 3 ? 'Base' : 'Build';
+    weeks.push(maraWeek(phase, l.mi, per, !l.cut && (phase === 'Build' || phase === 'Peak')));
+  });
+  taperLongs.forEach(f => weeks.push(maraWeek('Taper', half(peak * f), per, true, .7)));
+  const easy = clampMi(peak * .2, 3, 5);
+  weeks.push({ phase:'Race week', race:true, longMi:26.2,
+    runs:[ { mi:easy, title:`${easy} mi easy`, detail:'Then 4 × 20 sec strides. Legs should feel springy, not tired' },
+           { mi:4, title:'4 mi with 2 at marathon effort', detail:'A last reminder of goal pace — no faster' },
+           { mi:2, title:'2 mi shakeout', detail:'Very easy. Lay out your kit and fuel tonight' },
+           { mi:26.2, long:true, title:'Race day', detail:'Start slower than you want to. Fuel early and on schedule. Walk the aid stations if it helps' } ] });
+  return weeks.map((w, i) => {
+    const miles = half(w.runs.reduce((a, r) => a + r.mi, 0));
+    return { ...w, week:i + 1, miles,
+      session: w.race ? 'Race' : `${w.longMi} mi long run`,
+      detail: w.race ? `Race day ${fmtDateLong(race.date)}` : `${w.runs.length} runs · ~${miles} mi this week`,
+      add: w.phase === 'Recovery' ? 'An easier week so the next block lands' : w.phase === 'Taper' ? 'Less volume, same rhythm — trust it' : w.race ? 'Rest the day after, then walk' : w.runs.find(r => r.mp)?.title ?? '' };
+  });
+}
+function maraWeek(phase, longMi, per, quality, scale = 1){
+  const easy = clampMi(longMi * .35 * scale, 3, 7), med = clampMi(longMi * .5 * scale, 4, 10), mp = clampMi(longMi * .2, 2, 6);
+  const runs = [];
+  const E = (mi, extra = '') => ({ mi, title:`${mi} mi easy`, detail:`Conversational pace${extra}` });
+  const M = quality ? { mi:med, mp:true, title:`${med} mi with the last ${mp} at marathon effort`, detail:'Easy for the rest. Marathon effort is comfortably hard — you could still talk in short sentences' }
+                    : { mi:med, title:`${med} mi easy`, detail:'The midweek medium run. Easy all the way' };
+  if (per === 3) runs.push(E(easy, '. Then 4 × 20 sec strides'), M);
+  if (per === 4) runs.push(E(easy), M, E(3, '. Short and very easy — it’s the day before the long run'));
+  if (per === 5) runs.push(E(easy), M, E(easy, '. Then 4 × 20 sec strides'), E(3, '. Short and very easy — it’s the day before the long run'));
+  runs.push({ mi:longMi, long:true, title:`${longMi} mi long run`,
+    detail: longMi >= 16 ? 'Slower than marathon pace the whole way. Practise race fueling: something every 30–45 min after the first hour'
+      : longMi >= 12 ? 'Easy pace. Take fuel after the first hour — find what your stomach likes now, not on race day'
+      : 'Easy pace, the whole way. Walk breaks are fine' });
+  return { phase, longMi, runs };
+}
+// The adaptive part: never prescribe more than 2 mi beyond what you've actually run lately.
+function longCap(beforeDate){
+  const recent = doc.runs.filter(r => r.date < beforeDate && diffDays(r.date, beforeDate) <= 21).map(r => r.distMi ?? 0);
+  const setupLongest = doc.race?.setAt && diffDays(doc.race.setAt, beforeDate) <= 21 ? doc.race.longest || 0 : 0;
+  return half(Math.max(4, setupLongest, ...recent) + LONG_STEP_MAX);
+}
+const isMarathon = () => doc.planId === 'marathon';
+function maraRunDates(weekIdx){
+  const w = marathonWeeks()[weekIdx]; if (!w) return [];
+  if (w.race) return RACE_WEEK_DAYS.slice(-w.runs.length).map(o => addDays(doc.race.date, o));
+  const longDate = addDays(addDays(weekStart(doc.planStart), weekIdx * 7), ((doc.race.longDay ?? 6) + 6) % 7);
+  return MARA_DAYS[w.runs.length].map(o => addDays(longDate, o));
+}
+function marathonSchedule(from, n){
+  const out = [], red = redFlagActive(), weeks = marathonWeeks();
+  for (let i = 0; i < n; i++){
+    const d = addDays(from, i), wi = diffDays(weekStart(doc.planStart), weekStart(d)) / 7;
+    let kind = 'rest', note = '', slot = null;
+    if (runsOn(d).length) kind = 'done';
+    else if (isRef(d)) kind = 'ref';
+    else if (wi < 0 || wi >= weeks.length) note = wi < 0 ? 'Plan starts Monday' : 'After the race';
+    else if (red) note = 'Paused';
+    else { const k = maraRunDates(wi).indexOf(d); if (k >= 0){ kind = 'run'; slot = k + 1; } }
+    out.push({ date:d, kind, note, slot });
+  }
+  return out;
+}
+function marathonSession(pw, slot, date){
+  const w = marathonWeeks()[pw - 1]; if (!w) return { title:'Rest', detail:'', extra:'' };
+  const r = w.runs[slot - 1] ?? w.runs.at(-1);
+  if (r.long && !w.race && date){
+    const cap = longCap(weekStart(date));
+    if (r.mi > cap) return { title:`${cap} mi long run`, detail:r.detail, extra:`Planned ${r.mi} mi — held at ${cap} because your longest run in the last three weeks was ${half(cap - LONG_STEP_MAX)} mi. Jumping more than 2 mi is how marathon builds break`, mi:cap };
+  }
+  return { title:r.title, detail:r.detail, extra:'', mi:r.mi };
+}
+function sorenessItem(runs){
+  const cks = doc.checkins.filter(c => runs.some(r => r.id === c.runId));
+  const red = cks.some(c => c.value === 'red');
+  const sore48 = cks.filter(c => c.stage === '48' && c.value !== 'none');
+  const last = runs.at(-1);
+  const pending48 = !!last && !doc.checkins.some(c => c.runId === last.id && c.stage === '48') && hoursSince(last) < 72;
+  let item;
+  if (red) item = ['crit', 'No red-flag symptoms', 'Hard stop logged — plan paused'];
+  else if (sore48.length) item = ['crit', 'No soreness past 48 hrs', `${SORE[sore48[0].value]} still sore at 48 hrs`];
+  else if (pending48){
+    const sore24 = cks.find(c => c.runId === last.id && c.stage === '24' && c.value !== 'none');
+    const due = new Date(Date.parse(last.start) + 48 * 36e5);
+    item = ['wait', 'No soreness past 48 hrs', `${sore24 ? SORE[sore24.value] + ' sore at ~24 hrs — normal. ' : ''}48-hr check ${DOW_LONG[due.getDay()]} ${due.getHours() >= 17 ? 'night' : ''}`.trim()];
+  }
+  else item = ['good', 'No soreness past 48 hrs', runs.length ? 'Clear' : '—'];
+  return { item, red, sore48, pending48 };
+}
+function marathonGate(w){
+  const pl = marathonWeeks()[w.planWeek - 1], runs = w.runs, n = runs.length, items = [];
+  if (!pl) return { items:[['wait', 'Outside the plan', '—']], auto:'advance', verdict:['wait', 'No plan week.', ''] };
+  const target = pl.race ? null : marathonSession(w.planWeek, pl.runs.length, w.start).mi ?? pl.longMi;
+  const longest = n ? Math.max(...runs.map(r => r.distMi ?? 0)) : 0;
+  const longDone = target != null && longest >= target * .8;
+  const miles = half(runs.reduce((a, r) => a + (r.distMi ?? 0), 0));
+  if (!pl.race) items.push([longDone ? 'good' : w.current ? 'wait' : 'warn', `Long run · ${target} mi`, longest ? `Longest this week ${fmtMi(longest)} mi` : 'Not yet']);
+  items.push([n >= pl.runs.length - 1 ? 'good' : w.current ? 'wait' : 'warn', `${pl.runs.length} runs`, n ? `${n} so far · ${miles} of ~${pl.miles} mi` : 'None yet']);
+  const so = sorenessItem(runs);
+  items.push(so.item);
+  let verdict;
+  if (so.red) verdict = ['crit', 'Paused.', 'Resume once you’re cleared — the next long run will be held at what you’ve recently run.'];
+  else if (so.sore48.length) verdict = ['warn', 'Ease off.', 'Soreness lasted past 48 hours. Make next week’s runs easy and skip any marathon-effort work.'];
+  else if (pl.race) verdict = ['wait', 'Race week.', 'Rest, fuel, sleep. The work is done.'];
+  else if (longDone && n >= pl.runs.length - 1) verdict = ['good', 'On track.', 'Next week’s long run steps up as planned.'];
+  else if (w.current) verdict = ['wait', 'In progress.', longDone ? `${pl.runs.length - 1 - n} more run${pl.runs.length - 1 - n === 1 ? '' : 's'} this week.` : 'The long run is the one that matters most.'];
+  else verdict = ['warn', 'Short week.', 'Next week’s long run is held near your longest recent run rather than jumping ahead.'];
+  return { items, auto:'advance', verdict };
+}
+
 /* ── Plan state: walk calendar weeks from the start, gate each one ─ */
 function gateFor(w){
   const runs = w.runs, n = runs.length, p = doc.profile, items = [];
   items.push([n >= 3 ? 'good' : w.current ? 'wait' : 'crit', '3 runs completed',
     n ? `${n} so far · ${runs.map(r => DOW[parseYmd(r.date).getDay()]).join(', ')}` : 'None yet']);
 
-  const cks = doc.checkins.filter(c => runs.some(r => r.id === c.runId));
-  const red = cks.some(c => c.value === 'red');
-  const sore48 = cks.filter(c => c.stage === '48' && c.value !== 'none');
-  const last = runs.at(-1);
-  const pending48 = !!last && !doc.checkins.some(c => c.runId === last.id && c.stage === '48') && hoursSince(last) < 72;
-  if (red) items.push(['crit', 'No red-flag symptoms', 'Hard stop logged — plan paused']);
-  else if (sore48.length) items.push(['crit', 'No soreness past 48 hrs', `${SORE[sore48[0].value]} still sore at 48 hrs`]);
-  else if (pending48){
-    const sore24 = cks.find(c => c.runId === last.id && c.stage === '24' && c.value !== 'none');
-    const due = new Date(Date.parse(last.start) + 48 * 36e5);
-    items.push(['wait', 'No soreness past 48 hrs', `${sore24 ? SORE[sore24.value] + ' sore at ~24 hrs — normal. ' : ''}48-hr check ${DOW_LONG[due.getDay()]} ${due.getHours() >= 17 ? 'night' : ''}`.trim()]);
-  }
-  else items.push(['good', 'No soreness past 48 hrs', n ? 'Clear' : '—']);
+  const { item, red, sore48, pending48 } = sorenessItem(runs);
+  items.push(item);
 
   const over = runs.filter(r => r.maxHr > p.guardHr);
   const peak = n ? Math.max(...runs.map(r => r.maxHr ?? 0)) : null;
@@ -1336,8 +1473,9 @@ function planState(){
     const we = addDays(ws, 6);
     const w = { start:ws, end:we, planWeek:pw, current: ws === cur,
       runs: sortedRuns().filter(r => r.date >= ws && r.date <= we) };
-    w.gate = gateFor(w);
-    if (!w.current){
+    w.gate = isMarathon() ? marathonGate(w) : gateFor(w);
+    if (isMarathon()) pw++;   // race day doesn't move, so weeks follow the calendar
+    else if (!w.current){
       const ov = doc.decisions[ws];
       w.decision = ov || w.gate.auto; w.overridden = !!ov;
       pw = w.decision === 'advance' ? Math.min(planLen() + 1, pw + 1) : w.decision === 'back' ? Math.max(1, pw - 1) : pw;
@@ -1345,12 +1483,14 @@ function planState(){
     weeks.push(w);
     ws = addDays(ws, 7);
   }
+  if (isMarathon()) weeks.forEach(w => { w.decision = 'advance'; });
   return weeks;
 }
 const planWeekObj = pw => activePlan().weeks[Math.min(pw, planLen()) - 1];
 
 // Next N days: rest between runs, three a week, rest before a sport day.
 function schedule(from, n){
+  if (isMarathon()) return marathonSchedule(from, n);
   const out = [], red = redFlagActive(), counts = {};
   const count = ws => counts[ws] ??= doc.runs.filter(r => weekStart(r.date) === ws).length;
   for (let i = 0; i < n; i++){
@@ -1370,7 +1510,8 @@ function schedule(from, n){
   }
   return out;
 }
-function sessionFor(pw, slot){
+function sessionFor(pw, slot, date){
+  if (isMarathon()) return marathonSession(pw, slot, date);
   const p = planWeekObj(pw);
   if (p.third && slot === 3) return { title:p.third[0], detail:p.third[1], extra:'' };
   return { title:p.session, detail:p.detail, extra: slot && p.strides && slot <= p.strides ? 'Then 4 × 20 sec strides at ~80% — a full minute of walking between' : '' };
@@ -1736,10 +1877,10 @@ function renderToday(){
     copy = 'Not a rest day — another sport still loads the legs. Stretch between sessions, and skip the next run if the legs are done.';
     tasks = tasksFor(today, ['sporthip', 'calf']);
   } else if (t.kind === 'run'){
-    const s = sessionFor(pw, t.slot);
+    const s = sessionFor(pw, t.slot, today);
     eyebrow = `${dateLine} · week ${Math.min(pw, len)}, run ${t.slot}`;
     title = esc(s.title).replace(/^(\S+)/, '$1 <em>') + '</em>';
-    copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''} The protocol is below.`;
+    copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''}${isMarathon() ? '' : ' The protocol is below.'}`;
     tasks = tasksFor(today, ['hip', 'calf']);
   } else {
     title = 'Rest <em>day</em>';
@@ -1757,22 +1898,27 @@ function renderToday(){
   else if (!nr) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><p class="card-sub" style="margin:0">Nothing scheduled in the next 7 days — tap a day in “Next 7 days” to change sport days.</p></div>`;
   else {
     const nwk = diffDays(cur.start, nr.date) >= 7 ? Math.min(cur.gate.auto === 'advance' ? pw + 1 : pw, len) : Math.min(pw, len);
-    const s = sessionFor(nwk, nr.slot);
+    const s = sessionFor(nwk, nr.slot, nr.date);
     next = `<div class="card">
       <div class="card-head"><h2>${nr.date === today ? 'Today’s run' : 'Next run'}</h2><span class="card-sub">${fmtRel(nr.date)}${fmtRel(nr.date).includes(',') ? '' : ' · ' + fmtDate(nr.date)} · week ${nwk}, run ${nr.slot}</span></div>
       <div class="next-run-big display">${esc(s.title)}</div>
       <div class="card-sub">${esc(s.detail)}${s.extra ? '. ' + esc(s.extra) : ''}</div>
-      <div class="kv">
+      ${isMarathon() ? `<div class="kv">
+        <div>Distance<b class="num">${s.mi} mi</b></div>
+        <div>Effort<b>${/marathon effort/.test(s.title) ? 'Easy, then marathon effort' : s.title === 'Race day' ? 'Even, patient' : 'Easy enough to talk'}</b></div>
+        <div>Easy means HR under<b class="num">${doc.profile.zones.easy}</b></div>
+        ${s.mi >= 12 ? `<div>Fuel<b>Every 30–45 min after hour 1</b></div>` : ''}
+      </div>` : `<div class="kv">
         <div>Pace<b>Easy enough to talk</b></div>
         <div>Route<b>Flat test route</b></div>
         <div>Walk break if HR<b class="num">&gt; ${doc.profile.zones.mod}</b></div>
         <div>Ceiling<b class="num">${doc.profile.lthr} bpm</b></div>
-      </div>
-      <details class="protocol" style="margin-top:18px"${nr.date === today ? ' open' : ''}>
+      </div>`}
+      ${isMarathon() ? '' : `<details class="protocol" style="margin-top:18px"${nr.date === today ? ' open' : ''}>
         <summary><span class="eyebrow" style="color:var(--ink-2)">Run protocol · 6 steps</span><svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></summary>
         <ul class="task-list">${PROTOCOL(doc.profile).map(([id, mm, sub], i) => taskHTML(`${nr.date}|${id}`, `${i + 1}. ${mm}`, sub)).join('')}</ul>
         <p class="card-sub" style="margin:12px 0 0">Auto-pause off. Same time of day where you can. Uploads that break steps 1, 4 or 5 get flagged and kept out of the trend lines.</p>
-      </details>
+      </details>`}
     </div>`;
   }
 
@@ -1792,13 +1938,14 @@ function renderToday(){
         <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div><div class="d-tag tag-${k}">${l}${d.kind === 'run' && d.note ? '?' : ''}</div></button>`;
     }).join('')}</div>
     <div class="plan-bar" style="grid-template-columns:repeat(${len},1fr);margin-top:18px">${activePlan().weeks.map((_, i) => `<div class="plan-seg${i + 1 < pw ? ' done' : i + 1 === pw ? ' now' : ''}"></div>`).join('')}</div>
-    <p class="card-sub" style="margin:10px 0 0">${pw < len ? `Week ${pw + 1}: ${esc(planWeekObj(pw + 1).detail.toLowerCase())}. ${esc(planWeekObj(pw + 1).add)}.` : 'Final week. After this, re-test on the flat route and pick what’s next on the Plan tab.'}</p>
+    <p class="card-sub" style="margin:10px 0 0">${pw < len ? `Week ${pw + 1}: ${[planWeekObj(pw + 1).detail, planWeekObj(pw + 1).add].filter(Boolean).map(x => esc(x.charAt(0).toLowerCase() + x.slice(1))).join('. ')}.` : isMarathon() ? 'Race week. The work is done — rest, eat, sleep.' : 'Final week. After this, re-test on the flat route and pick what’s next on the Plan tab.'}</p>
   </div>`;
 
   const runsDone = weekRuns.length;
   $('#page-today').innerHTML = band({
     eyebrow, title, sub: copy,
-    stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), '/3'], ['Miles this week', weekMi.toFixed(1)]],
+    stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), `/${pwo.runs?.length ?? 3}`],
+      isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>`,
   }) + `<div class="wrap">${checkinCards()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
@@ -2227,7 +2374,14 @@ function renderPlan(){
   const weeks = planState(), cur = weeks.at(-1), pw = cur.planWeek;
   const past = weeks.filter(w => !w.current).reverse();
   const DEC = { advance:'Advanced', repeat:'Repeated', back:'Went back a week' };
-  $('#page-plan').innerHTML = band({
+  const mara = isMarathon(), toRace = mara ? diffDays(todayYmd(), doc.race.date) : 0;
+  $('#page-plan').innerHTML = band(mara ? {
+    eyebrow: `${esc(doc.race.name || 'Marathon')} · ${fmtDateLong(doc.race.date)} · ${doc.race.perWeek} runs a week`,
+    title: toRace > 0 ? `Race in <em>${toRace}</em> days` : toRace === 0 ? 'Race <em>day</em>' : 'Race <em>done</em>',
+    sub: `Built backward from race day. Long runs climb from ${doc.race.longest} mi to ${Math.max(...plan.weeks.filter(w => !w.race).map(w => w.longMi))} mi, then taper. Miss a long run and the next one holds near what you’ve actually run — it never jumps more than 2 mi.`,
+    stats: [['Week', Math.min(pw, len), `/${len}`], ['Phase', esc(planWeekObj(pw).phase)], ['This week', planWeekObj(pw).miles, 'mi']],
+    extra: `<div class="btn-row"><a class="btn small" href="#welcome" data-pick-plan="marathon" style="text-decoration:none">Edit race</a><a class="btn small" href="#welcome" style="text-decoration:none">Change plan</a></div>`,
+  } : {
     eyebrow: `${esc(plan.name)} · three runs a week, rest day between`,
     title: pw > len ? 'Plan <em>done</em>' : `Week <em>${pw}</em>`,
     sub: `Goal: ${esc(plan.goal)}. Each week has to pass its gate before the next one unlocks.`,
@@ -2237,19 +2391,31 @@ function renderPlan(){
       <div class="col"><div class="plan-list">
         ${plan.weeks.map((p, i) => { const w = i + 1; return `<div class="plan-row${w === Math.min(pw, len) ? ' now' : ''}" style="${w < pw ? 'opacity:.55' : ''}">
           <div class="wk display num">${w}</div>
-          <div><div class="p-t">${p.phase === p.session ? esc(p.session) : `${esc(p.phase)} · ${esc(p.session)}`}</div><div class="p-s">${esc(p.detail)}</div></div>
+          <div><div class="p-t">${p.phase === p.session ? esc(p.session) : `${esc(p.phase)} · ${esc(p.session)}`}</div><div class="p-s">${mara ? `Week of ${fmtDate(addDays(weekStart(doc.planStart), i * 7)).slice(4)} · ` : ''}${esc(p.detail)}</div></div>
           <div class="p-s" style="max-width:240px">${esc(p.add)}</div>
         </div>`; }).join('')}
       </div></div>
       <div class="col">
-        <div class="card"><div class="card-head"><h2>Week history</h2><span class="card-sub">decided by the gate; override if needed</span></div>
+        <div class="card"><div class="card-head"><h2>Week history</h2><span class="card-sub">${mara ? 'how each week went' : 'decided by the gate; override if needed'}</span></div>
           ${past.length ? `<ul class="hist">${past.map((w, i) => `<li>
             <span><b>${fmtDate(w.start).slice(4)} – ${fmtDate(w.end).slice(4)}</b> · week ${Math.min(w.planWeek, len)} · ${w.runs.length} run${w.runs.length === 1 ? '' : 's'}</span>
-            <span>${DEC[w.decision]}${w.overridden ? ' (you)' : ''}
-              ${i === 0 ? `· <button class="link-btn" data-decide="${w.start}" data-val="${w.decision === 'advance' ? 'repeat' : 'advance'}">${w.decision === 'advance' ? 'Repeat instead' : 'Advance instead'}</button>${w.overridden ? ` · <button class="link-btn" data-decide="${w.start}" data-val="">Use gate</button>` : ''}` : ''}</span>
+            <span>${mara ? esc(w.gate.verdict[1].replace(/\.$/, '')) : DEC[w.decision]}${w.overridden ? ' (you)' : ''}
+              ${i === 0 && !mara ? `· <button class="link-btn" data-decide="${w.start}" data-val="${w.decision === 'advance' ? 'repeat' : 'advance'}">${w.decision === 'advance' ? 'Repeat instead' : 'Advance instead'}</button>${w.overridden ? ` · <button class="link-btn" data-decide="${w.start}" data-val="">Use gate</button>` : ''}` : ''}</span>
           </li>`).join('')}</ul>` : '<p class="card-sub" style="margin:0">First week in progress.</p>'}
         </div>
-        <div class="card"><div class="card-head"><h2>Rules that override the plan</h2></div>
+        ${mara ? `<div class="card"><div class="card-head"><h2>Rules that override the plan</h2></div>
+          <ul class="rules">
+            <li><b>Easy runs are easy.</b> Most of your miles should be under ${doc.profile.zones.easy} bpm. Going harder on easy days is the most common way to arrive at race day tired.</li>
+            <li><b>The long run never jumps more than 2 mi</b> past the longest you’ve run in the last three weeks — Stride caps it for you.</li>
+            <li><b>Missed a run?</b> Skip it; don’t stack it onto another day. Missed the long run? Next week’s holds steady.</li>
+            <li><b>Soreness past 48 hours, or sharp pain:</b> make the next week all easy, no marathon-effort work.</li>
+            <li><b>One calf much worse, shin-bone pain, a spot on the bone that hurts to press, or pain that changes your stride:</b> stop and get it looked at.</li>
+            <li><b>Practise fueling</b> on every long run over 12 mi. Nothing new on race day — shoes, food or kit.</li>
+          </ul>
+        </div>
+        <div class="card"><div class="card-head"><h2>Effort</h2></div>
+          <p class="card-sub" style="margin:0"><b>Easy</b> — you can talk in full sentences, HR under ${doc.profile.zones.easy}. <b>Marathon effort</b> — comfortably hard, short sentences only, roughly ${doc.profile.zones.easy}–${doc.profile.zones.mod}. In the race, the first half should feel too easy.</p>
+        </div>` : `<div class="card"><div class="card-head"><h2>Rules that override the plan</h2></div>
           <ul class="rules">
             <li><b>Sport day or big day on your feet:</b> rest the day before, and skip the run right after if the legs are toast.</li>
             <li><b>Soreness past 48 hours, or sharp pain:</b> repeat the week.</li>
@@ -2261,17 +2427,39 @@ function renderPlan(){
         </div>
         <div class="card"><div class="card-head"><h2>Pacing</h2></div>
           <p class="card-sub" style="margin:0">Run slow enough to hold a conversation. If that’s barely faster than a walk, don’t shuffle — control effort with <b>interval length, not pace</b>: jog 2 min, walk 90 sec, × 5, walking until HR is back under ${doc.profile.zones.easy}. If HR passes ~${doc.profile.zones.mod}, take a walk break.</p>
-        </div>
+        </div>`}
       </div>
     </div></div>`;
 }
 
 /* ═══ WELCOME / CHOOSE A PLAN ════════════════════════════════════════ */
-const welcomeUi = { plan:null, start:null };
+const welcomeUi = { plan:null, start:null, race:null };
+// Live preview of a marathon plan from the form, with a straight answer when time is short.
+function maraPreview(){
+  const r = welcomeUi.race, start = welcomeUi.start;
+  if (!r?.date) return '<p class="card-sub" style="margin:0">Pick the race date to see the plan.</p>';
+  const weeks = diffDays(weekStart(start), weekStart(r.date)) / 7 + 1;
+  if (r.date <= start) return '<div class="note">' + WARN_SVG + '<div><b>That date is before the plan would start.</b></div></div>';
+  const ws = marathonWeeks({ ...r }, start), build = ws.filter(w => !w.race && w.phase !== 'Taper');
+  const peak = build.length ? Math.max(...build.map(w => w.longMi)) : r.longest;
+  const top = Math.max(0, ...ws.filter(w => !w.race).map(w => w.miles));
+  let warn = '';
+  if (weeks < 4) warn = `<b>${weeks} week${weeks === 1 ? '' : 's'} isn’t enough to build anything safely.</b> Stride can only taper you from where you are. If ${r.longest} mi is your longest run, think hard about the half, or a later race.`;
+  else if (peak < 16) warn = `<b>The long run only reaches ${peak} mi before the taper.</b> Most plans want 16–20. You can still finish — with planned walk breaks from the start — but a later race or the half would be kinder to your legs.`;
+  return `<div class="mara-sum">
+      <div><b class="display num">${ws.length}</b><span>weeks</span></div>
+      <div><b class="display num">${peak}</b><span>mi peak long run</span></div>
+      <div><b class="display num">${top}</b><span>mi biggest week</span></div>
+      <div><b class="display num">${ws.filter(w => w.phase === 'Taper').length + 1}</b><span>weeks of taper</span></div>
+    </div>
+    <div class="mara-strip">${ws.map(w => `<i style="height:${Math.max(8, w.longMi / 26.2 * 100)}%" class="${w.race ? 'race' : w.phase === 'Taper' ? 'taper' : w.phase === 'Recovery' ? 'cut' : ''}" data-tip="Week ${w.week} · ${esc(w.phase)}<br>${w.race ? 'Race' : w.longMi + ' mi long run'} · ~${w.miles} mi"></i>`).join('')}</div>
+    <div class="legend" style="margin:10px 0 0"><span><i style="background:var(--series-1)"></i>Build</span><span><i style="background:var(--series-1);opacity:.45"></i>Easier week</span><span><i style="background:var(--walk)"></i>Taper</span><span><i style="background:var(--accent)"></i>Race</span></div>
+    ${warn ? `<div class="note" style="margin-top:14px">${WARN_SVG}<div>${warn}</div></div>` : ''}`;
+}
 function planChoices(sel){
-  return `<div class="grid three plan-pick">${Object.entries(PLANS).map(([id, pl]) => `
+  return `<div class="grid plan-pick">${Object.entries(PLANS).map(([id, pl]) => `
     <button class="card plan-card" data-pick-plan="${id}" aria-pressed="${sel === id}">
-      <div class="eyebrow">${pl.weeks.length ? pl.weeks.length + ' weeks · 3 runs a week' : 'No plan'}</div>
+      <div class="eyebrow">${id === 'marathon' ? 'Built from your race date · 3–5 runs a week' : pl.weeks.length ? pl.weeks.length + ' weeks · 3 runs a week' : 'No plan'}</div>
       <div class="pc-name display">${esc(pl.name)}</div>
       <p>${esc(pl.who)}</p>
       ${pl.goal ? `<p class="pc-goal"><b>Goal</b> ${esc(pl.goal)}</p>` : '<p class="pc-goal"><b>You get</b> runs, trends and body data — no assignments</p>'}
@@ -2283,8 +2471,10 @@ function renderWelcome(){
   const thisMon = weekStart(todayYmd()), nextMon = addDays(thisMon, 7);
   const keep = doc.planStart && doc.planStart < thisMon && doc.runs.length ? doc.planStart : null;
   welcomeUi.start ??= keep ?? thisMon;
+  welcomeUi.race ??= { date:'', name:'', longest:8, perWeek:4, longDay:6, ...(doc.race ?? {}) };
+  if (welcomeUi.plan === 'marathon' && doc.planId !== 'marathon' && welcomeUi.start === keep) welcomeUi.start = thisMon;
   const opts = [...(keep ? [[keep, `Keep my start · ${fmtDate(keep).slice(4)}`]] : []), [thisMon, `This week · ${fmtDate(thisMon).slice(4)}`], [nextMon, `Next Monday · ${fmtDate(nextMon).slice(4)}`]];
-  const coachedPick = welcomeUi.plan && PLANS[welcomeUi.plan].weeks.length;
+  const coachedPick = welcomeUi.plan && (welcomeUi.plan === 'marathon' || PLANS[welcomeUi.plan].weeks.length);
   $('#page-welcome').innerHTML = band({
     eyebrow: first ? 'Welcome to Stride' : 'Change plan',
     title: first ? 'Pick your <em>plan</em>' : 'Switch <em>plans</em>',
@@ -2292,6 +2482,20 @@ function renderWelcome(){
       : 'Your runs, check-ins and body data stay exactly as they are. Only the weekly assignments change.',
   }) + `<div class="wrap">
     ${planChoices(welcomeUi.plan)}
+    ${welcomeUi.plan === 'marathon' ? (() => { const r = welcomeUi.race; return `<div class="section-label">Your race</div>
+      <div class="grid two" style="align-items:start">
+        <div class="card"><div class="field-row">
+          <div class="field"><label for="mr-date">Race date</label><input id="mr-date" type="date" min="${addDays(todayYmd(), 7)}" value="${esc(r.date)}"></div>
+          <div class="field"><label for="mr-name">Race (optional)</label><input id="mr-name" type="text" placeholder="e.g. CIM" value="${esc(r.name)}"></div>
+          <div class="field"><label for="mr-long">Longest run, last 4 weeks (mi)</label><input id="mr-long" type="number" min="1" max="22" step="0.5" inputmode="decimal" value="${r.longest}"></div>
+        </div>
+        <div class="section-label" style="margin-top:18px">Runs a week</div>
+        <div class="filter-row">${[3, 4, 5].map(n => `<button class="pill" data-mr-per="${n}" aria-pressed="${r.perWeek === n}">${n}${n === 4 ? ' · recommended' : ''}</button>`).join('')}</div>
+        <div class="section-label">Long run on</div>
+        <div class="filter-row" style="margin:0">${[[6, 'Saturday'], [0, 'Sunday']].map(([d, l]) => `<button class="pill" data-mr-day="${d}" aria-pressed="${r.longDay === d}">${l}</button>`).join('')}</div>
+        </div>
+        <div class="card"><div class="card-head"><h2>Your plan</h2><span class="card-sub">long run by week</span></div><div id="mara-preview">${maraPreview()}</div></div>
+      </div>`; })() : ''}
     ${coachedPick ? `<div class="section-label">Start</div>
       <div class="filter-row">${opts.map(([d, l]) => `<button class="pill" data-pick-start="${d}" aria-pressed="${welcomeUi.start === d}">${esc(l)}</button>`).join('')}</div>` : ''}
     <div class="btn-row" style="margin-top:22px">
@@ -2640,6 +2844,8 @@ async function importBackup(file){
 document.addEventListener('click', async e => {
   const pk = e.target.closest('[data-pick-plan]');
   if (pk){ welcomeUi.plan = pk.dataset.pickPlan; if (location.hash !== '#welcome' && doc.planId) location.hash = 'welcome'; else renderWelcome(); return; }
+  const mp = e.target.closest('[data-mr-per], [data-mr-day]');
+  if (mp){ if (mp.dataset.mrPer) welcomeUi.race.perWeek = +mp.dataset.mrPer; else welcomeUi.race.longDay = +mp.dataset.mrDay; renderWelcome(); return; }
   const ps = e.target.closest('[data-pick-start]');
   if (ps){ welcomeUi.start = ps.dataset.pickStart; renderWelcome(); return; }
   const br = e.target.closest('[data-body-range]');
@@ -2718,13 +2924,24 @@ document.addEventListener('click', async e => {
     }
     case 'welcome-go': {
       if (!welcomeUi.plan) break;
+      if (welcomeUi.plan === 'marathon'){
+        const r = welcomeUi.race;
+        if (!r.date || r.date <= welcomeUi.start){ toast('Pick a race date after the plan starts'); break; }
+        if (!(r.longest > 0)){ toast('Enter your longest recent run'); break; }
+        const moved = doc.race?.date !== r.date || doc.planStart !== welcomeUi.start;
+        doc.race = { ...r, setAt: todayYmd() };
+        doc.planId = 'marathon'; doc.planStart = welcomeUi.start;
+        if (moved) doc.decisions = {};
+        welcomeUi.plan = welcomeUi.start = welcomeUi.race = null;
+        await save(); location.hash = 'today'; render(); break;
+      }
       const changed = doc.planId !== welcomeUi.plan;
       doc.planId = welcomeUi.plan;
       if (PLANS[doc.planId].weeks.length && (changed || welcomeUi.start !== doc.planStart)){
         if (welcomeUi.start !== doc.planStart) doc.decisions = {};   // a new start date means a fresh week history
         doc.planStart = welcomeUi.start;
       }
-      welcomeUi.plan = welcomeUi.start = null;
+      welcomeUi.plan = welcomeUi.start = welcomeUi.race = null;
       await save(); location.hash = 'today'; render(); break;
     }
     case 'add-measure': {
@@ -2762,6 +2979,15 @@ document.addEventListener('keydown', e => {
   if (e.target.closest('input,textarea') || e.metaKey || e.ctrlKey) return;
   const pages = { 1:'today', 2:'progress', 3:'runs', 4:'body', 5:'plan', 6:'setup' };
   if (pages[e.key]) location.hash = pages[e.key];
+});
+
+document.addEventListener('input', e => {
+  if (!e.target.id?.startsWith('mr-') || !welcomeUi.race) return;
+  const r = welcomeUi.race, v = e.target.value;
+  if (e.target.id === 'mr-date') r.date = v;
+  if (e.target.id === 'mr-name') r.name = v;
+  if (e.target.id === 'mr-long') r.longest = Math.min(22, Math.max(0, +v || 0));
+  const pv = $('#mara-preview'); if (pv) pv.innerHTML = maraPreview();
 });
 
 /* ── Routing ─────────────────────────────────────────────────────── */

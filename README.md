@@ -25,6 +25,13 @@ check-ins and body data never change when you switch.
   1.5 miles, then some speed.
 - **Build to 5K** — 8 weeks for people who can already jog 20 minutes; long runs, then
   5K-effort intervals, then a time trial.
+- **Marathon** — generated backward from race day, from three inputs: race date, the longest
+  run you've done in the last four weeks, and 3–5 runs a week (long run Saturday or Sunday).
+  The long run climbs ~1.5–2 mi a week with an easier week every fourth, peaks at no more
+  than 20 mi, then tapers 2–3 weeks. Race day can't move, so weeks follow the calendar
+  instead of repeating; the adaptive part is the cap — a long run is never more than 2 mi
+  past the longest run in the last three weeks. Setup previews the plan and says plainly
+  when the timeline is too short for the long run to reach 16 mi.
 - **Just track** — no plan, no gate. Today becomes a weekly summary.
 
 Coached plans are three runs a week with a rest day between; each week has to pass its
