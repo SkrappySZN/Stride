@@ -42,7 +42,7 @@ def main():
         sys.exit(f"build: REFUSING to write — personal data still present: {', '.join(hits)}")
 
     # and it still has to be a working app
-    for marker in ("function analyzeFit(", "function renderToday(", "const SUPABASE", "syncInit(fromLink);"):
+    for marker in ("function analyzeFit(", "function renderToday(", "const SUPABASE", "syncInit(fromLink)", "function checkIntervals("):
         if marker not in out:
             sys.exit(f"build: output is missing `{marker}` — something was over-stripped")
 

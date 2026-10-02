@@ -1130,7 +1130,7 @@ async function syncInit(fromLink){
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden'){ if (pushTimer) pushRow().catch(() => {}); }
-  else refreshFromRemote();
+  else refreshFromRemote().then(() => checkIntervals());
 });
 
 /* two-way choice, for sync conflicts */
@@ -2020,6 +2020,7 @@ function renderUpload(){
       </div>
       <div class="col">
         ${accountCard()}
+        ${intervalsCard()}
         <div class="card"><div class="card-head"><h2>Zones & thresholds</h2><span class="card-sub">changing these re-scores every run</span></div>
           <div class="field-row">
             <div class="field"><label for="s-lthr">Lactate threshold HR</label><input id="s-lthr" type="number" value="${p.lthr}"></div>
@@ -2055,6 +2056,7 @@ function renderUpload(){
   drop.addEventListener('drop', e => handleFiles([...e.dataTransfer.files]));
   $('#file-in').addEventListener('change', e => { handleFiles([...e.target.files]); e.target.value = ''; });
   $('#backup-in').addEventListener('change', e => { importBackup(e.target.files[0]); e.target.value = ''; });
+  paintIcu();
 }
 function accountCard(){
   if (!syncOn()) return '';
@@ -2166,6 +2168,119 @@ async function importFit(name, buf){
   return { status: fl.length ? 'warn' : 'good', title, sub: sub + (fl.length ? ` · ${fl.map(f => esc(f[1])).join(', ')}` : ''), runId:run.id, makeTest };
 }
 
+/* ── intervals.icu: new runs arrive on their own ──────────────────────
+   Garmin (or Coros, Suunto, Wahoo) syncs to intervals.icu, which keeps the
+   original FIT file; this pulls new runs' files and feeds them through the
+   same importFit as a dropped file. Only the API key lives in the synced doc.
+   What's been checked is per-device, so a check never writes to the account
+   unless it actually found a run. */
+const ICU = 'https://intervals.icu/api/v1';
+const ICU_RUNS = ['Run', 'TrailRun', 'VirtualRun'];
+const ICUKEY = 'stride.icu';
+const icuUi = { status:'idle', msg:'' };
+let icuBusy = false;
+const icuLocal = () => {
+  let s = {}; try { s = JSON.parse(localStorage.getItem(ICUKEY)) || {}; } catch {}
+  return s.tail === doc.intervals?.key?.slice(-6) ? s : { tail: doc.intervals?.key?.slice(-6), seen:[] };   // a new key starts over
+};
+const setIcuLocal = s => { try { localStorage.setItem(ICUKEY, JSON.stringify(s)); } catch {} };
+async function icuGet(path, key){
+  const r = await fetch(ICU + path, { headers:{ Authorization:'Basic ' + btoa('API_KEY:' + key) } });
+  if (r.status === 401 || r.status === 403){ const e = new Error('intervals.icu didn’t accept the API key — paste it again'); e.auth = true; throw e; }
+  if (!r.ok) throw new Error('intervals.icu returned ' + r.status);
+  return r;
+}
+// The original file comes back gzipped; Garmin's own exports can be zips.
+async function unpackFit(buf){
+  const b = new Uint8Array(buf, 0, 2);
+  if (b[0] === 0x1f && b[1] === 0x8b) return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+  if (b[0] === 0x50 && b[1] === 0x4b){
+    const z = await (await loadZip()).loadAsync(buf);
+    const f = Object.values(z.files).find(e => !e.dir && /\.fit$/i.test(e.name));
+    if (!f) throw new Error('no FIT file in the download');
+    return f.async('arraybuffer');
+  }
+  return buf;
+}
+function paintIcu(){
+  const el = $('#icu-status'); if (!el) return;
+  const loc = icuLocal();
+  const line = icuUi.status === 'checking' ? 'Checking for new runs…'
+    : icuUi.status === 'error' ? icuUi.msg
+    : icuUi.msg || (loc.lastChecked ? 'Checked ' + timeAgo(loc.lastChecked) : 'Not checked yet');
+  el.className = `sync-line sync-${icuUi.status === 'error' ? 'error' : icuUi.status === 'checking' ? 'busy' : 'ok'}`;
+  el.innerHTML = `<span class="dot"></span>${esc(line)}`;
+}
+async function checkIntervals({ manual = false } = {}){
+  const key = doc.intervals?.key;
+  if (!key || icuBusy) return;
+  const loc = icuLocal();
+  if (!manual && loc.lastChecked && Date.now() - Date.parse(loc.lastChecked) < 5 * 60e3) return;
+  icuBusy = true; icuUi.status = 'checking'; icuUi.msg = ''; paintIcu();
+  let added = 0, problems = 0;
+  try {
+    // First check reaches back 30 days; after that, a few days before the last check.
+    const from = loc.lastChecked ? addDays(ymd(new Date(loc.lastChecked)), -3) : addDays(todayYmd(), -30);
+    const list = await (await icuGet(`/athlete/0/activities?oldest=${from}&newest=${addDays(todayYmd(), 1)}`, key)).json();
+    const seen = new Set(loc.seen);
+    const todo = list.filter(a => ICU_RUNS.includes(a.type) && !seen.has(a.id))
+      .sort((a, b) => a.start_date_local < b.start_date_local ? -1 : 1);
+    for (const a of todo){
+      const title = `${esc(a.name || 'Run')} · ${a.start_date_local ? fmtDate(a.start_date_local.slice(0, 10)) : ''}`;
+      let it;
+      try {
+        if (a.source === 'STRAVA') it = { status:'wait', title, sub:'Came in through Strava, which doesn’t share the original file. Connect Garmin to intervals.icu directly.' };
+        else if (a.file_type && a.file_type !== 'fit') it = { status:'wait', title, sub:`A ${esc(a.file_type)} file, not FIT — skipped.` };
+        else {
+          it = await importFit(title, await unpackFit(await (await icuGet(`/activity/${a.id}/file`, key)).arrayBuffer()));
+          if (it.status === 'good' || it.status === 'warn') added++;
+        }
+        seen.add(a.id);
+      } catch (err){
+        if (err.auth) throw err;
+        problems++;   // not marked seen, so the next check retries it
+        it = { status:'crit', title, sub:`Couldn’t import it: ${esc(err.message)}` };
+      }
+      if (!/Already imported/.test(it.sub)) importLog.unshift({ ...it, sub:'From intervals.icu · ' + it.sub });
+    }
+    setIcuLocal({ ...loc, seen:[...seen].slice(-500), lastChecked:new Date().toISOString() });
+    icuUi.status = 'idle';
+    icuUi.msg = added ? `${added} new run${added > 1 ? 's' : ''} just now` : problems ? `${problems} couldn’t be imported — see the log` : '';
+    if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); }
+    else if (manual) toast(problems ? 'Some runs couldn’t be imported' : 'No new runs');
+  } catch (err){
+    icuUi.status = 'error'; icuUi.msg = err.message;
+    if (manual || err.auth) toast(err.message);
+  } finally {
+    icuBusy = false; paintIcu();
+    if (location.hash.startsWith('#upload') && importLog.length) $('#log') && ($('#log').innerHTML = importLog.map(logItem).join(''));
+  }
+}
+async function connectIntervals(){
+  const key = $('#icu-key')?.value.trim();
+  if (!key){ toast('Paste your intervals.icu API key'); return; }
+  try {
+    const me = await (await icuGet('/athlete/0', key)).json();
+    doc.intervals = { key, name: me.name || me.email || '' };
+    await save(); icuUi.msg = ''; render(); toast('Connected to intervals.icu');
+    checkIntervals({ manual:true });
+  } catch (err){ toast(err.message.replace(' — paste it again', '')); }
+}
+function intervalsCard(){
+  const c = doc.intervals;
+  if (c?.key) return `<div class="card"><div class="card-head"><h2>Automatic import</h2><span class="card-sub">intervals.icu${c.name ? ' · ' + esc(c.name) : ''}</span></div>
+    <div id="icu-status" class="sync-line"></div>
+    <p class="card-sub" style="margin:10px 0 12px">New runs come in each time you open Stride. Runs you’ve already uploaded are skipped.</p>
+    <div class="btn-row"><button class="btn small" data-action="icu-check">Check now</button><button class="btn small" data-action="icu-off">Disconnect</button></div></div>`;
+  return `<div class="card"><div class="card-head"><h2>Automatic import</h2><span class="card-sub">skip the file shuffle</span></div>
+    <ol class="how">
+      <li><span><b>Make a free intervals.icu account</b>At <a href="https://intervals.icu" target="_blank" rel="noopener">intervals.icu</a>, connect Garmin Connect (Coros, Suunto and Wahoo work too). Connect the watch directly — runs that come through Strava can’t be imported.</span></li>
+      <li><span><b>Copy your API key</b>intervals.icu → Settings → Developer Settings, at the bottom → API key.</span></li>
+      <li><span><b>Paste it here</b><span class="field" style="display:flex;gap:8px;margin-top:6px"><input id="icu-key" type="password" autocomplete="off" placeholder="API key" style="flex:1"><button class="btn small primary" data-action="icu-connect">Connect</button></span></span></li>
+    </ol>
+    <p class="card-sub" style="margin:12px 0 0">${signedIn() ? 'The key is saved to your account, so every device you sign in on imports too.' : 'The key is saved in this browser. Sign in and it follows you to your other devices.'}</p></div>`;
+}
+
 async function rescoreAll(){
   for (const r of doc.runs){
     if (!r.hasSamples) continue;
@@ -2177,7 +2292,7 @@ async function rescoreAll(){
 async function exportBackup(){
   const samples = {};
   for (const r of doc.runs) if (r.hasSamples){ const s = await getSamples(r.id); if (s) samples[r.id] = s; }
-  const blob = new Blob([JSON.stringify({ app:'stride', exported:new Date().toISOString(), doc:blobOf(), samples })], { type:'application/json' });
+  const blob = new Blob([JSON.stringify({ app:'stride', exported:new Date().toISOString(), doc:(({ intervals, ...d }) => d)(blobOf()), samples })], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `stride-backup-${todayYmd()}.json`;
   document.body.appendChild(a); a.click(); a.remove();
@@ -2188,9 +2303,10 @@ async function importBackup(file){
   try {
     const data = JSON.parse(await file.text());
     if (data.app !== 'stride' || !data.doc?.runs) throw new Error('not a Stride backup');
-    const { sync } = doc;
+    const { sync, intervals } = doc;
     doc = normalize(data.doc);
     if (sync) doc.sync = sync;
+    if (intervals) doc.intervals = intervals;
     await idb.clear('samples').catch(() => {});
     memSamples.clear();
     for (const [id, s] of Object.entries(data.samples ?? {})) await putSamples(id, s);
@@ -2266,6 +2382,9 @@ document.addEventListener('click', async e => {
       await save(); toast('Weigh-in saved'); render(); break;
     }
     case 'export': exportBackup(); break;
+    case 'icu-connect': connectIntervals(); break;
+    case 'icu-check': checkIntervals({ manual:true }); break;
+    case 'icu-off': delete doc.intervals; try { localStorage.removeItem(ICUKEY); } catch {} await save(); render(); toast('Disconnected from intervals.icu'); break;
     case 'reset-ask': $('#reset-confirm').classList.add('show'); break;
     case 'reset-no': $('#reset-confirm').classList.remove('show'); break;
     case 'reset-yes':
@@ -2283,6 +2402,7 @@ document.addEventListener('click', async e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.id === 'si-email'){ sendLink(); return; }
   if (e.key === 'Enter' && e.target.id === 'si-code'){ verifyCode(); return; }
+  if (e.key === 'Enter' && e.target.id === 'icu-key'){ connectIntervals(); return; }
   if (e.key === 'Enter' && e.target.matches('tr[data-run]')) location.hash = 'runs/' + e.target.dataset.run;
   if (e.target.closest('input,textarea') || e.metaKey || e.ctrlKey) return;
   const pages = { 1:'today', 2:'progress', 3:'runs', 4:'plan', 5:'upload' };
@@ -2322,7 +2442,7 @@ if (!storageOk) toast('Storage is blocked here — changes won’t survive a rel
 lastRoute = location.hash;
 render();
 paintSync();
-syncInit(fromLink);
+syncInit(fromLink).finally(() => checkIntervals());
 </script>
 </body>
 </html>

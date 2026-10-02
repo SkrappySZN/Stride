@@ -29,6 +29,23 @@ browser's IndexedDB. Sign in, and your runs also sync to your account.
 
 `1`–`5` switch tabs.
 
+## Automatic import (intervals.icu)
+
+Garmin's own API is closed to new developers and Strava's doesn't share original files,
+so runs arrive through [intervals.icu](https://intervals.icu): the watch syncs to Garmin
+Connect, Garmin syncs to intervals.icu, and Stride downloads each new run's original FIT
+file and imports it exactly as if it had been dropped in. Set it up on Upload with an
+intervals.icu API key (Settings → Developer Settings).
+
+- Checks run when the app opens or comes back into view (at most every 5 min), or on
+  *Check now*. The first check reaches back 30 days.
+- The key lives in the synced doc so every signed-in device imports. It's left out of
+  backup files. What each device has already checked stays on that device, so a check
+  only writes to the account when it finds a run.
+- Runs already uploaded by hand are recognised by their FIT start time and skipped.
+  Activities that reached intervals.icu through Strava have no original file and are
+  skipped with a note.
+
 ## How the numbers are made
 
 - **Jog / walk / standing** come from Garmin's own run/walk detection (the `rwdRun`,
