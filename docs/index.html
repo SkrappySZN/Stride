@@ -2065,10 +2065,10 @@ function accountCard(){
   const code = authUi.stage === 'code';
   return `<div class="card" id="signin"><div class="card-head"><h2>Sign in</h2><span class="card-sub">keeps your runs on every device</span></div>
     <p class="card-sub" style="margin:0 0 12px">${code
-      ? `We emailed <b>${esc(authUi.email)}</b>. Tap the link in it on this device — or type the code from the email here.`
+      ? `We emailed <b>${esc(authUi.email)}</b>. Open it on this device and tap <b>Sign in</b>. It can take a minute — check spam if it doesn’t show.`
       : 'No password. We email you a sign-in link; anything already in this browser moves into your account.'}</p>
     <div class="field-row">${code
-      ? `<div class="field"><label for="si-code">Code from the email</label><input id="si-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>`
+      ? `<div class="field"><label for="si-code">Got a code instead? Enter it here</label><input id="si-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>`
       : `<div class="field"><label for="si-email">Email</label><input id="si-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(authUi.email)}"></div>`}</div>
     <div class="btn-row" style="margin-top:14px">${code
       ? `<button class="btn small primary" data-action="verify-code">Sign in</button><button class="link-btn" data-action="change-email">Use a different email</button><button class="link-btn" data-action="send-link">Resend</button>`
