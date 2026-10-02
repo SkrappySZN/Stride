@@ -1,0 +1,9 @@
+# Your actual runs. Never commit these.
+# Anchored with a leading slash so docs/index.html — the stripped copy — still ships.
+/index.html
+/index.html.bak-*
+/mockup.html
+# The leak-detection word list is itself the sensitive data.
+/.leakwords
+stride-backup-*.json
+.DS_Store

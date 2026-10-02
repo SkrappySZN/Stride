@@ -1,0 +1,2328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Running tracker: FIT upload, test-route trends and the 8-week build.">
+<title>Stride</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens ───────────────────────────────────────────────────────── */
+:root{
+  color-scheme:light;
+  --font:"Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --bg:#eef0ea;
+  --surface:#ffffff;
+  --surface-2:#f5f6f2;
+  --ink:#0c0d0e;
+  --ink-2:#4a4d52;
+  --muted:#7c8087;
+  --line:#e2e4de;
+  --grid:#e8e9e4;
+  --axis:#c5c8c0;
+
+  --accent:#d4ff3a;          /* brand volt — fills only, never text on light */
+  --accent-ink:#0c0d0e;      /* text that sits on the volt fill */
+  --accent-text:#4b6a00;     /* volt-family text that reads on the surface */
+
+  --series-1:#2a78d6;
+  --series-1-wash:rgba(42,120,214,.08);
+  --walk:#bfc2ba;
+
+  --good:#0ca30c;  --good-text:#006300;
+  --warn:#fab219;  --warn-text:#8a5a00;
+  --crit:#d03b3b;  --crit-text:#b02a2a;
+
+  --radius:14px;
+  --radius-sm:9px;
+  --shadow:0 1px 0 rgba(12,13,14,.04), 0 1px 3px rgba(12,13,14,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0a0b0d; --surface:#14161a; --surface-2:#1b1e22;
+    --ink:#f3f4f0; --ink-2:#b8bbb3; --muted:#7f838a;
+    --line:#24272c; --grid:#22252a; --axis:#393d43;
+    --accent-text:#d4ff3a;
+    --series-1:#3987e5; --series-1-wash:rgba(57,135,229,.10);
+    --walk:#4a4e55;
+    --good-text:#3fcf3f; --warn-text:#fab219; --crit-text:#ff7a7a;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0a0b0d; --surface:#14161a; --surface-2:#1b1e22;
+  --ink:#f3f4f0; --ink-2:#b8bbb3; --muted:#7f838a;
+  --line:#24272c; --grid:#22252a; --axis:#393d43;
+  --accent-text:#d4ff3a;
+  --series-1:#3987e5; --series-1-wash:rgba(57,135,229,.10);
+  --walk:#4a4e55;
+  --good-text:#3fcf3f; --warn-text:#fab219; --crit-text:#ff7a7a;
+  --shadow:none;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────── */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--font); font-size:15px; line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit}
+.display{
+  font-stretch:72%; font-weight:850; font-style:italic;
+  letter-spacing:-.01em; text-transform:uppercase; line-height:.95;
+}
+.eyebrow{
+  font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--muted);
+}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── Shell ────────────────────────────────────────────────────────── */
+.shell{display:grid; grid-template-columns:220px 1fr; min-height:100vh}
+.rail{
+  position:sticky; top:0; height:100vh;
+  padding:22px 14px; display:flex; flex-direction:column; gap:4px;
+  border-right:1px solid var(--line); background:var(--surface);
+}
+.brand{display:flex; align-items:center; gap:10px; padding:0 8px 22px}
+.brand-mark{
+  width:30px; height:30px; border-radius:8px; background:var(--accent);
+  display:grid; place-items:center;
+}
+.brand-name{font-size:24px}
+.nav-btn{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:10px 12px; border:0; border-radius:10px; background:none;
+  font-weight:600; color:var(--ink-2); cursor:pointer; text-align:left;
+}
+.nav-btn:hover{background:var(--surface-2); color:var(--ink)}
+.nav-btn[aria-current="page"]{background:var(--ink); color:var(--surface)}
+.nav-btn[aria-current="page"] svg{color:var(--accent)}
+:root[data-theme="dark"] .nav-btn[aria-current="page"]{background:var(--accent); color:var(--accent-ink)}
+:root[data-theme="dark"] .nav-btn[aria-current="page"] svg{color:var(--accent-ink)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .nav-btn[aria-current="page"]{background:var(--accent); color:var(--accent-ink)}
+  :root:not([data-theme="light"]) .nav-btn[aria-current="page"] svg{color:var(--accent-ink)}
+}
+.nav-btn[disabled]{opacity:.45; cursor:default}
+.nav-btn[disabled]:hover{background:none; color:var(--ink-2)}
+.nav-btn .soon{margin-left:auto; font-size:10px; font-weight:700; letter-spacing:.08em; color:var(--muted)}
+.nav-btn svg{width:18px; height:18px; flex:none}
+.rail-foot{margin-top:auto; padding:8px; display:flex; flex-direction:column; gap:10px}
+.theme-btn{
+  border:1px solid var(--line); background:var(--surface-2); border-radius:10px;
+  padding:8px 10px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink-2);
+}
+.mock-note{font-size:12px; color:var(--muted); line-height:1.4}
+#syncbox{display:flex; flex-direction:column; gap:6px}
+#syncbox .mock-note{overflow-wrap:anywhere}
+.sync-line{display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:650; color:var(--ink-2)}
+.sync-line .dot{width:8px; height:8px; border-radius:50%; flex:none; background:var(--good)}
+.sync-busy .dot,.sync-signedout .dot,.sync-off .dot{background:none; box-shadow:0 0 0 1.5px var(--muted) inset}
+.sync-error,.sync-conflict{color:var(--crit-text)}
+.sync-error .dot,.sync-conflict .dot{background:var(--crit)}
+dialog#choose{
+  max-width:min(440px, calc(100vw - 32px)); padding:24px; border:1px solid var(--line); border-radius:var(--radius);
+  background:var(--surface); color:var(--ink); box-shadow:0 12px 40px rgba(0,0,0,.25)
+}
+dialog#choose::backdrop{background:rgba(10,11,13,.55)}
+dialog#choose h2{font-size:32px; margin:0 0 10px}
+dialog#choose p{margin:0 0 18px; color:var(--ink-2); font-size:14.5px}
+
+main{padding:30px 36px 80px; max-width:1180px; width:100%; min-width:0}
+.page{display:none}
+.page.active{display:block}
+.page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap}
+.page-head h1{margin:6px 0 0; font-size:52px}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+  background:var(--surface); border:1px solid var(--line); font-size:12.5px; font-weight:600; color:var(--ink-2);
+}
+.chip .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:20px; box-shadow:var(--shadow); min-width:0;
+}
+.card h2{margin:0; font-size:15px; font-weight:750}
+.card-head{display:flex; justify-content:space-between; align-items:baseline; gap:6px 12px; margin-bottom:14px; flex-wrap:wrap}
+.card-sub{color:var(--muted); font-size:13px}
+.grid{display:grid; gap:16px}
+.today-grid{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); align-items:start}
+.col{display:grid; gap:16px; min-width:0}
+
+/* hero assignment */
+.hero{
+  position:relative; overflow:hidden; padding:26px 24px 22px;
+  background:var(--ink); color:var(--surface); border:0;
+}
+:root[data-theme="dark"] .hero{background:var(--surface-2); color:var(--ink); border:1px solid var(--line)}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .hero{background:var(--surface-2); color:var(--ink); border:1px solid var(--line)} }
+.hero .eyebrow{color:var(--accent)}
+.hero-title{font-size:68px; margin:10px 0 12px}
+.hero-title em{font-style:inherit; color:var(--accent)}
+.hero p{margin:0; max-width:52ch; opacity:.82}
+.hero-stripes{
+  position:absolute; right:-40px; top:-20px; width:260px; height:200px; opacity:.12;
+  background:repeating-linear-gradient(115deg, var(--accent) 0 14px, transparent 14px 34px);
+  pointer-events:none;
+}
+.task-list{list-style:none; margin:18px 0 0; padding:0; display:grid; gap:8px}
+.task{
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  padding:11px 12px; border-radius:10px; cursor:pointer;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
+}
+.card:not(.hero) .task{background:var(--surface-2); border:1px solid var(--line)}
+.task .box{
+  width:22px; height:22px; flex:none; border-radius:7px; border:2px solid currentColor; opacity:.55;
+  display:grid; place-items:center;
+}
+.task .box svg{width:14px; height:14px; opacity:0}
+.task[aria-pressed="true"] .box{background:var(--accent); border-color:var(--accent); opacity:1; color:var(--accent-ink)}
+.task[aria-pressed="true"] .box svg{opacity:1}
+.task[aria-pressed="true"] .t-main{text-decoration:line-through; opacity:.55}
+.t-main{font-weight:600}
+.t-sub{font-size:12.5px; opacity:.65}
+.task .t-meta{margin-left:auto; font-size:12px; opacity:.6; white-space:nowrap}
+
+/* check-in */
+.pill-row{display:flex; flex-wrap:wrap; gap:8px}
+.pill{
+  padding:9px 14px; border-radius:999px; border:1px solid var(--line); background:var(--surface-2);
+  font-weight:600; cursor:pointer; font-size:14px;
+}
+.pill:hover{border-color:var(--ink-2)}
+.pill[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.pill.flag{border-style:dashed}
+.response{margin-top:14px; padding:12px 14px; border-radius:10px; background:var(--surface-2); font-size:14px; display:none}
+.response.show{display:block}
+.response.alarm{background:color-mix(in srgb, var(--crit) 12%, var(--surface)); border:1px solid color-mix(in srgb, var(--crit) 40%, transparent)}
+
+/* status rows */
+.status-list{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+.status-row{display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--line)}
+.status-row:first-child{border-top:0}
+.s-icon{width:22px; height:22px; flex:none; border-radius:50%; display:grid; place-items:center; margin-top:1px}
+.s-icon svg{width:13px; height:13px}
+.s-good{background:var(--good); color:#fff}
+.s-warn{background:var(--warn); color:#1a1300}
+.s-crit{background:var(--crit); color:#fff}
+.s-wait{background:var(--surface-2); color:var(--muted); border:1.5px dashed var(--axis)}
+.s-main{font-weight:600}
+.s-sub{font-size:13px; color:var(--muted)}
+.verdict{margin-top:14px; padding:12px 14px; border-radius:10px; background:var(--surface-2); display:flex; gap:10px; align-items:center; font-size:14px}
+.verdict strong{font-weight:750}
+
+/* week strip */
+.days{display:grid; grid-template-columns:repeat(7,1fr); gap:6px}
+.day{
+  border-radius:10px; padding:9px 4px 10px; text-align:center; background:var(--surface-2);
+  border:1px solid var(--line); min-width:0;
+}
+.day .d-name{font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--muted); text-transform:uppercase}
+.day .d-num{font-size:20px; font-weight:800; font-stretch:75%; margin:2px 0 6px}
+.day .d-tag{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 0; border-radius:6px}
+.day.today{outline:2px solid var(--ink); outline-offset:-1px}
+.tag-run{background:var(--accent); color:var(--accent-ink)}
+.tag-ref{background:var(--ink); color:var(--surface)}
+.tag-rest{color:var(--muted)}
+.tag-done{color:var(--accent-text)}
+
+.plan-bar{display:grid; grid-template-columns:repeat(8,1fr); gap:4px; margin-top:6px}
+.plan-seg{height:8px; border-radius:4px; background:var(--grid)}
+.plan-seg.done{background:var(--ink)}
+.plan-seg.now{background:var(--accent); box-shadow:0 0 0 1px rgba(0,0,0,.2) inset}
+.plan-labels{display:grid; grid-template-columns:repeat(8,1fr); gap:4px; margin-top:6px; font-size:11px; color:var(--muted); text-align:center}
+
+.note{
+  display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--radius);
+  background:color-mix(in srgb, var(--warn) 14%, var(--surface)); border:1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  font-size:14px;
+}
+.note b{font-weight:700}
+
+details.protocol summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center}
+details.protocol summary::-webkit-details-marker{display:none}
+details.protocol summary .caret{transition:transform .15s; color:var(--muted)}
+details.protocol[open] summary .caret{transform:rotate(180deg)}
+.next-run-big{font-size:40px; margin:6px 0 4px}
+.kv{display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:10px}
+.kv div{font-size:13px; color:var(--muted)}
+.kv b{display:block; font-size:17px; color:var(--ink); font-weight:750}
+.switch{display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600; font-size:14px; user-select:none}
+.switch input{appearance:none; width:40px; height:24px; border-radius:999px; background:var(--axis); position:relative; cursor:pointer; margin:0; transition:background .15s}
+.switch input::after{content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .15s}
+.switch input:checked{background:var(--ink)}
+.switch input:checked::after{transform:translateX(16px); background:var(--accent)}
+
+/* ── Progress ─────────────────────────────────────────────────────── */
+.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kpi .k-val{font-size:64px; margin:14px 0 2px; display:flex; align-items:baseline; gap:8px}
+.kpi .k-unit{font-size:18px; font-style:normal; font-weight:700; color:var(--muted); font-stretch:90%; text-transform:none}
+.kpi .k-dir{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; padding:4px 9px; border-radius:999px; background:var(--surface-2); color:var(--ink-2)}
+.kpi .k-foot{margin-top:12px; font-size:13px; color:var(--muted)}
+.kpi .k-foot b{color:var(--ink); font-weight:650}
+.te-strip{display:flex; gap:6px; margin-top:10px}
+.te-cell{flex:1; border-radius:8px; padding:7px 8px; background:var(--surface-2); border:1px solid var(--line); font-size:12px; color:var(--muted)}
+.te-cell b{display:flex; align-items:center; gap:5px; font-size:16px; color:var(--ink)}
+.te-cell i{width:9px; height:9px; border-radius:50%; display:inline-block}
+
+.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.chart{width:100%; position:relative}
+.chart svg{display:block; width:100%; overflow:visible}
+.chart text{font-family:var(--font); font-size:11px; fill:var(--muted)}
+.chart .lbl{fill:var(--ink); font-weight:700; font-size:12px; paint-order:stroke; stroke:var(--surface); stroke-width:4px; stroke-linejoin:round}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-2); margin-bottom:10px}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.legend i{width:10px; height:10px; border-radius:3px; display:inline-block}
+.legend i.ring{border-radius:50%; border:2px solid var(--muted); background:var(--surface)}
+.legend i.dotf{border-radius:50%}
+.pending-box{
+  height:170px; border-radius:10px; border:1.5px dashed var(--axis); display:grid; place-items:center;
+  text-align:center; color:var(--muted); font-size:13.5px; padding:16px;
+}
+table.quiet{width:100%; border-collapse:collapse; font-size:13.5px}
+table.quiet td{padding:9px 0; border-top:1px solid var(--line)}
+table.quiet td:nth-child(2){text-align:right; font-weight:650; font-variant-numeric:tabular-nums}
+table.quiet td:nth-child(3){padding-left:18px; color:var(--muted); font-size:12.5px}
+details.stored summary{cursor:pointer; font-weight:700; list-style:none; display:flex; justify-content:space-between}
+details.stored summary::-webkit-details-marker{display:none}
+
+#tip{
+  position:fixed; z-index:50; pointer-events:none; opacity:0; transition:opacity .08s;
+  background:var(--ink); color:var(--surface); padding:8px 10px; border-radius:8px;
+  font-size:12.5px; line-height:1.35; max-width:240px; box-shadow:0 6px 20px rgba(0,0,0,.2);
+}
+#tip b{font-weight:750}
+#tip.show{opacity:1}
+
+/* ── Mobile ───────────────────────────────────────────────────────── */
+@media (max-width:900px){
+  .today-grid,.two{grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:720px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .days{gap:4px}
+  .day .d-tag{font-size:9.5px}
+  .task .t-meta{display:none}
+  .rail{
+    position:fixed; top:auto; bottom:0; left:0; right:0; height:auto; z-index:20;
+    flex-direction:row; padding:6px 8px calc(6px + env(safe-area-inset-bottom)); gap:2px;
+    border-right:0; border-top:1px solid var(--line); justify-content:space-around;
+  }
+  .brand,.rail-foot,.nav-btn .soon,.nav-btn[data-optional]{display:none}
+  .nav-btn{flex-direction:column; gap:3px; font-size:11px; padding:7px 4px; align-items:center; text-align:center}
+  main{padding:18px 16px 110px}
+  .page-head h1{font-size:40px}
+  .hero-title{font-size:52px}
+  .kpi .k-val{font-size:54px}
+  .mobile-theme{display:inline-flex !important}
+}
+.mobile-theme{display:none}
+
+/* ── App additions ────────────────────────────────────────────────── */
+:root{
+  --z-easy:#86b6ef; --z-mod:#2a78d6; --z-hard:#184f95; --z-above:#d03b3b;
+}
+:root[data-theme="dark"]{ --z-easy:#1c5cab; --z-mod:#3987e5; --z-hard:#86b6ef; --z-above:#e66767 }
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){ --z-easy:#1c5cab; --z-mod:#3987e5; --z-hard:#86b6ef; --z-above:#e66767 }
+}
+a{color:inherit}
+.link-btn{border:0; background:none; padding:0; cursor:pointer; font-weight:650; color:var(--ink-2); text-decoration:underline; text-underline-offset:3px}
+.btn{
+  display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:10px;
+  border:1px solid var(--line); background:var(--surface-2); font-weight:650; cursor:pointer; font-size:14px;
+}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:transparent}
+.btn.danger{color:var(--crit-text)}
+.btn.small{padding:6px 11px; font-size:13px}
+.btn-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.empty{padding:28px; text-align:center; color:var(--muted); border:1.5px dashed var(--axis); border-radius:var(--radius)}
+.empty b{color:var(--ink)}
+
+/* runs table */
+.table-wrap{overflow-x:auto; margin:0 -20px; padding:0 20px}
+table.runs{width:100%; border-collapse:collapse; font-size:14px; min-width:720px}
+table.runs th{
+  text-align:right; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted); padding:0 10px 10px; white-space:nowrap
+}
+table.runs th:first-child, table.runs td:first-child{text-align:left; padding-left:0}
+table.runs td{padding:12px 10px; border-top:1px solid var(--line); text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+table.runs tbody tr{cursor:pointer}
+table.runs tbody tr:hover td{background:var(--surface-2)}
+.r-date{font-weight:700}
+.r-sub{font-size:12px; color:var(--muted); font-weight:500}
+.badge{
+  display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:3px 8px; border-radius:6px; background:var(--surface-2); border:1px solid var(--line); color:var(--ink-2); white-space:nowrap
+}
+.badge.test{background:var(--accent); color:var(--accent-ink); border-color:transparent}
+.badge.warn{color:var(--warn-text); border-color:color-mix(in srgb, var(--warn) 50%, transparent)}
+.badge.crit{color:var(--crit-text); border-color:color-mix(in srgb, var(--crit) 50%, transparent)}
+.flags{display:inline-flex; gap:4px}
+.flag-dot{width:8px; height:8px; border-radius:50%}
+
+/* run detail */
+.detail-head{display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:18px}
+.detail-head h1{font-size:56px; margin:6px 0 8px}
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden}
+.stat{padding:14px 16px; box-shadow:1px 0 0 var(--line), 0 1px 0 var(--line)}
+.stat .s-l{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.stat .s-v{font-size:26px; font-weight:800; font-stretch:78%; margin-top:4px; font-variant-numeric:tabular-nums}
+.stat .s-v small{font-size:13px; font-weight:600; color:var(--muted); font-stretch:100%; margin-left:3px}
+.stat .s-n{font-size:12px; color:var(--muted); margin-top:2px}
+.stat input{
+  width:90px; font:inherit; font-size:22px; font-weight:800; font-stretch:78%; padding:2px 6px; margin-top:4px;
+  border:1px solid var(--line); border-radius:8px; background:var(--surface-2); color:var(--ink)
+}
+.zone-bar{display:flex; gap:2px; height:14px; border-radius:5px; overflow:hidden; margin:10px 0 12px}
+.zone-bar div{height:100%}
+.zone-legend{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; font-size:12.5px}
+.zone-legend b{display:block; font-size:16px; font-variant-numeric:tabular-nums}
+.zone-legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:-1px}
+.state-strip{display:flex; height:8px; border-radius:4px; overflow:hidden; gap:0}
+textarea.felt{
+  width:100%; min-height:84px; font:inherit; font-size:14px; padding:10px 12px; border-radius:10px;
+  border:1px solid var(--line); background:var(--surface-2); color:var(--ink); resize:vertical
+}
+.route-svg{width:100%; height:180px; display:block}
+.confirm{display:none; gap:8px; align-items:center; font-size:13.5px}
+.confirm.show{display:inline-flex}
+
+/* upload */
+.drop{
+  border:2px dashed var(--axis); border-radius:18px; padding:48px 20px; text-align:center; cursor:pointer;
+  background:var(--surface); transition:border-color .15s, background .15s;
+}
+.drop:hover,.drop.over{border-color:var(--ink); background:var(--surface-2)}
+.drop .display{font-size:40px; margin:10px 0 6px}
+.drop-icon{width:52px; height:52px; border-radius:14px; background:var(--accent); display:inline-grid; place-items:center}
+.log{list-style:none; margin:14px 0 0; padding:0; display:grid; gap:8px}
+.log li{display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border-radius:10px; background:var(--surface); border:1px solid var(--line); font-size:14px}
+.log .s-icon{margin-top:0}
+.how{counter-reset:how; list-style:none; padding:0; margin:0; display:grid; gap:12px}
+.how li{counter-increment:how; display:grid; grid-template-columns:28px 1fr; gap:10px; font-size:14px}
+.how li::before{
+  content:counter(how); width:24px; height:24px; border-radius:7px; background:var(--surface-2); border:1px solid var(--line);
+  display:grid; place-items:center; font-weight:800; font-size:12px
+}
+.how b{display:block}
+.field-row{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px}
+.field label{display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px; letter-spacing:.04em}
+.field input{
+  width:100%; font:inherit; font-size:15px; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
+  background:var(--surface-2); color:var(--ink); font-variant-numeric:tabular-nums
+}
+
+/* plan */
+.plan-list{display:grid; gap:10px}
+.plan-row{display:grid; grid-template-columns:64px 1fr auto; gap:16px; align-items:center; padding:14px 16px; border-radius:12px; background:var(--surface); border:1px solid var(--line)}
+.plan-row.now{outline:2px solid var(--ink); outline-offset:-1px}
+.plan-row .wk{font-size:34px}
+.plan-row .p-t{font-weight:750}
+.plan-row .p-s{font-size:13px; color:var(--muted)}
+.hist{list-style:none; padding:0; margin:0}
+.hist li{display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--line); font-size:14px; flex-wrap:wrap}
+.hist li:first-child{border-top:0}
+.rules{margin:0; padding-left:18px; display:grid; gap:8px; font-size:14px}
+
+.toast{
+  position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); opacity:0; z-index:60;
+  background:var(--ink); color:var(--surface); padding:10px 16px; border-radius:10px; font-weight:600; font-size:14px;
+  transition:opacity .2s, transform .2s; pointer-events:none
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+@media (max-width:720px){
+  .toast{bottom:92px}
+  .detail-head h1{font-size:44px}
+  .zone-legend{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .plan-row{grid-template-columns:48px 1fr}
+  .plan-row > :last-child{grid-column:1 / -1}
+}
+</style>
+</head>
+<body>
+<div id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status"></div>
+<dialog id="choose"></dialog>
+
+<div class="shell">
+  <nav class="rail" aria-label="Sections">
+    <div class="brand">
+      <div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0c0d0e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/></svg></div>
+      <span class="brand-name display">Stride</span>
+    </div>
+    <button class="nav-btn" data-page="today">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Today</button>
+    <button class="nav-btn" data-page="progress">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 16l4-5 4 3 6-8"/></svg>Progress</button>
+    <button class="nav-btn" data-page="runs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Runs</button>
+    <button class="nav-btn" data-page="plan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plan</button>
+    <button class="nav-btn" disabled data-optional>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>Body<span class="soon">SOON</span></button>
+    <button class="nav-btn" data-page="upload">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>Upload</button>
+    <div class="rail-foot">
+      <button class="theme-btn" data-theme-toggle>Toggle light / dark</button>
+      <div id="syncbox"></div>
+    </div>
+  </nav>
+
+  <main>
+    <section class="page" id="page-today"></section>
+    <section class="page" id="page-progress"></section>
+    <section class="page" id="page-runs"></section>
+    <section class="page" id="page-plan"></section>
+    <section class="page" id="page-upload"></section>
+  </main>
+</div>
+
+<script type="module">
+/* ═══════════════════════════════════════════════════════════════════
+   STRIDE — running tracker
+   One file. Runs, check-ins and settings live in this browser's
+   IndexedDB; FIT files are parsed in the page and never uploaded.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const FITSDK_URL = 'https://cdn.jsdelivr.net/npm/@garmin/fitsdk@21.217.0/+esm';
+const JSZIP_URL  = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
+
+/* ── The 8-week build ─────────────────────────────────────────────── */
+const PLAN = [
+  { w:1, phase:'Base',      session:'9–10 min jog',       detail:'Flat route, walk breaks as needed',                       add:'Nothing — just no calf pain the next day' },
+  { w:2, phase:'Base',      session:'9–10 min jog',       detail:'Flat route, walk breaks as needed',                       add:'Nothing — just no calf pain the next day' },
+  { w:3, phase:'Full mile', session:'Full mile',          detail:'Same route, work toward the full mile continuous',        add:'4 × 20 sec strides after one run', strides:1 },
+  { w:4, phase:'Full mile', session:'Full mile',          detail:'Same route, work toward the full mile continuous',        add:'4 × 20 sec strides after one run', strides:1 },
+  { w:5, phase:'Extend',    session:'1.25–1.5 mi easy',   detail:'Same easy pace. Keep one run a week on the test route',   add:'Strides after two runs a week', strides:2 },
+  { w:6, phase:'Extend',    session:'1.25–1.5 mi easy',   detail:'Same easy pace. Keep one run a week on the test route',   add:'Strides after two runs a week', strides:2 },
+  { w:7, phase:'Speed',     session:'1.5 mi easy',        detail:'Two easy runs at 1.5 mi, one speed run',                  add:'Speed run: warm up, 4 × 2 min harder / 2 min walk, cool down', speed:true },
+  { w:8, phase:'Speed',     session:'1.5 mi easy',        detail:'Two easy runs at 1.5 mi, one speed run',                  add:'Speed run: warm up, 4 × 2 min harder / 2 min walk, cool down', speed:true },
+];
+
+const PROTOCOL = p => [
+  ['p1','Start where the test route starts','Not from home if there’s a hill on the way — a climb contaminates every average'],
+  ['p2','Warm up','5 min brisk walk, then 10 leg swings per side'],
+  ['p3','Run the flat test route',`Under ~50 ft total gain. Walk break if HR passes ~${p.zones.mod}`],
+  ['p4','Stop the timer at the finish','Don’t hit Save yet'],
+  ['p5','Stand still for 2 minutes','This is how the watch captures recovery HR'],
+  ['p6','Save, then walk home','That’s the cooldown'],
+];
+
+const TASKS = {
+  hip:    ['Half-kneeling hip flexor stretch','Back knee down, squeeze the glute, tuck the hips · 30–45 sec','2–3× / side'],
+  calf:   ['Calf stretch — straight leg, then bent','30 sec each, against the wall','2× / side'],
+  roll:   ['Foam roll or tennis ball the calves','','~5 min'],
+  bridge: ['Glute bridges','Takes load off the hip flexors and knees','2–3 × 12–15'],
+  sporthip: ['Hip flexor stretch between sessions','Most sports work them hard','each break'],
+};
+
+/* SEED:START — empty in the published copy. */
+const SEED = {};
+/* SEED:END */
+
+// ==ANALYZE:START== pure helpers + FIT analysis (no DOM) ───────────────
+const MI = 1609.344, FT = 3.28084;
+const IDLE_TOLERANCE = 20;   // seconds of standing still before a run is flagged
+const RUN_CADENCE = 125;     // spm — at or above is jogging, below is walking
+
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseYmd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+const diffDays = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 864e5);
+const weekStart = s => addDays(s, -((parseYmd(s).getDay() + 6) % 7));   // Monday
+const fmtDur = s => { if (s == null || !isFinite(s)) return '—'; s = Math.round(s); return `${Math.floor(s/60)}:${pad(s%60)}`; };
+
+function median(a){
+  const b = a.filter(v => v != null && !Number.isNaN(v)).sort((x, y) => x - y);
+  if (!b.length) return null;
+  const m = b.length >> 1;
+  return b.length % 2 ? b[m] : (b[m-1] + b[m]) / 2;
+}
+function rollMedian(arr, i, k){
+  const w = [];
+  for (let j = Math.max(0, i-k); j <= Math.min(arr.length-1, i+k); j++) w.push(arr[j]);
+  return median(w);
+}
+function haversine(a, b){
+  const R = 6371000, r = Math.PI / 180;
+  const dLat = (b[0]-a[0]) * r, dLon = (b[1]-a[1]) * r;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a[0]*r) * Math.cos(b[0]*r) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Time in each threshold-anchored zone. Recomputed whenever the zones change,
+// so every run is always measured against the same lines.
+function zoneStats(s, profile){
+  const { easy, mod } = profile.zones, lt = profile.lthr;
+  const z = { easy:0, mod:0, hard:0, above:0 };
+  let above = 0;
+  for (let i = 0; i < s.t.length; i++){
+    const hr = s.hr[i]; if (hr == null) continue;
+    const dt = i < s.t.length-1 && s.t[i+1]-s.t[i] <= 5 ? s.t[i+1]-s.t[i] : 1;
+    if (hr >= lt){ z.above += dt; above += dt; }
+    else if (hr >= mod) z.hard += dt;
+    else if (hr >= easy) z.mod += dt;
+    else z.easy += dt;
+  }
+  return { aboveLtSec: above, zoneSec: z };
+}
+
+function analyzeFit(messages, profile){
+  const session = messages.sessionMesgs?.[0] ?? {};
+  const recs = (messages.recordMesgs ?? []).filter(r => r.timestamp);
+  if (!recs.length) throw new Error('No second-by-second samples in this file');
+  const sport = String(session.sport ?? messages.sportMesgs?.[0]?.sport ?? '').toLowerCase();
+  const startDate = new Date(session.startTime ?? recs[0].timestamp);
+  const t0 = +startDate;
+  const n = recs.length;
+
+  const T = [], HR = [], SPD = [], CAD = [], PWR = [], ALT = [], DIST = [], GCT = [], LAT = [], LON = [];
+  for (const r of recs){
+    T.push(Math.round((+new Date(r.timestamp) - t0) / 1000));
+    HR.push(r.heartRate ?? null);
+    SPD.push(r.enhancedSpeed ?? r.speed ?? null);
+    CAD.push(r.cadence != null ? (r.cadence + (r.fractionalCadence || 0)) * 2 : null);   // strides → steps
+    PWR.push(r.power ?? null);
+    ALT.push(r.enhancedAltitude ?? r.altitude ?? null);
+    DIST.push(r.distance ?? null);
+    GCT.push(r.stanceTime ?? null);
+    LAT.push(r.positionLat != null ? r.positionLat * 180 / 2**31 : null);
+    LON.push(r.positionLong != null ? r.positionLong * 180 / 2**31 : null);
+  }
+
+  // Single-sample sensor glitches: drop anything far from its neighbours.
+  const filtered = { hr:0, cad:0, gct:0 };
+  const HRf = HR.map((v, i) => {
+    if (v == null) return null;
+    const m = rollMedian(HR, i, 3);
+    if (v < 40 || v > 230 || (m != null && Math.abs(v - m) > 25)){ filtered.hr++; return null; }
+    return v;
+  });
+  const CADf = CAD.map((v, i) => {
+    if (v == null) return null;
+    const m = rollMedian(CAD, i, 2);
+    if (v > 200 || (m != null && v - m > 40)){ filtered.cad++; return null; }
+    return v;
+  });
+  const GCTf = GCT.map((v, i) => {
+    if (v == null) return null;
+    const m = rollMedian(GCT, i, 4);
+    if (v < 150 || v > 500 || (m != null && Math.abs(v - m) > 70)){ filtered.gct++; return null; }
+    return v;
+  });
+  const SPDf = SPD.map(v => v == null || v > 7 ? null : v);
+  const DT = T.map((t, i) => i < n-1 && T[i+1] - t <= 5 ? T[i+1] - t : 1);   // gaps are timer pauses
+
+  // Run / walk / idle, from smoothed cadence and speed.
+  let ST = T.map((_, i) => {
+    const c = rollMedian(CADf, i, 2), s = rollMedian(SPDf, i, 2);
+    if ((s == null || s < 0.35) && (c == null || c < 40)) return 0;
+    if (c != null ? c >= RUN_CADENCE : (s ?? 0) >= 1.6) return 2;
+    return 1;
+  });
+  // Fold blips shorter than 8 s into the segment before them.
+  const segs = [];
+  ST.forEach((st, i) => {
+    const last = segs.at(-1);
+    if (last && last.st === st){ last.i1 = i; last.dur += DT[i]; }
+    else segs.push({ st, i0:i, i1:i, dur:DT[i] });
+  });
+  for (let k = 1; k < segs.length; k++){
+    if (segs[k].dur < 8){ for (let i = segs[k].i0; i <= segs[k].i1; i++) ST[i] = segs[k-1].st; segs[k].st = segs[k-1].st; }
+  }
+  // Garmin's own run/walk detection (rwd* splits) wins wherever it covers a sample.
+  const RWD = { rwdRun:2, rwdWalk:1, rwdStand:0 };
+  const rwdSplits = (messages.splitMesgs ?? []).filter(x => x.splitType in RWD && x.totalTimerTime > 0 && x.startTime);
+  for (const sp of rwdSplits){
+    const a = Math.round((+new Date(sp.startTime) - t0) / 1000);
+    const b = Math.round((+new Date(sp.endTime ?? +new Date(sp.startTime) + sp.totalElapsedTime * 1000) - t0) / 1000);
+    for (let i = 0; i < n; i++) if (T[i] >= a && T[i] <= b) ST[i] = RWD[sp.splitType];
+  }
+  const rwdSum = {};
+  for (const x of messages.splitSummaryMesgs ?? []) if (x.splitType in RWD) rwdSum[x.splitType] = x;
+
+  let runSec = 0, walkSec = 0, idleSec = 0, runDist = 0, hrSum = 0, hrW = 0;
+  const runHr = [];
+  for (let i = 0; i < n; i++){
+    const dt = DT[i];
+    if (ST[i] === 2){
+      runSec += dt;
+      if (i < n-1 && DIST[i] != null && DIST[i+1] != null && T[i+1]-T[i] <= 5) runDist += DIST[i+1] - DIST[i];
+      if (HRf[i] != null){ hrSum += HRf[i] * dt; hrW += dt; runHr.push([runSec, HRf[i], dt]); }
+    }
+    else if (ST[i] === 1) walkSec += dt;
+    else idleSec += dt;
+  }
+  // Cardiac drift: second half of the jogging vs the first half.
+  let drift = null;
+  if (runSec >= 480 && runHr.length > 20){
+    const half = runSec / 2;
+    const a = runHr.filter(x => x[0] <= half), b = runHr.filter(x => x[0] > half);
+    const mean = xs => xs.reduce((s, x) => s + x[1]*x[2], 0) / xs.reduce((s, x) => s + x[2], 0);
+    drift = Math.round((mean(b) - mean(a)) * 10) / 10;
+  }
+
+  const altOk = ALT.filter(v => v != null);
+  let gainFt = session.totalAscent != null ? session.totalAscent * FT : null;
+  if (gainFt == null && altOk.length){
+    let g = 0, ref = altOk[0];
+    for (const a of altOk){ if (a - ref > 1){ g += a - ref; ref = a; } else if (a < ref) ref = a; }
+    gainFt = g * FT;
+  }
+  const firstLL = LAT.findIndex((v, i) => v != null && LON[i] != null);
+  let lastLL = -1; for (let i = n-1; i >= 0; i--) if (LAT[i] != null && LON[i] != null){ lastLL = i; break; }
+  const path = [];
+  for (let i = 0; i < n; i += 5) if (LAT[i] != null && LON[i] != null) path.push([+LAT[i].toFixed(5), +LON[i].toFixed(5)]);
+
+  if (rwdSum.rwdRun){
+    runSec = rwdSum.rwdRun.totalTimerTime ?? runSec;
+    if (rwdSum.rwdRun.totalDistance) runDist = rwdSum.rwdRun.totalDistance;
+    if (rwdSum.rwdRun.avgHeartRate) hrSum = rwdSum.rwdRun.avgHeartRate, hrW = 1;
+  }
+  if (rwdSum.rwdWalk) walkSec = rwdSum.rwdWalk.totalTimerTime ?? walkSec;
+  if (rwdSum.rwdStand) idleSec = rwdSum.rwdStand.totalTimerTime ?? idleSec;
+  runSec = Math.round(runSec); walkSec = Math.round(walkSec); idleSec = Math.round(idleSec);
+
+  // The watch's own local time, so the date is right wherever the file is opened.
+  const act = messages.activityMesgs?.[0];
+  const tzOffsetSec = act?.localTimestamp != null && act.timestamp ? Math.round(act.localTimestamp + 631065600 - +new Date(act.timestamp) / 1000) : null;
+  const localDate = tzOffsetSec == null ? ymd(startDate) : new Date(t0 + tzOffsetSec * 1000).toISOString().slice(0, 10);
+  // Recovery HR isn't in the public FIT profile; the FR265 writes it to session field 202.
+  const recoveryHr = typeof session[202] === 'number' && session[202] > 0 ? session[202] : null;
+
+  const lastDist = [...DIST].reverse().find(v => v != null) ?? 0;
+  const distMi = (session.totalDistance ?? lastDist) / MI;
+  const timerSec = session.totalTimerTime ?? T[n-1];
+  const hrVals = HRf.filter(v => v != null);
+  const user = messages.userProfileMesgs?.[0];
+  const zt = messages.zonesTargetMesgs?.[0];
+
+  // Garmin-only fields that aren't in the public FIT profile (recovery HR among
+  // them) arrive as numbered fields. Keep them so they can be mapped later.
+  const unknown = {};
+  for (const [k, v] of Object.entries(session)) if (/^\d+$/.test(k) && typeof v === 'number') unknown['session.' + k] = v;
+
+  const samples = {
+    t: T, hr: HRf, st: ST, cad: CADf.map(v => v == null ? null : Math.round(v)),
+    spd: SPDf.map(v => v == null ? null : Math.round(v * 100)),
+    alt: ALT.map(v => v == null ? null : Math.round(v * 10)),
+    dist: DIST.map(v => v == null ? null : Math.round(v)),
+    gct: GCTf.map(v => v == null ? null : Math.round(v)),
+    pwr: PWR, path,
+  };
+  const zs = zoneStats(samples, profile);
+
+  const run = {
+    id: 'g' + Math.round(t0 / 1000), source: 'fit', date: localDate, start: startDate.toISOString(), tzOffsetSec,
+    sport, subSport: String(session.subSport ?? ''),
+    distMi, elapsedSec: session.totalElapsedTime ?? T[n-1], timerSec,
+    movingSec: runSec + walkSec, runSec, walkSec, idleSec,
+    avgPaceSec: distMi > 0.05 ? timerSec / distMi : null,
+    jogPaceSec: runDist > 50 ? runSec / (runDist / MI) : null,
+    avgHr: session.avgHeartRate ?? (hrVals.length ? Math.round(hrVals.reduce((a, b) => a + b, 0) / hrVals.length) : null),
+    maxHr: session.maxHeartRate ?? (hrVals.length ? Math.max(...hrVals) : null),
+    jogHr: hrW ? Math.round(hrSum / hrW * 10) / 10 : null,
+    drift, aboveLtSec: zs.aboveLtSec, zoneSec: zs.zoneSec,
+    recoveryHr,
+    aerobicTE: session.totalTrainingEffect ?? null,
+    anaerobicTE: session.totalAnaerobicTrainingEffect ?? null,
+    load: session.trainingLoadPeak != null ? Math.round(session.trainingLoadPeak) : null,
+    avgPower: session.avgPower ?? null, maxPower: session.maxPower ?? null,
+    weightLbs: user?.weight ? Math.round(user.weight * 2.20462 * 10) / 10 : null,
+    cadence: (() => { const c = median(CADf.filter((_, i) => ST[i] === 2)); return c == null ? null : Math.round(c); })(),
+    stride: session.avgStepLength ? Math.round(session.avgStepLength) / 1000 : null,
+    vertRatio: session.avgVerticalRatio ?? null,
+    vertOsc: session.avgVerticalOscillation != null ? Math.round(session.avgVerticalOscillation) / 10 : null,
+    gct: (() => { const g = median(GCTf.filter((_, i) => ST[i] === 2)); return g == null ? (session.avgStanceTime ?? null) : Math.round(g); })(),
+    gainFt: gainFt == null ? null : Math.round(gainFt),
+    minElevFt: altOk.length ? Math.round(Math.min(...altOk) * FT) : null,
+    maxElevFt: altOk.length ? Math.round(Math.max(...altOk) * FT) : null,
+    calories: session.totalCalories ?? null,
+    startLL: firstLL >= 0 ? [LAT[firstLL], LON[firstLL]] : null,
+    endLL: lastLL >= 0 ? [LAT[lastLL], LON[lastLL]] : null,
+    garminMaxHr: zt?.maxHeartRate ?? null, garminLthr: zt?.thresholdHeartRate ?? null,
+    filtered, unknown, hasSamples: true,
+    felt: '', routeId: null, testOverride: null,
+  };
+  return { run, samples };
+}
+// ==ANALYZE:END==
+
+/* ── DOM helpers ─────────────────────────────────────────────────── */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOW_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MON_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const todayYmd = () => ymd(new Date());
+const fmtDate = s => { const d = parseYmd(s); return `${DOW[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`; };
+const fmtDateLong = s => { const d = parseYmd(s); return `${DOW_LONG[d.getDay()]}, ${MON[d.getMonth()]} ${d.getDate()}`; };
+const fmtRel = s => { const k = diffDays(todayYmd(), s); return k === 0 ? 'Today' : k === 1 ? 'Tomorrow' : k === -1 ? 'Yesterday' : fmtDateLong(s); };
+const fmtTime = iso => new Date(iso).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+const fmtMi = v => v == null ? '—' : v.toFixed(2);
+const num = (v, d = 0) => v == null || !isFinite(v) ? '—' : Number(v).toFixed(d);
+const hoursSince = r => (Date.now() - Date.parse(r.start)) / 36e5;
+
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const BANG  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 6v7M12 18h.01"/></svg>';
+const CROSS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>';
+const CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>';
+const ICON = { good:CHECK, warn:BANG, crit:CROSS, wait:CLOCK };
+const WARN_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="flex:none;margin-top:1px"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+const statusIcon = s => `<span class="s-icon s-${s}" aria-label="${s}">${ICON[s]}</span>`;
+
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ── Storage: IndexedDB, one doc + one samples row per run ───────── */
+const idb = {
+  _db: null,
+  open(){
+    return this._db ??= new Promise((res, rej) => {
+      const r = indexedDB.open('stride', 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore('doc'); r.result.createObjectStore('samples'); };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async tx(store, mode, fn){
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const t = db.transaction(store, mode), req = fn(t.objectStore(store));
+      t.oncomplete = () => res(req?.result);
+      t.onerror = () => rej(t.error);
+    });
+  },
+  get(store, k){ return this.tx(store, 'readonly', s => s.get(k)); },
+  put(store, k, v){ return this.tx(store, 'readwrite', s => s.put(v, k)); },
+  del(store, k){ return this.tx(store, 'readwrite', s => s.delete(k)); },
+  clear(store){ return this.tx(store, 'readwrite', s => s.clear()); },
+  keys(store){ return this.tx(store, 'readonly', s => s.getAllKeys()); },
+};
+let storageOk = true;
+const memSamples = new Map();
+
+function freshDoc(){
+  return {
+    v: 1,
+    planStart: SEED.planStart ?? weekStart(todayYmd()),
+    profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false }),
+    runs: structuredClone(SEED.runs ?? []),
+    checkins: structuredClone(SEED.checkins ?? []),
+    routes: [], done: {}, refDays: [], decisions: {}, redClearedAt: null,
+  };
+}
+// Older docs and docs pulled from another device may be missing newer keys.
+function normalize(d){
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], decisions:{}, redClearedAt:null, ...d,
+    profile: { weights:[], ...(d.profile ?? freshDoc().profile) } };
+}
+let doc;
+// Sync bookkeeping writes through here so it never looks like an edit and
+// schedules a push of its own.
+async function saveLocal(){
+  if (!storageOk) return;
+  try { await idb.put('doc', 'main', doc); } catch { storageOk = false; toast('Couldn’t save — this browser is blocking storage'); }
+}
+async function save(){ await saveLocal(); syncTouch(); }
+async function getSamples(id){
+  if (memSamples.has(id)) return memSamples.get(id);
+  let s = null;
+  try { s = await idb.get('samples', id); } catch {}
+  if (!s && signedIn()){
+    s = await pullSamples(id).catch(() => null);
+    if (s) try { await idb.put('samples', id, s); } catch {}
+  }
+  if (s) memSamples.set(id, s);
+  return s;
+}
+async function putSamples(id, s){
+  memSamples.set(id, s);
+  try { await idb.put('samples', id, s); } catch { storageOk = false; }
+  if (signedIn()){ addUnsent([id]); flushSamples(); }
+}
+
+/* ── Sync: optional login + Supabase copy ────────────────────────────
+   Fill in url + key and the app gains an emailed-link login and a synced
+   copy of each person's runs. Leave them empty and nothing changes — no
+   network, no login, IndexedDB only.
+
+   The publishable key is meant to be public; row-level security is what
+   keeps each person's rows theirs. Use a Supabase project of its own.
+
+   Two tables: stride_docs is one row per person (everything but the
+   second-by-second samples), written compare-and-set on `version` so a
+   stale device fails instead of overwriting. stride_samples is one
+   write-once row per run, fetched only when a run page needs it. */
+const SUPABASE = { url:'', key:'' };
+
+const syncOn = () => !!(SUPABASE.url && SUPABASE.key);
+const SESSKEY = 'stride.session', UNSENTKEY = 'stride.unsent';
+let SESSION = null, pushTimer = null;
+const SYNC = { status:'off', msg:'' };
+const signedIn = () => syncOn() && !!SESSION?.user_id;
+
+function loadSession(){ try { SESSION = JSON.parse(localStorage.getItem(SESSKEY)) || null; } catch { SESSION = null; } }
+function saveSession(){ try { SESSION ? localStorage.setItem(SESSKEY, JSON.stringify(SESSION)) : localStorage.removeItem(SESSKEY); } catch {} }
+function setSession(d){
+  SESSION = { access_token:d.access_token, refresh_token:d.refresh_token,
+    expires_at: Date.now() + (d.expires_in || 3600) * 1000,
+    email: d.user?.email || SESSION?.email || '', user_id: d.user?.id || SESSION?.user_id || '' };
+  saveSession();
+}
+const base = () => SUPABASE.url.replace(/\/+$/, '');
+function sb(path, opts = {}, auth = true){
+  const h = { apikey:SUPABASE.key, 'Content-Type':'application/json', ...(opts.headers || {}) };
+  if (auth && SESSION) h.Authorization = 'Bearer ' + SESSION.access_token;
+  return fetch(base() + path, { ...opts, headers:h });
+}
+async function ensureToken(){
+  if (!SESSION) return false;
+  if (Date.now() < SESSION.expires_at - 60000) return true;
+  const r = await sb('/auth/v1/token?grant_type=refresh_token',
+    { method:'POST', body:JSON.stringify({ refresh_token:SESSION.refresh_token }) }, false);
+  if (!r.ok){ SESSION = null; saveSession(); return false; }
+  setSession(await r.json()); return true;
+}
+// The emailed link lands with the tokens in the URL fragment — which this app
+// also uses for routing — so it has to be read and cleared before first render.
+function consumeAuthHash(){
+  const h = location.hash;
+  if (!/access_token=|error_description=/.test(h)) return null;
+  const p = new URLSearchParams(h.slice(1));
+  history.replaceState(null, '', location.pathname + location.search + '#today');
+  if (p.get('error_description')) return { error: p.get('error_code') === 'otp_expired' ? 'That sign-in link has expired or was already used — send a new one' : p.get('error_description') };
+  SESSION = { access_token:p.get('access_token'), refresh_token:p.get('refresh_token') || '',
+    expires_at: Date.now() + parseInt(p.get('expires_in') || '3600', 10) * 1000, email:'', user_id:'' };
+  saveSession();
+  return { ok:true };
+}
+async function fetchUser(){
+  const r = await sb('/auth/v1/user');
+  if (!r.ok) return false;
+  const u = await r.json();
+  SESSION.email = u.email || ''; SESSION.user_id = u.id || ''; saveSession(); return true;
+}
+
+/* the doc row */
+const blobOf = () => { const { sync, ...rest } = doc; return rest; };
+const runCount = o => o?.runs?.length ?? 0;
+const meta = (row, dirty) => ({ user_id:SESSION.user_id, email:SESSION.email, version:row?.version ?? 0, at:row?.updated_at ?? null, dirty });
+// jsonb doesn't keep key order, so compare with keys sorted.
+function stableStringify(v){
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+  return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
+}
+async function pullRow(){
+  if (!await ensureToken()) return null;
+  const r = await sb(`/rest/v1/stride_docs?user_id=eq.${SESSION.user_id}&select=data,version,updated_at`);
+  if (!r.ok) throw new Error('pull failed (' + r.status + ')');
+  return (await r.json())[0] || null;
+}
+async function markSynced(row){ doc.sync = meta(row, false); await saveLocal(); setSync('ok'); flushSamples(); }
+async function adoptRemote(row){
+  doc = normalize(row.data); doc.sync = meta(row, false);
+  await saveLocal(); render(); setSync('ok');
+}
+async function pushRow(){
+  clearTimeout(pushTimer); pushTimer = null;
+  if (!signedIn()) return;
+  if (!await ensureToken()){ setSync('signedout', 'Session expired — sign in again'); return; }
+  const v = doc.sync?.version || 0;
+  const payload = { user_id:SESSION.user_id, data:blobOf(), version:v + 1, updated_at:new Date().toISOString() };
+  setSync('busy', 'Saving…');
+  let r;
+  if (v === 0){
+    r = await sb('/rest/v1/stride_docs', { method:'POST', body:JSON.stringify(payload), headers:{ Prefer:'return=representation' } });
+    if (r.status === 409){ await reconcile(); return; }
+  } else {
+    // compare-and-set: if another device wrote since, this matches nothing
+    r = await sb(`/rest/v1/stride_docs?user_id=eq.${SESSION.user_id}&version=eq.${v}`,
+      { method:'PATCH', body:JSON.stringify(payload), headers:{ Prefer:'return=representation' } });
+  }
+  if (!r.ok){ setSync('error', 'Couldn’t save — ' + r.status); return; }
+  const rows = await r.json();
+  if (!rows.length){ await reconcile(); return; }
+  await markSynced(rows[0]);
+}
+// The row moved under us. Let the person choose; never guess.
+async function reconcile(){
+  const row = await pullRow();
+  if (!row){ doc.sync = meta(null, true); await saveLocal(); return pushRow(); }
+  if (!runCount(row.data) && runCount(doc)){ doc.sync = meta(row, true); await saveLocal(); return pushRow(); }
+  if (stableStringify(blobOf()) === stableStringify(row.data)){ await markSynced(row); return; }
+  setSync('conflict', 'Another device saved first');
+  choose('Changed on another device',
+    `Here: ${runCount(doc)} runs, last synced ${timeAgo(doc.sync?.at)}. There: ${runCount(row.data)} runs, saved ${timeAgo(row.updated_at)}. Keeping one replaces the other.`,
+    ['Keep what’s here', async () => { doc.sync = meta(row, true); await saveLocal(); pushRow(); }],
+    ['Take the other one', async () => { await adoptRemote(row); toast('Pulled from the other device'); }]);
+}
+async function firstSync(){
+  try {
+    const row = await pullRow();
+    // This browser holds someone else's runs: never upload them into this account.
+    const owner = doc.sync?.user_id;
+    if (owner && owner !== SESSION.user_id){
+      await idb.clear('samples').catch(() => {}); memSamples.clear(); setUnsent([]);
+      if (row){ await adoptRemote(row); toast(`Loaded ${runCount(doc)} runs`); }
+      else { doc = normalize({ ...freshDoc(), runs:[], checkins:[] }); doc.sync = meta(null, false); await saveLocal(); render(); setSync('ok'); }
+      return;
+    }
+    const here = runCount(doc), there = row ? runCount(row.data) : 0;
+    const uploadAll = async () => { addUnsent(doc.runs.filter(r => r.hasSamples).map(r => r.id)); await pushRow(); toast(`Uploaded ${runCount(doc)} runs to your account`); };
+    if (!row){
+      // signing in on an empty browser must not publish that emptiness
+      doc.sync = meta(null, !!here); await saveLocal();
+      if (here) await uploadAll(); else setSync('ok');
+      return;
+    }
+    if (!there && !here){ await markSynced(row); return; }
+    if (!there){ doc.sync = meta(row, true); await saveLocal(); await uploadAll(); return; }
+    if (!here){ await adoptRemote(row); toast(`Loaded ${runCount(doc)} runs`); return; }
+    // The version counter says what happened; content breaks the tie only the
+    // first time this browser meets the row.
+    const known = doc.sync?.version || 0, dirty = !!doc.sync?.dirty;
+    if (known === row.version){
+      if (!dirty){ await markSynced(row); return; }
+      doc.sync = meta(row, true); await saveLocal(); await pushRow(); return;
+    }
+    if (known && known < row.version && !dirty){ await adoptRemote(row); toast('Pulled changes from another device'); return; }
+    if (stableStringify(blobOf()) === stableStringify(row.data)){ await markSynced(row); return; }
+    setSync('conflict', 'Two versions');
+    choose('There are already runs on this account',
+      `Here: ${here} runs. There: ${there} runs, saved ${timeAgo(row.updated_at)}. Keeping one replaces the other.`,
+      ['Keep what’s here', async () => { doc.sync = meta(row, true); await saveLocal(); await uploadAll(); }],
+      ['Take the account’s', async () => { await adoptRemote(row); toast('Loaded from your account'); }]);
+  } catch (e){ setSync('error', e.message); }
+}
+// Pick up another device's changes when this tab comes back into view.
+async function refreshFromRemote(){
+  if (!signedIn() || doc.sync?.dirty || SYNC.status === 'conflict') return;
+  try {
+    const row = await pullRow();
+    if (row && row.version > (doc.sync?.version || 0)) await adoptRemote(row);
+  } catch {}
+}
+
+/* the samples rows — write-once per run, retried until they land */
+function getUnsent(){ try { return JSON.parse(localStorage.getItem(UNSENTKEY)) || []; } catch { return []; } }
+function setUnsent(a){ try { localStorage.setItem(UNSENTKEY, JSON.stringify([...new Set(a)])); } catch {} }
+const addUnsent = ids => setUnsent([...getUnsent(), ...ids]);
+let flushing = false;
+async function flushSamples(){
+  if (flushing || !signedIn()) return;
+  flushing = true;
+  try {
+    for (const id of getUnsent()){
+      if (!runById(id)){ setUnsent(getUnsent().filter(x => x !== id)); continue; }
+      let s = memSamples.get(id);
+      if (!s) try { s = await idb.get('samples', id); } catch {}
+      if (s){
+        if (!await ensureToken()) break;
+        const r = await sb('/rest/v1/stride_samples?on_conflict=user_id,run_id', { method:'POST',
+          body:JSON.stringify({ user_id:SESSION.user_id, run_id:id, data:s }),
+          headers:{ Prefer:'resolution=merge-duplicates,return=minimal' } });
+        if (!r.ok) break;
+      }
+      setUnsent(getUnsent().filter(x => x !== id));
+    }
+  } catch {} finally { flushing = false; }
+}
+async function pullSamples(id){
+  if (!await ensureToken()) return null;
+  const r = await sb(`/rest/v1/stride_samples?user_id=eq.${SESSION.user_id}&run_id=eq.${encodeURIComponent(id)}&select=data`);
+  return r.ok ? (await r.json())[0]?.data ?? null : null;
+}
+async function dropSamples(id){
+  if (!signedIn() || !await ensureToken()) return;
+  const q = id ? `&run_id=eq.${encodeURIComponent(id)}` : '';
+  await sb(`/rest/v1/stride_samples?user_id=eq.${SESSION.user_id}${q}`, { method:'DELETE' }).catch(() => {});
+}
+
+/* plumbing */
+function setSync(status, msg = ''){ SYNC.status = status; SYNC.msg = msg; paintSync(); }
+function syncTouch(){
+  if (!signedIn()) return;
+  doc.sync = { ...(doc.sync || meta(null, true)), dirty:true };
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => pushRow().catch(e => setSync('error', e.message)), 2500);
+}
+function timeAgo(iso){
+  if (!iso) return 'never';
+  const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  return s < 60 ? 'just now' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' hr ago' : Math.round(s / 86400) + ' d ago';
+}
+function syncLine(){
+  if (SYNC.msg) return SYNC.msg;
+  return doc.sync?.at ? 'Synced ' + timeAgo(doc.sync.at) : 'Not synced yet';
+}
+function paintSync(){
+  const box = $('#syncbox'); if (!box) return;
+  if (!syncOn()){ box.innerHTML = '<div class="mock-note">Everything is stored in this browser only. Back it up from Upload.</div>'; return; }
+  if (!SESSION){ box.innerHTML = `<button class="theme-btn" data-action="goto-signin">Sign in to sync</button><div class="mock-note">Runs stay in this browser until you sign in.</div>`; return; }
+  box.innerHTML = `<div class="sync-line sync-${SYNC.status}"><span class="dot"></span>${esc(syncLine())}</div><div class="mock-note">${esc(SESSION.email)}</div>`;
+  document.querySelectorAll('[data-sync-line]').forEach(e => { e.className = `sync-line sync-${SYNC.status}`; e.innerHTML = `<span class="dot"></span>${esc(syncLine())}`; });
+}
+
+/* sign-in, done inline on the Upload page so it works on phones too */
+const authUi = { stage:'email', email:'', busy:false };
+async function sendLink(){
+  const email = $('#si-email')?.value.trim() || authUi.email;
+  if (!/^\S+@\S+\.\S+$/.test(email || '')){ toast('Enter your email'); return; }
+  authUi.email = email; authUi.busy = true; renderUpload();
+  try {
+    const back = encodeURIComponent(location.origin + location.pathname);
+    const r = await sb('/auth/v1/otp?redirect_to=' + back, { method:'POST', body:JSON.stringify({ email, create_user:true }) }, false);
+    if (r.status === 429) toast('Too many sign-in emails just now — wait a bit, or use the code from your last email');
+    else if (!r.ok) toast('Couldn’t send — ' + r.status);
+    else { authUi.stage = 'code'; toast('Check your email'); }
+  } catch { toast('Network error'); }
+  authUi.busy = false; renderUpload();
+}
+async function verifyCode(){
+  const token = $('#si-code')?.value.replace(/\s/g, '');
+  if (!/^\d{6,10}$/.test(token || '')){ toast('Enter the code from the email'); return; }
+  try {
+    const r = await sb('/auth/v1/verify', { method:'POST', body:JSON.stringify({ email:authUi.email, token, type:'email' }) }, false);
+    if (!r.ok){ toast('That code didn’t work'); return; }
+    setSession(await r.json()); await fetchUser();
+    authUi.stage = 'email'; paintSync(); render(); toast('Signed in');
+    await firstSync();
+  } catch { toast('Network error'); }
+}
+async function signOut(){
+  if (pushTimer) await pushRow().catch(() => {});
+  const go = () => { SESSION = null; saveSession(); setSync('off'); render(); toast('Signed out — your runs stay in this browser'); };
+  if (!doc.sync?.dirty) return go();
+  choose('Not everything has synced', 'Some changes haven’t reached your account yet. Signing out now leaves them only in this browser.',
+    ['Stay signed in', () => pushRow().catch(() => {})], ['Sign out anyway', go]);
+}
+async function syncInit(fromLink){
+  if (!syncOn()) return;
+  if (fromLink?.error){ toast(fromLink.error); }
+  if (!SESSION){ setSync('off'); return; }
+  if (!await ensureToken()){ setSync('signedout', 'Sign in again'); return; }
+  if (!SESSION.user_id) await fetchUser();
+  paintSync(); render();
+  await firstSync();
+  if (fromLink?.ok) toast('Signed in');
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden'){ if (pushTimer) pushRow().catch(() => {}); }
+  else refreshFromRemote();
+});
+
+/* two-way choice, for sync conflicts */
+function choose(title, body, [aLabel, aFn], [bLabel, bFn]){
+  const d = $('#choose');
+  d.innerHTML = `<h2 class="display">${esc(title)}</h2><p>${esc(body)}</p>
+    <div class="btn-row"><button class="btn primary" value="a">${esc(aLabel)}</button><button class="btn" value="b">${esc(bLabel)}</button></div>`;
+  d.querySelectorAll('button').forEach(b => b.onclick = () => { d.close(); (b.value === 'a' ? aFn : bFn)(); });
+  d.oncancel = e => e.preventDefault();   // a choice is required
+  d.showModal();
+}
+
+/* ── Derived facts ───────────────────────────────────────────────── */
+const sortedRuns = () => [...doc.runs].sort((a, b) => a.start < b.start ? -1 : 1);
+const runsOn = d => doc.runs.filter(r => r.date === d);
+const runById = id => doc.runs.find(r => r.id === id);
+const isRef = d => doc.refDays.includes(d);
+const testRoute = () => doc.routes.find(r => r.isTest);
+const isTest = r => r.testOverride ?? (!!r.routeId && !!doc.routes.find(x => x.id === r.routeId)?.isTest);
+const isClean = r => isTest(r) && (r.idleSec ?? 0) <= IDLE_TOLERANCE;
+const hrMetric = r => r.jogHr ?? r.avgHr;
+const currentWeight = () => doc.profile.weights.at(-1)?.lbs ?? null;
+
+function exclusionReasons(r){
+  const why = [];
+  if (!isTest(r)) why.push(r.gainFt > 50 ? `not the test route (${r.gainFt} ft gain)` : 'not the test route');
+  if ((r.idleSec ?? 0) > IDLE_TOLERANCE) why.push(`idle ${fmtDur(r.idleSec)} — timer left running`);
+  return why;
+}
+
+// Protocol audit: what, if anything, contaminates this run's numbers.
+function flagsFor(r){
+  const f = [], p = doc.profile;
+  if ((r.idleSec ?? 0) > IDLE_TOLERANCE) f.push(['warn', `Idle ${fmtDur(r.idleSec)}`, 'Timer left running while standing — drags average pace and HR']);
+  if (!isTest(r)) f.push(['wait', 'Not the test route', r.gainFt != null ? `${r.gainFt} ft of gain — kept out of the HR trend` : 'Kept out of the HR trend']);
+  if (r.recoveryHr == null) f.push(['wait', 'No recovery HR', 'Stop the timer, stand still 2 min, then save. Or type it in from Garmin Connect']);
+  if (r.anaerobicTE != null && r.anaerobicTE > 1.0) f.push(['crit', `Anaerobic TE ${r.anaerobicTE.toFixed(1)}`, 'Too hard for an easy run — should be near 0.0']);
+  if (r.maxHr != null && r.maxHr > p.guardHr) f.push(['warn', `Max HR ${r.maxHr}`, `Over the ~${p.guardHr} guardrail — take a walk break when HR passes ${p.zones.mod}`]);
+  if (r.aboveLtSec != null && r.aboveLtSec > 30) f.push(['warn', `${fmtDur(r.aboveLtSec)} above ${p.lthr}`, 'Should be near zero on easy runs']);
+  const w = currentWeight();
+  if (r.weightLbs != null && w != null && Math.abs(r.weightLbs - w) >= 3) f.push(['wait', `Computed at ${r.weightLbs} lbs`, 'Power and calories are a few percent off vs. your current weight']);
+  if (r.source === 'manual') f.push(['wait', 'Entered from notes', 'Upload the FIT file for jogging-only HR, zones and time above threshold']);
+  return f;
+}
+
+/* ── Check-ins and the red flag ──────────────────────────────────── */
+const SORE = { none:'Nothing', calves:'Calves', hip:'Hip', knee:'Knee', red:'Shin / Achilles / one calf much worse' };
+function redFlagActive(){
+  const reds = doc.checkins.filter(c => c.value === 'red').map(c => c.at).sort();
+  return reds.length > 0 && (!doc.redClearedAt || reds.at(-1) > doc.redClearedAt);
+}
+function pendingCheckin(){
+  // Only the latest run matters — a newer run resets the soreness clock.
+  const r = sortedRuns().reverse().find(x => hoursSince(x) >= 0);
+  if (!r) return null;
+  const h = hoursSince(r);
+  const has = st => doc.checkins.some(c => c.runId === r.id && c.stage === st);
+  if (h >= 36 && h < 72 && !has('48')) return { run:r, stage:'48', hours:h };
+  if (h >= 10 && h < 36 && !has('24')) return { run:r, stage:'24', hours:h };
+  return null;
+}
+
+/* ── Plan state: walk calendar weeks from the start, gate each one ─ */
+function gateFor(w){
+  const runs = w.runs, n = runs.length, p = doc.profile, items = [];
+  items.push([n >= 3 ? 'good' : w.current ? 'wait' : 'crit', '3 runs completed',
+    n ? `${n} so far · ${runs.map(r => DOW[parseYmd(r.date).getDay()]).join(', ')}` : 'None yet']);
+
+  const cks = doc.checkins.filter(c => runs.some(r => r.id === c.runId));
+  const red = cks.some(c => c.value === 'red');
+  const sore48 = cks.filter(c => c.stage === '48' && c.value !== 'none');
+  const last = runs.at(-1);
+  const pending48 = !!last && !doc.checkins.some(c => c.runId === last.id && c.stage === '48') && hoursSince(last) < 72;
+  if (red) items.push(['crit', 'No red-flag symptoms', 'Hard stop logged — plan paused']);
+  else if (sore48.length) items.push(['crit', 'No soreness past 48 hrs', `${SORE[sore48[0].value]} still sore at 48 hrs`]);
+  else if (pending48){
+    const sore24 = cks.find(c => c.runId === last.id && c.stage === '24' && c.value !== 'none');
+    const due = new Date(Date.parse(last.start) + 48 * 36e5);
+    items.push(['wait', 'No soreness past 48 hrs', `${sore24 ? SORE[sore24.value] + ' sore at ~24 hrs — normal. ' : ''}48-hr check ${DOW_LONG[due.getDay()]} ${due.getHours() >= 17 ? 'night' : ''}`.trim()]);
+  }
+  else items.push(['good', 'No soreness past 48 hrs', n ? 'Clear' : '—']);
+
+  const over = runs.filter(r => r.maxHr > p.guardHr);
+  const peak = n ? Math.max(...runs.map(r => r.maxHr ?? 0)) : null;
+  items.push([over.length ? 'warn' : n ? (peak === p.guardHr ? 'warn' : 'good') : 'wait', `Max HR under ~${p.guardHr}`,
+    over.length ? `${over.map(r => `${r.maxHr} ${DOW[parseYmd(r.date).getDay()]}`).join(', ')} — walk when HR passes ${p.zones.mod}`
+      : n ? (peak === p.guardHr ? `Peaked at ${peak} — right on the line` : `Peaked at ${peak}`) : '—']);
+
+  const withS = runs.filter(r => r.aboveLtSec != null);
+  if (!withS.length) items.push(['wait', `Little to no time above ${p.lthr}`, n ? 'Needs FIT samples — upload these runs' : '—']);
+  else {
+    const tot = withS.reduce((s, r) => s + r.aboveLtSec, 0);
+    items.push([tot > 60 ? 'warn' : 'good', `Little to no time above ${p.lthr}`,
+      `${fmtDur(tot)} total${withS.length < n ? ` · ${n - withS.length} run${n - withS.length > 1 ? 's' : ''} without samples` : ''}`]);
+  }
+
+  let auto, verdict;
+  if (red){ auto = 'repeat'; verdict = ['crit', 'Paused.', 'Resume once you’re cleared.']; }
+  else if (n === 0 && !w.current){ auto = 'back'; verdict = ['crit', 'Missed week.', 'Go back one week — don’t jump ahead.']; }
+  else if (sore48.length){ auto = 'repeat'; verdict = ['warn', 'Repeat this week.', 'Soreness lasted past 48 hours.']; }
+  else if (n < 3){ auto = 'repeat'; verdict = w.current ? ['wait', 'In progress.', `${3 - n} more run${3 - n > 1 ? 's' : ''} this week.`] : ['warn', 'Repeat this week.', 'Fewer than 3 runs.']; }
+  else if (pending48){ auto = 'advance'; verdict = ['wait', 'Almost there.', 'Advances if the 48-hour check comes back clear.']; }
+  else { auto = 'advance'; verdict = ['good', 'On track to advance.', w.planWeek === 1 ? 'Weeks 1–2 are the same workload, so there’s no jump either way.' : 'Next week’s targets unlock Monday.']; }
+  return { items, auto, verdict };
+}
+
+function planState(){
+  const cur = weekStart(todayYmd());
+  const weeks = [];
+  let ws = weekStart(doc.planStart), pw = 1;
+  while (ws <= cur){
+    const we = addDays(ws, 6);
+    const w = { start:ws, end:we, planWeek:pw, current: ws === cur,
+      runs: sortedRuns().filter(r => r.date >= ws && r.date <= we) };
+    w.gate = gateFor(w);
+    if (!w.current){
+      const ov = doc.decisions[ws];
+      w.decision = ov || w.gate.auto; w.overridden = !!ov;
+      pw = w.decision === 'advance' ? Math.min(9, pw + 1) : w.decision === 'back' ? Math.max(1, pw - 1) : pw;
+    }
+    weeks.push(w);
+    ws = addDays(ws, 7);
+  }
+  return weeks;
+}
+const planWeekObj = pw => PLAN[Math.min(pw, 8) - 1];
+
+// Next N days: rest between runs, three a week, rest before a sport day.
+function schedule(from, n){
+  const out = [], red = redFlagActive(), counts = {};
+  const count = ws => counts[ws] ??= doc.runs.filter(r => weekStart(r.date) === ws).length;
+  for (let i = 0; i < n; i++){
+    const d = addDays(from, i), ws = weekStart(d);
+    count(ws);
+    const prevD = addDays(d, -1);
+    const prev = i ? out[i-1] : { kind: runsOn(prevD).length ? 'done' : isRef(prevD) ? 'ref' : 'rest' };
+    let kind, note = '';
+    if (runsOn(d).length) kind = 'done';
+    else if (isRef(d)) kind = 'ref';
+    else if (red){ kind = 'rest'; note = 'Paused'; }
+    else if (prev.kind === 'done' || prev.kind === 'run'){ kind = 'rest'; note = 'After a run'; }
+    else if (counts[ws] >= 3){ kind = 'rest'; note = 'Week’s runs are in'; }
+    else if (isRef(addDays(d, 1))){ kind = 'rest'; note = 'Sport tomorrow'; }
+    else { kind = 'run'; counts[ws]++; if (prev.kind === 'ref') note = 'Skip if legs are toast'; }
+    out.push({ date:d, kind, note, slot: kind === 'run' ? counts[ws] : null });
+  }
+  return out;
+}
+function sessionFor(pw, slot){
+  const p = planWeekObj(pw);
+  if (p.speed && slot === 3) return { title:'Speed run', detail:'Warm up, 4 × 2 min harder with 2 min walk, cool down', extra:'' };
+  return { title:p.session, detail:p.detail, extra: slot && p.strides && slot <= p.strides ? 'Then 4 × 20 sec strides at ~80% — a full minute of walking between' : '' };
+}
+
+/* ── Theme ───────────────────────────────────────────────────────── */
+const prefs = {
+  get(k, d){ try { const v = localStorage.getItem('stride:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem('stride:' + k, JSON.stringify(v)); } catch {} },
+};
+const savedTheme = prefs.get('theme', null);
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+document.querySelectorAll('[data-theme-toggle]').forEach(b => b.addEventListener('click', () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  prefs.set('theme', next);
+  render();
+}));
+document.addEventListener('click', e => { if (e.target.closest('[data-theme-toggle2]')) $('[data-theme-toggle]').click(); });
+
+/* ── Charts: hand-built SVG at the container's real width ────────── */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs = {}, parent){
+  const node = document.createElementNS(NS, tag);
+  for (const k in attrs) node.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function svgFor(host, H){
+  host.innerHTML = '';
+  const W = Math.max(host.clientWidth, 260);
+  return [el('svg', { width:W, height:H, viewBox:`0 0 ${W} ${H}` }, host), W];
+}
+function hGrid(svg, ticks, y, x0, x1, fmt = String){
+  ticks.forEach(t => {
+    el('line', { x1:x0, x2:x1, y1:y(t), y2:y(t), stroke:css('--grid'), 'stroke-width':1 }, svg);
+    el('text', { x:x0 - 8, y:y(t) + 4, 'text-anchor':'end', class:'num' }, svg).textContent = fmt(t);
+  });
+}
+function colPath(x, yTop, w, yBase, r = 4){
+  const h = yBase - yTop; r = Math.min(r, h, w / 2);
+  if (h <= 0) return '';
+  return `M${x},${yBase} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + w - r} Q${x + w},${yTop} ${x + w},${yTop + r} V${yBase} Z`;
+}
+const tipOn = (node, html) => { node.dataset.tip = html; return node; };
+const niceTicks = (lo, hi, step) => { const t = []; for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) t.push(v); return t; };
+
+function chartHrTrend(host, runs){
+  const H = 260, m = { t:14, r:58, b:30, l:40 };
+  const [svg, W] = svgFor(host, H);
+  const p = doc.profile;
+  const vals = runs.map(hrMetric).filter(v => v != null);
+  const lo = Math.min(140, ...vals.map(v => Math.floor((v - 5) / 10) * 10));
+  const hi = Math.max(190, ...vals.map(v => Math.ceil((v + 5) / 10) * 10));
+  const last = runs.length ? runs.at(-1).date : doc.planStart;
+  const span = Math.max(56, Math.ceil((diffDays(doc.planStart, last) + 8) / 7) * 7);
+  const x = d => m.l + d / span * (W - m.l - m.r);
+  const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+
+  el('rect', { x:m.l, y:y(p.zones.easy), width:W - m.l - m.r, height:y(lo) - y(p.zones.easy), fill:css('--series-1-wash') }, svg);
+  hGrid(svg, niceTicks(lo, hi, 10), y, m.l, W - m.r);
+  const weeks = span / 7, every = Math.ceil(weeks / 10);
+  for (let w = 0; w < weeks; w++){
+    if (w) el('line', { x1:x(w * 7), x2:x(w * 7), y1:m.t, y2:H - m.b, stroke:css('--grid') }, svg);
+    if (w % every === 0) el('text', { x:x(w * 7 + 3.5), y:H - m.b + 18, 'text-anchor':'middle' }, svg).textContent = 'W' + (w + 1);
+  }
+  el('line', { x1:m.l, x2:W - m.r, y1:H - m.b, y2:H - m.b, stroke:css('--axis') }, svg);
+  el('line', { x1:m.l, x2:W - m.r, y1:y(p.lthr), y2:y(p.lthr), stroke:css('--crit'), 'stroke-width':1.5 }, svg);
+  el('text', { x:W - m.r + 6, y:y(p.lthr) + 4 }, svg).textContent = 'LT ' + p.lthr;
+  el('text', { x:W - m.r + 6, y:y(p.zones.easy) + 4 }, svg).textContent = 'Easy';
+  const td = diffDays(doc.planStart, todayYmd());
+  if (td >= 0 && td <= span){
+    el('line', { x1:x(td), x2:x(td), y1:m.t, y2:H - m.b, stroke:css('--ink'), opacity:.35 }, svg);
+    el('text', { x:x(td) + 5, y:m.t + 10, style:'font-weight:700' }, svg).textContent = 'Today';
+  }
+  const clean = runs.filter(isClean);
+  if (clean.length > 1){
+    el('path', { d: clean.map((r, i) => `${i ? 'L' : 'M'}${x(diffDays(doc.planStart, r.date))},${y(hrMetric(r))}`).join(' '),
+      fill:'none', stroke:css('--series-1'), 'stroke-width':2, 'stroke-linejoin':'round', 'stroke-linecap':'round' }, svg);
+  }
+  runs.forEach(r => {
+    const v = hrMetric(r); if (v == null) return;
+    const cx = x(diffDays(doc.planStart, r.date)), cy = y(v), ok = isClean(r);
+    if (ok) el('circle', { cx, cy, r:6, fill:css('--series-1'), stroke:css('--surface'), 'stroke-width':2 }, svg);
+    else el('circle', { cx, cy, r:5, fill:css('--surface'), stroke:css('--muted'), 'stroke-width':2 }, svg);
+    if (ok && (r === clean.at(-1) || r === clean[0])) el('text', { x:cx + 10, y:cy - 8, class:'lbl num' }, svg).textContent = Math.round(v);
+    const pace = fmtDur(r.jogPaceSec ?? r.avgPaceSec);
+    const kind = r.jogHr != null ? 'jogging HR' : 'avg HR (whole run)';
+    const hit = el('circle', { cx, cy, r:14, fill:'transparent', style:'cursor:pointer' }, svg);
+    hit.addEventListener('click', () => { location.hash = 'runs/' + r.id; });
+    tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${Math.round(v)} bpm ${kind} · ${pace} /mi<br>${ok ? '✓ Clean test-route run' : '✕ Excluded: ' + exclusionReasons(r).join(' · ')}`);
+  });
+}
+
+function chartColumns(host, { cats, series, max, ticks, fmt, guard, labelFmt, tipFmt, onClick }){
+  const H = 210, m = { t:20, r:12, b:28, l:36 };
+  const [svg, W] = svgFor(host, H);
+  const y = v => m.t + (max - v) / max * (H - m.t - m.b);
+  hGrid(svg, ticks ?? niceTicks(0, max, max <= 5 ? 1 : 5), y, m.l, W - m.r, fmt);
+  const band = (W - m.l - m.r) / Math.max(cats.length, 1);
+  const bw = Math.min(24, band * 0.55);
+  cats.forEach((c, i) => {
+    const cx = m.l + band * i + band / 2;
+    let acc = 0;
+    series.forEach((s, si) => {
+      const v = Math.min(c[s.key] ?? 0, max - acc);
+      if (v <= 0) return;
+      const y0 = y(acc), y1 = y(acc + v), gap = acc > 0 ? 2 : 0;
+      const top = series.slice(si + 1).every(s2 => !(c[s2.key] > 0));
+      if (top) el('path', { d:colPath(cx - bw / 2, y1, bw, y0 - gap), fill:s.color }, svg);
+      else el('rect', { x:cx - bw / 2, y:y1, width:bw, height:Math.max(0, y0 - y1 - gap), fill:s.color }, svg);
+      acc += v;
+    });
+    if (labelFmt && band > 34) el('text', { x:cx, y:y(acc) - 6, 'text-anchor':'middle', class:'lbl num' }, svg).textContent = labelFmt(c);
+    if (band > 30 || i % Math.ceil(30 / band) === 0)
+      el('text', { x:cx, y:H - m.b + 18, 'text-anchor':'middle' }, svg).textContent = c.date.slice(5).replace('-', '/');
+    const hit = el('rect', { x:cx - band / 2 + 2, y:m.t, width:Math.max(band - 4, 4), height:H - m.t - m.b, fill:'transparent', style:onClick ? 'cursor:pointer' : '' }, svg);
+    tipOn(hit, tipFmt(c));
+    if (onClick) hit.addEventListener('click', () => onClick(c));
+  });
+  el('line', { x1:m.l, x2:W - m.r, y1:H - m.b, y2:H - m.b, stroke:css('--axis') }, svg);
+  if (guard != null) el('line', { x1:m.l, x2:W - m.r, y1:y(guard), y2:y(guard), stroke:css('--crit'), 'stroke-width':1.5 }, svg);
+}
+
+function chartLine(host, pts, { lo = 0, hi, step, tipFmt }){
+  const H = 210, m = { t:22, r:24, b:28, l:36 };
+  const [svg, W] = svgFor(host, H);
+  const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+  const x = i => pts.length === 1 ? (m.l + W - m.r) / 2 : m.l + 16 + i * (W - m.l - m.r - 32) / (pts.length - 1);
+  hGrid(svg, niceTicks(lo, hi, step), y, m.l, W - m.r);
+  el('line', { x1:m.l, x2:W - m.r, y1:H - m.b, y2:H - m.b, stroke:css('--axis') }, svg);
+  if (pts.length > 1) el('path', { d:pts.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p.v)}`).join(' '), fill:'none',
+    stroke:css('--series-1'), 'stroke-width':2, 'stroke-linejoin':'round', 'stroke-linecap':'round' }, svg);
+  const labelEvery = Math.ceil(pts.length / 8);
+  pts.forEach((p, i) => {
+    el('circle', { cx:x(i), cy:y(p.v), r:4.5, fill:css('--series-1'), stroke:css('--surface'), 'stroke-width':2 }, svg);
+    if (i === 0 || i === pts.length - 1) el('text', { x:x(i), y:y(p.v) - 11, 'text-anchor':'middle', class:'lbl num' }, svg).textContent = p.v;
+    if (i % labelEvery === 0 || i === pts.length - 1) el('text', { x:x(i), y:H - m.b + 18, 'text-anchor':'middle' }, svg).textContent = p.r.date.slice(5).replace('-', '/');
+    tipOn(el('circle', { cx:x(i), cy:y(p.v), r:14, fill:'transparent' }, svg), tipFmt(p));
+  });
+}
+
+// One run's heart rate over time, zone bands behind, run/walk strip below.
+function chartTrace(host, s){
+  const H = 280, m = { t:12, r:74, b:46, l:40 };
+  const [svg, W] = svgFor(host, H);
+  const p = doc.profile;
+  const hrs = s.hr.filter(v => v != null);
+  if (!hrs.length){ host.innerHTML = '<div class="pending-box">No heart rate in this file.</div>'; return; }
+  const lo = Math.min(100, Math.floor((Math.min(...hrs) - 5) / 10) * 10);
+  const hi = Math.max(190, Math.ceil((Math.max(...hrs) + 3) / 10) * 10);
+  const tMax = s.t.at(-1) || 1;
+  const x = t => m.l + t / tMax * (W - m.l - m.r);
+  const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+  const bands = [[lo, p.zones.easy, '--z-easy', 'Easy'], [p.zones.easy, p.zones.mod, '--z-mod', 'Moderate'], [p.zones.mod, p.lthr, '--z-hard', 'Hard'], [p.lthr, hi, '--z-above', 'Above LT']];
+  bands.forEach(([a, b, c, label]) => {
+    el('rect', { x:m.l, y:y(b), width:W - m.l - m.r, height:y(a) - y(b), fill:css(c), 'fill-opacity':.1 }, svg);
+    el('text', { x:W - m.r + 8, y:(y(a) + y(b)) / 2 + 4 }, svg).textContent = label;
+  });
+  hGrid(svg, niceTicks(lo, hi, 20), y, m.l, W - m.r);
+  el('line', { x1:m.l, x2:W - m.r, y1:y(p.lthr), y2:y(p.lthr), stroke:css('--crit'), 'stroke-width':1.5 }, svg);
+  const tickStep = tMax > 1800 ? 300 : tMax > 600 ? 120 : 60;
+  for (let t = 0; t <= tMax; t += tickStep) el('text', { x:x(t), y:H - m.b + 32, 'text-anchor':'middle', class:'num' }, svg).textContent = fmtDur(t);
+  let d = '', pen = false;
+  s.t.forEach((t, i) => {
+    const v = s.hr[i];
+    if (v == null || (i && t - s.t[i-1] > 5)){ pen = false; if (v == null) return; }
+    d += `${pen ? 'L' : 'M'}${x(t).toFixed(1)},${y(v).toFixed(1)}`; pen = true;
+  });
+  el('path', { d, fill:'none', stroke:css('--series-1'), 'stroke-width':2, 'stroke-linejoin':'round', 'stroke-linecap':'round' }, svg);
+  // run / walk / idle strip
+  const stripY = H - m.b + 8, colors = [css('--muted'), css('--walk'), css('--series-1')];
+  let i0 = 0;
+  for (let i = 1; i <= s.t.length; i++){
+    if (i === s.t.length || s.st[i] !== s.st[i0]){
+      const x0 = x(s.t[i0]), x1 = x(i === s.t.length ? tMax : s.t[i]);
+      el('rect', { x:x0, y:stripY, width:Math.max(x1 - x0 - (i === s.t.length ? 0 : 2), 1), height:8, rx:2, fill:colors[s.st[i0]], opacity:s.st[i0] === 0 ? .5 : 1 }, svg);
+      i0 = i;
+    }
+  }
+  // crosshair
+  const cross = el('line', { y1:m.t, y2:H - m.b, stroke:css('--ink'), opacity:0 }, svg);
+  const dot = el('circle', { r:4.5, fill:css('--series-1'), stroke:css('--surface'), 'stroke-width':2, opacity:0 }, svg);
+  const hit = el('rect', { x:m.l, y:m.t, width:W - m.l - m.r, height:H - m.t, fill:'transparent' }, svg);
+  const STATE = ['standing', 'walking', 'jogging'];
+  hit._tip = e => {
+    const r = svg.getBoundingClientRect();
+    const t = (e.clientX - r.left - m.l) / (W - m.l - m.r) * tMax;
+    let a = 0, b = s.t.length - 1;
+    while (b - a > 1){ const mid = (a + b) >> 1; if (s.t[mid] < t) a = mid; else b = mid; }
+    const i = Math.abs(s.t[a] - t) < Math.abs(s.t[b] - t) ? a : b;
+    cross.setAttribute('x1', x(s.t[i])); cross.setAttribute('x2', x(s.t[i])); cross.setAttribute('opacity', .3);
+    if (s.hr[i] != null){ dot.setAttribute('cx', x(s.t[i])); dot.setAttribute('cy', y(s.hr[i])); dot.setAttribute('opacity', 1); }
+    const pace = s.spd[i] > 30 ? `${fmtDur(MI / (s.spd[i] / 100))} /mi` : '—';
+    return `<b>${fmtDur(s.t[i])}</b> · ${STATE[s.st[i]]}<br>${s.hr[i] ?? '—'} bpm · ${pace}${s.cad[i] ? ` · ${s.cad[i]} spm` : ''}`;
+  };
+  hit._tipOut = () => { cross.setAttribute('opacity', 0); dot.setAttribute('opacity', 0); };
+}
+
+function routeSvg(path){
+  if (!path || path.length < 2) return '';
+  const lat0 = path[0][0] * Math.PI / 180;
+  const pts = path.map(([la, lo]) => [lo * Math.cos(lat0), -la]);
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const span = Math.max(x1 - x0, y1 - y0) || 1, W = 300, H = 180, padd = 16;
+  const k = Math.min((W - 2 * padd) / (x1 - x0 || span), (H - 2 * padd) / (y1 - y0 || span));
+  const ox = (W - (x1 - x0) * k) / 2, oy = (H - (y1 - y0) * k) / 2;
+  const P = pts.map(([px, py]) => [ox + (px - x0) * k, oy + (py - y0) * k]);
+  const d = P.map((q, i) => `${i ? 'L' : 'M'}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('');
+  return `<svg class="route-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-label="Route shape">
+    <path d="${d}" fill="none" stroke="var(--series-1)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${P.at(-1)[0]}" cy="${P.at(-1)[1]}" r="5" fill="var(--ink)" stroke="var(--surface)" stroke-width="2"/>
+    <circle cx="${P[0][0]}" cy="${P[0][1]}" r="6" fill="var(--accent)" stroke="var(--ink)" stroke-width="2"/>
+  </svg>`;
+}
+
+/* ── Tooltip ─────────────────────────────────────────────────────── */
+const tip = $('#tip');
+let lastTipTarget = null;
+document.addEventListener('pointermove', e => {
+  const t = e.target.closest?.('[data-tip]');
+  const live = e.target._tip ? e.target : null;
+  if (lastTipTarget && lastTipTarget !== live && lastTipTarget._tipOut) lastTipTarget._tipOut();
+  lastTipTarget = live;
+  const html = live ? live._tip(e) : t?.dataset.tip;
+  if (!html){ tip.classList.remove('show'); return; }
+  tip.innerHTML = html; tip.classList.add('show');
+  const r = tip.getBoundingClientRect();
+  let lx = e.clientX + 14, ly = e.clientY - r.height - 12;
+  if (lx + r.width > innerWidth - 8) lx = e.clientX - r.width - 14;
+  if (ly < 8) ly = e.clientY + 16;
+  tip.style.left = lx + 'px'; tip.style.top = ly + 'px';
+});
+
+/* ═══ TODAY ══════════════════════════════════════════════════════════ */
+let lastResponse = null;
+const RESPONSES = {
+  '24': {
+    none:   'Logged. Good sign.',
+    calves: 'Expected when the stride shortens. Normal is dull, achy, both legs, worst at 24–48 hrs and easing as you move. <b>You’ll get a 48-hour check</b> — still sore then means the week repeats.',
+    hip:    'Usually a tight hip flexor rather than a strength gap. The half-kneeling stretch is the fix; shorter steps help too.',
+    knee:   'Mild, intermittent ache is common coming back from a break and usually settles. <b>Escalate</b> if it turns sharp, swells, causes a limp, or is still there in a couple of days.',
+  },
+  '48': {
+    none:   'Clear at 48 hours. That’s the green light for the week.',
+    calves: '<b>Still sore at 48 hours — this week repeats.</b> Same jog time next week, no increase. Consider swapping one run for intervals (jog 2 min / walk 90 sec × 5).',
+    hip:    '<b>Hip still tight at 48 hours — repeat the week.</b> Daily half-kneeling stretch and glute bridges; shorter steps on the next run.',
+    knee:   '<b>Knee still aching at 48 hours — repeat the week.</b> If it’s sharp, swollen or causing a limp, see a doctor or physical therapist.',
+  },
+  red: '<b>Stop running and get it looked at.</b> One calf much worse than the other, shin-bone pain, or Achilles tightness getting out of bed are the plan’s hard stops.',
+};
+
+function taskHTML(key, main, sub, meta){
+  const on = !!doc.done[key];
+  return `<li><button class="task" data-task="${esc(key)}" aria-pressed="${on}">
+    <span class="box">${CHECK}</span>
+    <span><div class="t-main">${main}</div>${sub ? `<div class="t-sub">${sub}</div>` : ''}</span>
+    ${meta ? `<span class="t-meta">${meta}</span>` : ''}
+  </button></li>`;
+}
+const tasksFor = (date, ids) => ids.map(id => taskHTML(`${date}|${id}`, ...TASKS[id])).join('');
+
+function renderToday(){
+  const today = todayYmd(), now = new Date();
+  const weeks = planState(), cur = weeks.at(-1), pw = cur.planWeek;
+  const days = schedule(today, 7), t = days[0];
+  const red = redFlagActive();
+  const ranYesterday = runsOn(addDays(today, -1)).length > 0;
+  const todayRuns = runsOn(today);
+  const pwo = planWeekObj(pw);
+
+  let eyebrow = 'Today’s assignment', title, copy, tasks;
+  if (red){
+    eyebrow = 'Today’s assignment · plan paused';
+    title = 'Get it <em>checked</em>';
+    copy = 'A hard-stop symptom is logged. No running until a doctor or physical therapist has looked at it. Walking and the hip stretch are fine if they don’t hurt.';
+    tasks = tasksFor(today, ['hip']) + `<li><button class="btn small" data-action="clear-red" style="margin-top:6px">I’ve been cleared to run</button></li>`;
+  } else if (t.kind === 'done'){
+    const r = todayRuns.at(-1);
+    title = 'Run <em>done</em>';
+    copy = `${fmtMi(r.distMi)} mi · ${fmtDur(r.runSec)} jogging · ${r.jogHr != null ? `jogging HR ${Math.round(r.jogHr)}` : `avg HR ${r.avgHr}`}${r.recoveryHr != null ? ` · recovery ${r.recoveryHr}` : ''}. Stretch the calves tonight; there’s a soreness check tomorrow.`;
+    tasks = tasksFor(today, ['calf', 'roll', 'hip']);
+  } else if (t.kind === 'ref'){
+    title = 'Sport <em>day</em>';
+    copy = 'Not a rest day — another sport still loads the legs. Stretch between sessions, and skip the next run if the legs are done.';
+    tasks = tasksFor(today, ['sporthip', 'calf']);
+  } else if (t.kind === 'run'){
+    const s = sessionFor(pw, t.slot);
+    eyebrow = `Today’s assignment · week ${Math.min(pw, 8)}, run ${t.slot}`;
+    title = `Run <em>day</em>`;
+    copy = `${s.title} — ${s.detail.toLowerCase()}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''} The protocol is below.`;
+    tasks = tasksFor(today, ['hip', 'calf']);
+  } else {
+    title = 'Rest <em>day</em>';
+    copy = isRef(addDays(today, 1)) ? 'Sport day tomorrow — rest today and go in fresh. Mobility only.'
+      : ranYesterday ? 'You ran yesterday. Calves take the brunt when the stride shortens and 24–48 hours after is the peak — let them settle. Mobility only.'
+      : t.note === 'Week’s runs are in' ? 'This week’s three runs are in. A walk is fine; keep the stretching going.'
+      : 'Mobility only today.';
+    tasks = tasksFor(today, ranYesterday ? ['hip', 'calf', 'roll', 'bridge'] : ['hip', 'bridge']);
+  }
+
+  // Check-in
+  const pc = pendingCheckin();
+  let checkin = '';
+  if (pc){
+    const dn = DOW_LONG[parseYmd(pc.run.date).getDay()];
+    checkin = `<div class="card">
+      <div class="card-head"><h2>How are the legs after ${dn}’s run?</h2><span class="card-sub">${pc.stage === '48' ? '48-hour check' : '~' + Math.round(pc.hours) + ' hrs after'}</span></div>
+      <div class="pill-row">${Object.entries(SORE).map(([k, l]) => `<button class="pill${k === 'red' ? ' flag' : ''}" data-checkin="${k}" data-run="${pc.run.id}" data-stage="${pc.stage}">${l}</button>`).join('')}</div>
+    </div>`;
+  }
+  if (lastResponse){
+    checkin += `<div class="card"><div class="card-head"><h2>Logged</h2><button class="link-btn" data-action="undo-checkin">Undo</button></div>
+      <div class="response show${lastResponse.alarm ? ' alarm' : ''}" style="margin-top:0">${lastResponse.html}</div></div>`;
+  }
+
+  // Next run
+  const nr = days.find(d => d.kind === 'run');
+  let next;
+  if (red) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><div class="next-run-big display">On hold</div><p class="card-sub" style="margin:0">Resume at the week you were on once you’re cleared.</p></div>`;
+  else if (!nr) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><p class="card-sub" style="margin:0">Nothing scheduled in the next 7 days — tap a day below to change sport days.</p></div>`;
+  else {
+    const nwk = diffDays(cur.start, nr.date) >= 7 ? Math.min(cur.gate.auto === 'advance' ? pw + 1 : pw, 8) : Math.min(pw, 8);
+    const s = sessionFor(nwk, nr.slot);
+    next = `<div class="card">
+      <div class="card-head"><h2>${nr.date === today ? 'Today’s run' : 'Next run'}</h2><span class="card-sub">Tap a day in “Next 7 days” to mark a sport day</span></div>
+      <div class="eyebrow">${fmtRel(nr.date)}${fmtRel(nr.date).includes(',') ? '' : ' · ' + fmtDate(nr.date)} · week ${nwk}, run ${nr.slot}${nr.note ? ' · ' + nr.note.toLowerCase() : ''}</div>
+      <div class="next-run-big display">${esc(s.title)}</div>
+      <div class="card-sub">${esc(s.detail)}${s.extra ? '. ' + esc(s.extra) : ''}</div>
+      <div class="kv">
+        <div>Pace<b>Easy enough to talk</b></div>
+        <div>Route<b>Flat test route</b></div>
+        <div>Walk break if HR<b class="num">&gt; ${doc.profile.zones.mod}</b></div>
+        <div>Ceiling<b class="num">${doc.profile.lthr} bpm</b></div>
+      </div>
+      <details class="protocol" style="margin-top:18px"${nr.date === today ? ' open' : ''}>
+        <summary><span class="eyebrow" style="color:var(--ink-2)">Run protocol · 6 steps</span><svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <ul class="task-list">${PROTOCOL(doc.profile).map(([id, mm, sub], i) => taskHTML(`${nr.date}|${id}`, `${i + 1}. ${mm}`, sub)).join('')}</ul>
+        <p class="card-sub" style="margin:12px 0 0">Auto-pause off. Same time of day where you can. Uploads that break steps 1, 4 or 5 get flagged and kept out of the trend lines.</p>
+      </details>
+    </div>`;
+  }
+
+  // Gate
+  const g = cur.gate;
+  const gate = `<div class="card">
+    <div class="card-head"><h2>Week ${Math.min(pw, 8)} → ${pw >= 8 ? 'done' : 'Week ' + (pw + 1)} gate</h2><span class="card-sub">Decides Sun night</span></div>
+    <ul class="status-list">${g.items.map(([s, mm, sub]) => `<li class="status-row">${statusIcon(s)}<span><div class="s-main">${mm}</div><div class="s-sub">${sub}</div></span></li>`).join('')}</ul>
+    <div class="verdict">${statusIcon(g.verdict[0])}<span><strong>${g.verdict[1]}</strong> ${g.verdict[2]}</span></div>
+  </div>`;
+
+  // Days
+  const TAG = { run:['run', 'Run'], done:['done', 'Done'], ref:['ref', 'Sport'], rest:['rest', 'Rest'] };
+  const strip = `<div class="card">
+    <div class="card-head"><h2>Next 7 days</h2><span class="card-sub">Tap a day you have another sport or a hard day on your feet</span></div>
+    <div class="days">${days.map((d, i) => {
+      const dd = parseYmd(d.date), [k, l] = TAG[d.kind];
+      return `<button class="day${i === 0 ? ' today' : ''}" data-refday="${d.date}" ${d.kind === 'done' ? 'disabled' : ''} style="cursor:${d.kind === 'done' ? 'default' : 'pointer'};font:inherit;color:inherit" ${d.note ? `data-tip="${esc(d.note)}"` : ''}>
+        <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div><div class="d-tag tag-${k}">${l}${d.kind === 'run' && d.note ? '?' : ''}</div></button>`;
+    }).join('')}</div>
+  </div>`;
+
+  // Build bar
+  const build = `<div class="card">
+    <div class="card-head"><h2>8-week build</h2><span class="card-sub">Week ${Math.min(pw, 8)}: ${esc(pwo.phase.toLowerCase())}</span></div>
+    <div class="plan-bar">${PLAN.map(p => `<div class="plan-seg${p.w < pw ? ' done' : p.w === pw ? ' now' : ''}"></div>`).join('')}</div>
+    <div class="plan-labels">${PLAN.map(p => `<span>${p.w}</span>`).join('')}</div>
+    <p class="card-sub" style="margin:12px 0 0">${pw < 8 ? `Up next in week ${pw + 1}: ${esc(planWeekObj(pw + 1).detail.toLowerCase())}. ${esc(planWeekObj(pw + 1).add)}.` : 'Final week. After this, re-test on the flat route and plan the next block.'}</p>
+  </div>`;
+
+  // Notes
+  const notes = [];
+  const recent = sortedRuns().filter(r => diffDays(r.date, today) <= 7);
+  for (let i = 1; i < recent.length; i++){
+    if (diffDays(recent[i - 1].date, recent[i].date) === 1){
+      notes.push(`<b>${DOW[parseYmd(recent[i - 1].date).getDay()]} and ${DOW[parseYmd(recent[i].date).getDay()]} were back-to-back.</b> The plan wants a rest or walk day between runs — the schedule keeps a gap from here.`);
+      break;
+    }
+  }
+  const manual = doc.runs.filter(r => r.source === 'manual').length;
+  if (manual) notes.push(`<b>${manual} run${manual > 1 ? 's are' : ' is'} from your notes, not FIT files.</b> <a href="#upload">Upload ${manual > 1 ? 'them' : 'it'}</a> for jogging-only HR, zones and time above ${doc.profile.lthr}.`);
+  if (!doc.runs.length) notes.push(`<b>Welcome to Stride.</b> After each run, <a href="#upload">upload the FIT file</a> from your watch — it’s parsed in this browser.${syncOn() && !SESSION ? ' Sign in on Upload to keep your runs on every device.' : ''}`);
+  if (doc.profile.zonesSet === false){
+    const glt = sortedRuns().reverse().find(r => r.garminLthr)?.garminLthr;
+    notes.push(`<b>These are placeholder heart-rate zones.</b> ${glt ? `Your watch puts your threshold at ${glt} bpm. ` : ''}<a href="#upload">Set your own on Upload</a> — every number here is anchored to them.`);
+  }
+  if (!testRoute() && doc.runs.some(r => r.source === 'fit')) notes.push('<b>No test route set yet.</b> Open your flat-route run in Runs and tap “Make this the test route”.');
+
+  const d = now;
+  $('#page-today').innerHTML = `
+    <div class="page-head">
+      <div><div class="eyebrow">${DOW_LONG[d.getDay()]} · ${MON_LONG[d.getMonth()]} ${d.getDate()}</div><h1 class="display">Today</h1></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="chip"><span class="dot"></span>Week ${Math.min(pw, 8)} of 8 · ${esc(pwo.phase)}</span>
+        <button class="chip mobile-theme" data-theme-toggle2 style="cursor:pointer">Light / dark</button>
+      </div>
+    </div>
+    <div class="grid today-grid">
+      <div class="col">
+        <div class="card hero"><div class="hero-stripes"></div>
+          <div class="eyebrow">${eyebrow}</div>
+          <div class="hero-title display">${title}</div>
+          <p>${copy}</p>
+          <ul class="task-list">${tasks}</ul>
+        </div>
+        ${checkin}
+        ${next}
+      </div>
+      <div class="col">
+        ${gate}${strip}${build}
+        ${notes.map(n => `<div class="note">${WARN_SVG}<div>${n}</div></div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* ═══ PROGRESS ═══════════════════════════════════════════════════════ */
+function renderProgress(){
+  const runs = sortedRuns(), p = doc.profile;
+  const page = $('#page-progress');
+  if (!runs.length){
+    page.innerHTML = `<div class="page-head"><div><div class="eyebrow">No runs yet</div><h1 class="display">Progress</h1></div></div>
+      <div class="empty"><b>Nothing to chart yet.</b><br>Upload a FIT file to get started. <a href="#upload">Go to Upload</a></div>`;
+    return;
+  }
+  const clean = runs.filter(isClean);
+  const lastClean = clean.at(-1), firstClean = clean[0];
+  const rec = runs.filter(r => r.recoveryHr != null);
+  const lastRun = runs.at(-1);
+  const delta = (a, b, lowerBetter) => {
+    if (a == null || b == null || a === b) return '';
+    const d = Math.round((a - b) * 10) / 10, good = lowerBetter ? d < 0 : d > 0;
+    return ` <span style="color:var(--${good ? 'good' : 'warn'}-text);font-weight:700">${d > 0 ? '+' : ''}${d} vs first</span>`;
+  };
+
+  const kpiHr = lastClean
+    ? `<div class="k-val display num">${Math.round(hrMetric(lastClean))}<span class="k-unit">bpm</span></div>
+       <span class="k-dir">↓ Lower is better</span>
+       <div class="k-foot">${lastClean.jogHr != null ? 'Jogging only' : 'Whole-run average'} at <b>${fmtDur(lastClean.jogPaceSec ?? lastClean.avgPaceSec)} /mi</b>, ${fmtDate(lastClean.date)}.${clean.length > 1 ? delta(hrMetric(lastClean), hrMetric(firstClean), true) : ' The baseline — the same pace should cost fewer beats every few weeks.'}</div>`
+    : `<div class="k-val display num">—</div><div class="k-foot">No clean test-route run yet. Run the protocol on the flat route.</div>`;
+  const kpiRec = rec.length
+    ? `<div class="k-val display num">${rec.at(-1).recoveryHr}<span class="k-unit">bpm</span></div>
+       <span class="k-dir">↑ Higher is better</span>
+       <div class="k-foot">${fmtDate(rec.at(-1).date)}.${rec.length > 1 ? delta(rec.at(-1).recoveryHr, rec[0].recoveryHr, false) : ' Moves before pace does. Only counts when you stand still 2 min before saving.'}</div>`
+    : `<div class="k-val display num">—</div><div class="k-foot">Not captured yet. Stop the timer, stand still 2 minutes, then save.</div>`;
+  const teRuns = runs.filter(r => r.anaerobicTE != null).slice(-6);
+  const kpiTe = `<div class="k-val display num">${num(lastRun.anaerobicTE, 1)}<span class="k-unit">last run</span></div>
+    <span class="k-dir">→ Stay near 0.0</span>
+    <div class="te-strip">${teRuns.map(r => { const ok = r.anaerobicTE <= 1.0;
+      return `<div class="te-cell" data-tip="${esc(fmtDate(r.date))} · ${ok ? 'easy' : 'too hard for an easy run'}"><b class="num"><i style="background:var(--${ok ? 'good' : 'crit'})"></i>${r.anaerobicTE.toFixed(1)}</b>${fmtDate(r.date).slice(4)}</div>`; }).join('')}</div>`;
+
+  const withS = runs.filter(r => r.aboveLtSec != null);
+  const recent = runs.slice(-12);
+  const latest = k => [...runs].reverse().find(r => r[k] != null)?.[k];
+
+  page.innerHTML = `
+    <div class="page-head">
+      <div><div class="eyebrow">Since ${fmtDate(runs[0].date).slice(4)} · ${runs.length} run${runs.length > 1 ? 's' : ''} · ${clean.length} clean</div><h1 class="display">Progress</h1></div>
+      ${firstClean ? `<span class="chip"><span class="dot"></span>Baseline set ${fmtDate(firstClean.date).slice(4)}</span>` : ''}
+    </div>
+    <div class="grid kpis">
+      <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · test route</div>${kpiHr}</div>
+      <div class="card kpi"><div class="eyebrow">Recovery HR · 2-min drop</div>${kpiRec}</div>
+      <div class="card kpi"><div class="eyebrow">Anaerobic TE · easy runs</div>${kpiTe}</div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><div><h2>Heart rate on the test route</h2>
+        <div class="card-sub">Only clean runs on the flat route count toward the trend. Jogging-only HR where there’s a FIT file; whole-run average otherwise.</div></div></div>
+      <div class="legend">
+        <span><i class="dotf" style="background:var(--series-1)"></i>Clean test-route run</span>
+        <span><i class="ring"></i>Excluded — hover for why</span>
+        <span><i style="background:var(--series-1-wash);border:1px solid var(--series-1)"></i>Easy zone (&lt; ${p.zones.easy})</span>
+      </div>
+      <div class="chart" id="c-hr"></div>
+    </div>
+    <div class="eyebrow" style="margin:28px 0 12px">Secondary</div>
+    <div class="grid two">
+      <div class="card"><div class="card-head"><h2>Jogging vs walking</h2><span class="card-sub">minutes per run</span></div>
+        <div class="legend"><span><i style="background:var(--series-1)"></i>Jog</span><span><i style="background:var(--walk)"></i>Walk</span></div>
+        <div class="chart" id="c-jog"></div></div>
+      <div class="card"><div class="card-head"><h2>Recovery HR</h2><span class="card-sub">2-min drop · higher is better</span></div>
+        ${rec.length ? '<div class="chart" id="c-rec"></div>' : '<div class="pending-box">No recovery HR captured yet.<br>Stand still 2 min before saving, or type it in on a run’s page.</div>'}</div>
+      <div class="card"><div class="card-head"><h2>Max HR per run</h2><span class="card-sub">guardrail ~${p.guardHr}</span></div>
+        <div class="legend"><span><i style="background:var(--series-1)"></i>Max HR</span><span><i style="background:var(--crit);height:2px;border-radius:0"></i>Guardrail</span></div>
+        <div class="chart" id="c-max"></div></div>
+      <div class="card"><div class="card-head"><h2>Time above ${p.lthr} bpm</h2><span class="card-sub">should trend to zero</span></div>
+        ${withS.length ? '<div class="chart" id="c-lt"></div>' : '<div class="pending-box">Needs second-by-second HR from a FIT file.<br>Fills in with your first upload.</div>'}</div>
+      <div class="card"><div class="card-head"><h2>Exercise load</h2><span class="card-sub">lower for the same work is better</span></div>
+        <div class="chart" id="c-load"></div></div>
+      <div class="card"><div class="card-head"><h2>Cardiac drift</h2><span class="card-sub">2nd half vs 1st half of the jogging</span></div>
+        ${runs.some(r => r.drift != null) ? '<div class="chart" id="c-drift"></div>' : '<div class="pending-box">Needs a FIT file with 8+ minutes of jogging.<br>Small drift means you’re ready to go longer.</div>'}</div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <details class="stored"><summary><span>Stored, not charted as progress</span><span class="card-sub">latest values ›</span></summary>
+        <table class="quiet" style="margin-top:10px">
+          <tr><td>Jogging cadence</td><td>${num(latest('cadence'))} spm</td><td>From jog segments only — the blended average is meaningless</td></tr>
+          <tr><td>Stride length</td><td>${num(latest('stride'), 2)} m</td><td>Holding it while pace dropped was the overstriding fix</td></tr>
+          <tr><td>Vertical ratio</td><td>${num(latest('vertRatio'), 1)}%</td><td>Already in a good range</td></tr>
+          <tr><td>Ground contact</td><td>${num(latest('gct'))} ms</td><td>Rises as you slow down — pace-dependent</td></tr>
+          <tr><td>VO2 max</td><td>${p.vo2 ?? '—'}</td><td>Too noisy yet. Revisit after 4–6 weeks</td></tr>
+          <tr><td>Avg power</td><td>${num(latest('avgPower'))} W</td><td>Weight-dependent; jumps whenever the weight setting changes</td></tr>
+        </table>
+      </details>
+    </div>`;
+
+  const openRun = c => { location.hash = 'runs/' + c.id; };
+  chartHrTrend($('#c-hr'), runs);
+  chartColumns($('#c-jog'), {
+    cats: recent.map(r => ({ ...r, jogM:(r.runSec ?? 0) / 60, walkM:(r.walkSec ?? 0) / 60 })),
+    series: [{ key:'jogM', color:css('--series-1') }, { key:'walkM', color:css('--walk') }],
+    max: Math.max(15, Math.ceil(Math.max(...recent.map(r => ((r.runSec ?? 0) + (r.walkSec ?? 0)) / 60)) / 5) * 5),
+    ticks: null, labelFmt: c => fmtDur(c.runSec),
+    tipFmt: c => `<b>${fmtDate(c.date)}</b><br>Jog ${fmtDur(c.runSec)} · Walk ${fmtDur(c.walkSec)}`, onClick: openRun,
+  });
+  if (rec.length) chartLine($('#c-rec'), rec.slice(-12).map(r => ({ r, v:r.recoveryHr, id:r.id })), {
+    lo: 0, hi: Math.max(50, Math.ceil(Math.max(...rec.map(r => r.recoveryHr)) / 10) * 10 + 10), step: 10,
+    tipFmt: pt => `<b>${fmtDate(pt.r.date)}</b><br>Dropped ${pt.v} bpm in 2 min` });
+  chartColumns($('#c-max'), {
+    cats: recent, series: [{ key:'maxHr', color:css('--series-1') }], max: 200, ticks: [0, 50, 100, 150, 200], guard: p.guardHr,
+    labelFmt: c => c.maxHr, onClick: openRun,
+    tipFmt: c => `<b>${fmtDate(c.date)}</b><br>Max ${c.maxHr} bpm · ${c.maxHr > p.guardHr ? '▲ over the guardrail' : `✓ at or under ${p.guardHr}`}`,
+  });
+  if (withS.length){
+    const lt = withS.slice(-12).map(r => ({ ...r, ltM:r.aboveLtSec / 60 }));
+    chartColumns($('#c-lt'), {
+      cats: lt, series: [{ key:'ltM', color:css('--series-1') }],
+      max: Math.max(2, Math.ceil(Math.max(...lt.map(r => r.ltM)))), ticks: null, fmt: v => v + 'm',
+      labelFmt: c => fmtDur(c.aboveLtSec), onClick: openRun,
+      tipFmt: c => `<b>${fmtDate(c.date)}</b><br>${fmtDur(c.aboveLtSec)} at or above ${p.lthr} bpm`,
+    });
+  }
+  const loads = runs.filter(r => r.load != null).slice(-12);
+  if (loads.length) chartLine($('#c-load'), loads.map(r => ({ r, v:r.load })), {
+    lo: 0, hi: Math.max(80, Math.ceil(Math.max(...loads.map(r => r.load)) / 20) * 20), step: 20,
+    tipFmt: pt => `<b>${fmtDate(pt.r.date)}</b><br>Load ${pt.v} · ${fmtDur(pt.r.runSec)} jogging` });
+  const drifts = runs.filter(r => r.drift != null).slice(-12);
+  if (drifts.length) chartLine($('#c-drift'), drifts.map(r => ({ r, v:r.drift })), {
+    lo: Math.min(0, Math.floor(Math.min(...drifts.map(r => r.drift)) / 5) * 5), hi: Math.max(15, Math.ceil(Math.max(...drifts.map(r => r.drift)) / 5) * 5), step: 5,
+    tipFmt: pt => `<b>${fmtDate(pt.r.date)}</b><br>HR ${pt.v >= 0 ? 'rose' : 'fell'} ${Math.abs(pt.v)} bpm from the first half of the jogging to the second` });
+}
+
+/* ═══ RUNS ═══════════════════════════════════════════════════════════ */
+function renderRunsList(){
+  const runs = sortedRuns().reverse();
+  const page = $('#page-runs');
+  if (!runs.length){
+    page.innerHTML = `<div class="page-head"><div><div class="eyebrow">No runs yet</div><h1 class="display">Runs</h1></div></div>
+      <div class="empty"><b>No runs yet.</b><br><a href="#upload">Upload a FIT file</a> to get started.</div>`;
+    return;
+  }
+  const dotColor = { crit:'var(--crit)', warn:'var(--warn)', wait:'var(--axis)' };
+  page.innerHTML = `
+    <div class="page-head"><div><div class="eyebrow">${runs.length} run${runs.length > 1 ? 's' : ''} · ${runs.filter(isClean).length} clean on the test route</div><h1 class="display">Runs</h1></div>
+      <a class="btn primary" href="#upload" style="text-decoration:none">Upload FIT</a></div>
+    <div class="card"><div class="table-wrap"><table class="runs">
+      <thead><tr><th>Date</th><th>Route</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
+      <tbody>${runs.map(r => {
+        const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
+        return `<tr data-run="${r.id}" tabindex="0">
+          <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">${r.source === 'fit' ? fmtTime(r.start) + ' · FIT' : 'from notes'}</div></td>
+          <td style="text-align:right">${isTest(r) ? '<span class="badge test">Test</span>' : '<span class="badge">Other</span>'}</td>
+          <td>${fmtMi(r.distMi)}</td>
+          <td>${fmtDur(r.runSec)} / ${fmtDur(r.walkSec)}</td>
+          <td>${fmtDur(r.avgPaceSec)}</td>
+          <td>${num(r.avgHr)}</td>
+          <td>${r.jogHr != null ? Math.round(r.jogHr) : '—'}</td>
+          <td>${num(r.maxHr)}</td>
+          <td>${num(r.anaerobicTE, 1)}</td>
+          <td>${num(r.load)}</td>
+          <td><span class="flags" data-tip="${esc(fl.map(f => f[1]).join(' · ') || 'Clean')}">${fl.length ? fl.map(f => `<i class="flag-dot" style="background:${dotColor[f[0]]}"></i>`).join('') : `<span style="color:var(--good-text);font-weight:700">✓</span>`}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div></div>`;
+}
+
+async function renderRunDetail(id){
+  const r = runById(id);
+  const page = $('#page-runs');
+  if (!r){ page.innerHTML = `<div class="empty"><b>That run isn’t here.</b><br><a href="#runs">Back to runs</a></div>`; return; }
+  const s = r.hasSamples ? await getSamples(r.id) : null;
+  if (location.hash.slice(1) !== 'runs/' + id) return;   // navigated away while loading
+  const p = doc.profile, flags = flagsFor(r), tr = testRoute();
+  const stat = (l, v, unit = '', note = '') => `<div class="stat"><div class="s-l">${l}</div><div class="s-v">${v}${unit ? `<small>${unit}</small>` : ''}</div>${note ? `<div class="s-n">${note}</div>` : ''}</div>`;
+  const zs = r.zoneSec, zTot = zs ? Object.values(zs).reduce((a, b) => a + b, 0) : 0;
+  const checks = doc.checkins.filter(c => c.runId === r.id);
+
+  let routeCtl;
+  if (isTest(r)) routeCtl = `<span class="badge test">Test route</span> <button class="btn small" data-action="not-test">Not the test route</button>`;
+  else if (r.startLL && !tr) routeCtl = `<button class="btn small primary" data-action="make-test">Make this the test route</button>`;
+  else if (r.startLL && tr) routeCtl = `<button class="btn small" data-action="count-test">Count as test route</button> <button class="btn small" data-action="make-test">Replace the test route with this one</button>`;
+  else routeCtl = `<button class="btn small" data-action="count-test">Count as test route</button>`;
+
+  page.innerHTML = `
+    <div class="detail-head">
+      <div>
+        <button class="link-btn" data-action="back">← All runs</button>
+        <h1 class="display num">${fmtMi(r.distMi)} <span style="font-size:.5em">mi</span></h1>
+        <div class="eyebrow">${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''} · ${r.source === 'fit' ? 'FIT file' : 'from notes'}</div>
+      </div>
+      <div class="btn-row">${routeCtl}</div>
+    </div>
+    <div class="stat-grid">
+      ${stat('Timer', fmtDur(r.timerSec))}
+      ${stat('Jog / walk', `${fmtDur(r.runSec)}`, `/ ${fmtDur(r.walkSec)}`)}
+      ${stat('Avg pace', fmtDur(r.avgPaceSec), '/mi')}
+      ${stat('Jog pace', fmtDur(r.jogPaceSec), '/mi')}
+      ${stat('Avg HR', num(r.avgHr), 'bpm')}
+      ${stat('Jog HR', r.jogHr != null ? Math.round(r.jogHr) : '—', 'bpm', 'the fitness signal')}
+      ${stat('Max HR', num(r.maxHr), 'bpm')}
+      <div class="stat"><div class="s-l">Recovery HR</div><input type="number" inputmode="numeric" min="0" max="120" id="rec-in" value="${r.recoveryHr ?? ''}" placeholder="—" aria-label="Recovery HR, bpm dropped in 2 minutes"><div class="s-n">${r.recoveryHr == null ? 'Type it in from Garmin Connect' : 'bpm dropped in 2 min'}</div></div>
+      ${stat(`Above ${p.lthr}`, fmtDur(r.aboveLtSec))}
+      ${stat('Anaerobic TE', num(r.anaerobicTE, 1), '', r.anaerobicTE > 1 ? 'too hard' : r.anaerobicTE != null ? 'easy' : '')}
+      ${stat('Aerobic TE', num(r.aerobicTE, 1))}
+      ${stat('Load', num(r.load))}
+      ${stat('Drift', r.drift != null ? (r.drift > 0 ? '+' : '') + r.drift : '—', r.drift != null ? 'bpm' : '')}
+      ${stat('Idle', fmtDur(r.idleSec), '', (r.idleSec ?? 0) > IDLE_TOLERANCE ? 'timer left running' : '')}
+    </div>
+
+    <div class="grid today-grid" style="margin-top:16px">
+      <div class="col">
+        <div class="card"><div class="card-head"><h2>Heart rate</h2><span class="card-sub">zones anchored to your ${p.lthr} threshold</span></div>
+          ${s ? `<div class="legend"><span><i style="background:var(--series-1)"></i>Jogging</span><span><i style="background:var(--walk)"></i>Walking</span><span><i style="background:var(--muted);opacity:.5"></i>Standing</span></div><div class="chart" id="c-trace"></div>`
+              : '<div class="pending-box">Upload this run’s FIT file to see the second-by-second trace.</div>'}
+          ${zs ? `<div class="zone-bar">${[['easy', '--z-easy'], ['mod', '--z-mod'], ['hard', '--z-hard'], ['above', '--z-above']].filter(([k]) => zs[k] > 0).map(([k, c]) => `<div style="flex:${zs[k]};background:var(${c})" data-tip="${fmtDur(zs[k])}"></div>`).join('')}</div>
+            <div class="zone-legend">
+              <div><i style="background:var(--z-easy)"></i>Easy &lt;${p.zones.easy}<b>${fmtDur(zs.easy)}</b></div>
+              <div><i style="background:var(--z-mod)"></i>Moderate<b>${fmtDur(zs.mod)}</b></div>
+              <div><i style="background:var(--z-hard)"></i>Hard ${p.zones.mod}–${p.lthr}<b>${fmtDur(zs.hard)}</b></div>
+              <div><i style="background:var(--z-above)"></i>Above ${p.lthr}<b>${fmtDur(zs.above)}</b></div>
+            </div>` : ''}
+        </div>
+        <div class="card"><div class="card-head"><h2>How it felt</h2><span class="card-sub">saved as you type</span></div>
+          <textarea class="felt" id="felt" placeholder="Legs, breathing, anything odd…">${esc(r.felt)}</textarea>
+          ${checks.length ? `<div class="pill-row" style="margin-top:12px">${checks.map(c => `<span class="badge${c.value === 'none' ? '' : c.value === 'red' ? ' crit' : ' warn'}">${c.stage} hr · ${esc(SORE[c.value])}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>
+      <div class="col">
+        <div class="card"><div class="card-head"><h2>Protocol check</h2><span class="card-sub">${isClean(r) ? 'counts toward the trend' : 'kept out of the trend'}</span></div>
+          ${flags.length ? `<ul class="status-list">${flags.map(([st, mm, sub]) => `<li class="status-row">${statusIcon(st)}<span><div class="s-main">${esc(mm)}</div><div class="s-sub">${esc(sub)}</div></span></li>`).join('')}</ul>`
+            : `<div class="verdict" style="margin:0">${statusIcon('good')}<span><strong>Clean.</strong> Test route, no idle time, recovery HR captured.</span></div>`}
+        </div>
+        ${s?.path?.length ? `<div class="card"><div class="card-head"><h2>Route</h2><span class="card-sub">${r.gainFt ?? '—'} ft gain · ${r.minElevFt ?? '—'}–${r.maxElevFt ?? '—'} ft</span></div>${routeSvg(s.path)}</div>` : ''}
+        <div class="card"><div class="card-head"><h2>Form</h2><span class="card-sub">stored, not progress</span></div>
+          <table class="quiet">
+            <tr><td>Jogging cadence</td><td>${num(r.cadence)} spm</td><td></td></tr>
+            <tr><td>Stride length</td><td>${num(r.stride, 2)} m</td><td></td></tr>
+            <tr><td>Vertical ratio</td><td>${num(r.vertRatio, 1)}%</td><td></td></tr>
+            <tr><td>Vertical oscillation</td><td>${num(r.vertOsc, 1)} cm</td><td></td></tr>
+            <tr><td>Ground contact</td><td>${num(r.gct)} ms</td><td></td></tr>
+            <tr><td>Power avg / max</td><td>${num(r.avgPower)} / ${num(r.maxPower)} W</td><td>${r.weightLbs ? `at ${r.weightLbs} lbs` : ''}</td></tr>
+            <tr><td>Calories</td><td>${num(r.calories)}</td><td></td></tr>
+            ${r.filtered && (r.filtered.hr + r.filtered.cad + r.filtered.gct) ? `<tr><td>Glitches filtered</td><td>${r.filtered.hr + r.filtered.cad + r.filtered.gct}</td><td>${[r.filtered.hr && r.filtered.hr + ' HR', r.filtered.cad && r.filtered.cad + ' cadence', r.filtered.gct && r.filtered.gct + ' contact'].filter(Boolean).join(', ')}</td></tr>` : ''}
+          </table>
+        </div>
+        <div class="btn-row">
+          <button class="btn small danger" data-action="delete-ask">Delete this run</button>
+          <span class="confirm" id="del-confirm">Delete for good? <button class="btn small danger" data-action="delete-yes">Delete</button><button class="btn small" data-action="delete-no">Keep</button></span>
+        </div>
+      </div>
+    </div>`;
+
+  if (s) chartTrace($('#c-trace'), s);
+  $('#rec-in').addEventListener('change', async e => {
+    const v = e.target.value.trim();
+    r.recoveryHr = v === '' ? null : Math.max(0, Math.min(120, Math.round(+v)));
+    await save(); toast('Recovery HR saved'); renderRunDetail(r.id);
+  });
+  let ft;
+  $('#felt').addEventListener('input', e => { clearTimeout(ft); ft = setTimeout(() => { r.felt = e.target.value; save(); }, 500); });
+  page.dataset.run = r.id;
+}
+
+/* ═══ PLAN ═══════════════════════════════════════════════════════════ */
+function renderPlan(){
+  const weeks = planState(), cur = weeks.at(-1), pw = cur.planWeek;
+  const past = weeks.filter(w => !w.current).reverse();
+  const DEC = { advance:'Advanced', repeat:'Repeated', back:'Went back a week' };
+  $('#page-plan').innerHTML = `
+    <div class="page-head"><div><div class="eyebrow">Three runs a week · rest day between</div><h1 class="display">Plan</h1></div>
+      <span class="chip"><span class="dot"></span>Week ${Math.min(pw, 8)} of 8</span></div>
+    <div class="grid today-grid">
+      <div class="col"><div class="plan-list">
+        ${PLAN.map(p => `<div class="plan-row${p.w === Math.min(pw, 8) ? ' now' : ''}" style="${p.w < pw ? 'opacity:.55' : ''}">
+          <div class="wk display num">${p.w}</div>
+          <div><div class="p-t">${p.phase === p.session ? esc(p.session) : `${esc(p.phase)} · ${esc(p.session)}`}</div><div class="p-s">${esc(p.detail)}</div></div>
+          <div class="p-s" style="max-width:240px">${esc(p.add)}</div>
+        </div>`).join('')}
+      </div></div>
+      <div class="col">
+        <div class="card"><div class="card-head"><h2>Week history</h2><span class="card-sub">decided by the gate; override if needed</span></div>
+          ${past.length ? `<ul class="hist">${past.map((w, i) => `<li>
+            <span><b>${fmtDate(w.start).slice(4)} – ${fmtDate(w.end).slice(4)}</b> · week ${Math.min(w.planWeek, 8)} · ${w.runs.length} run${w.runs.length === 1 ? '' : 's'}</span>
+            <span>${DEC[w.decision]}${w.overridden ? ' (you)' : ''}
+              ${i === 0 ? `· <button class="link-btn" data-decide="${w.start}" data-val="${w.decision === 'advance' ? 'repeat' : 'advance'}">${w.decision === 'advance' ? 'Repeat instead' : 'Advance instead'}</button>${w.overridden ? ` · <button class="link-btn" data-decide="${w.start}" data-val="">Use gate</button>` : ''}` : ''}</span>
+          </li>`).join('')}</ul>` : '<p class="card-sub" style="margin:0">First week in progress.</p>'}
+        </div>
+        <div class="card"><div class="card-head"><h2>Rules that override the plan</h2></div>
+          <ul class="rules">
+            <li><b>Sport day or big day on your feet:</b> rest the day before, and skip the run right after if the legs are toast.</li>
+            <li><b>Soreness past 48 hours, or sharp pain:</b> repeat the week.</li>
+            <li><b>Miss a week:</b> go back one week, don’t jump ahead.</li>
+            <li><b>One calf much worse, shin-bone pain, or Achilles tightness out of bed:</b> stop and get it looked at.</li>
+            <li><b>Knee pain that turns sharp, swells, or causes a limp:</b> see a doctor or PT.</li>
+            <li>Don’t add more than a couple of minutes of jogging a week. When in doubt, repeat the week.</li>
+          </ul>
+        </div>
+        <div class="card"><div class="card-head"><h2>Pacing</h2></div>
+          <p class="card-sub" style="margin:0">Run slow enough to hold a conversation. If that’s barely faster than a walk, don’t shuffle — control effort with <b>interval length, not pace</b>: jog 2 min, walk 90 sec, × 5, walking until HR is back under ${doc.profile.zones.easy}. If HR passes ~${doc.profile.zones.mod}, take a walk break.</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ═══ UPLOAD ═════════════════════════════════════════════════════════ */
+const importLog = [];
+function renderUpload(){
+  const p = doc.profile, w = p.weights.at(-1);
+  $('#page-upload').innerHTML = `
+    <div class="page-head"><div><div class="eyebrow">FIT files · parsed in this browser, never uploaded anywhere</div><h1 class="display">Upload</h1></div></div>
+    <div class="grid today-grid">
+      <div class="col">
+        <label class="drop" id="drop">
+          <input type="file" id="file-in" accept=".fit,.FIT,.zip" multiple hidden>
+          <span class="drop-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0c0d0e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
+          <div class="display">Drop FIT files</div>
+          <div class="card-sub">.fit or Garmin’s .zip — as many as you like. Or click to choose.</div>
+        </label>
+        <ul class="log" id="log">${importLog.map(logItem).join('')}</ul>
+        <div class="card"><div class="card-head"><h2>Getting the file off the watch</h2><span class="card-sub">~15 seconds a run</span></div>
+          <ol class="how">
+            <li><span><b>From Garmin Connect on the web</b>Open the activity → gear icon, top right → <i>Export Original</i>. Drop the .zip straight in.</span></li>
+            <li><span><b>Straight off the watch (best for several)</b>Plug the watch in by USB; it mounts as a drive. Open <code>GARMIN/Activity</code> — files are named by time, like <code>2026-09-24-22-05-13.fit</code>.</span></li>
+            <li><span><b>Everything at once</b>Garmin Connect → Account Settings → Data Management → Export Your Data. Arrives by email within a day or two.</span></li>
+          </ol>
+        </div>
+      </div>
+      <div class="col">
+        ${accountCard()}
+        <div class="card"><div class="card-head"><h2>Zones & thresholds</h2><span class="card-sub">changing these re-scores every run</span></div>
+          <div class="field-row">
+            <div class="field"><label for="s-lthr">Lactate threshold HR</label><input id="s-lthr" type="number" value="${p.lthr}"></div>
+            <div class="field"><label for="s-easy">Easy below</label><input id="s-easy" type="number" value="${p.zones.easy}"></div>
+            <div class="field"><label for="s-mod">Moderate below</label><input id="s-mod" type="number" value="${p.zones.mod}"></div>
+            <div class="field"><label for="s-guard">Max HR guardrail</label><input id="s-guard" type="number" value="${p.guardHr}"></div>
+          </div>
+          <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="save-zones">Save zones</button></div>
+        </div>
+        <div class="card"><div class="card-head"><h2>Weight</h2><span class="card-sub">${w ? `${w.lbs} lbs since ${fmtDate(w.date).slice(4)}` : 'not set'}</span></div>
+          <div class="field-row">
+            <div class="field"><label for="s-w">Weight (lbs)</label><input id="s-w" type="number" step="0.1" value="${w?.lbs ?? ''}"></div>
+            <div class="field"><label for="s-wd">As of</label><input id="s-wd" type="date" value="${todayYmd()}"></div>
+          </div>
+          <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="add-weight">Add weigh-in</button></div>
+          <p class="card-sub" style="margin:12px 0 0">Runs computed by the watch at a different weight get flagged, since their power and calories are off.</p>
+        </div>
+        <div class="card"><div class="card-head"><h2>Your data</h2><span class="card-sub">${doc.runs.length} runs ${signedIn() ? 'on your account' : 'in this browser'}</span></div>
+          <p class="card-sub" style="margin:0 0 12px">${signedIn() ? 'Synced to your account. A backup file is still a good idea now and then.' : 'It lives only in this browser. Export a backup to move it to another device or keep it safe.'}</p>
+          <div class="btn-row">
+            <button class="btn small" data-action="export">Export backup</button>
+            <label class="btn small" style="cursor:pointer">Import backup<input type="file" id="backup-in" accept=".json,application/json" hidden></label>
+            <button class="btn small danger" data-action="reset-ask">Reset…</button>
+            <span class="confirm" id="reset-confirm">${signedIn() ? 'Erase everything, on your account too?' : 'Erase everything?'} <button class="btn small danger" data-action="reset-yes">Erase</button><button class="btn small" data-action="reset-no">Cancel</button></span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  const drop = $('#drop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => handleFiles([...e.dataTransfer.files]));
+  $('#file-in').addEventListener('change', e => { handleFiles([...e.target.files]); e.target.value = ''; });
+  $('#backup-in').addEventListener('change', e => { importBackup(e.target.files[0]); e.target.value = ''; });
+}
+function accountCard(){
+  if (!syncOn()) return '';
+  if (SESSION) return `<div class="card"><div class="card-head"><h2>Account</h2><span class="card-sub">${esc(SESSION.email)}</span></div>
+    <div data-sync-line class="sync-line sync-${SYNC.status}"><span class="dot"></span>${esc(syncLine())}</div>
+    <p class="card-sub" style="margin:10px 0 12px">Sign in with the same email on your phone or another computer and your runs follow you.</p>
+    <div class="btn-row"><button class="btn small" data-action="sync-now">Sync now</button><button class="btn small" data-action="signout">Sign out</button></div></div>`;
+  const code = authUi.stage === 'code';
+  return `<div class="card" id="signin"><div class="card-head"><h2>Sign in</h2><span class="card-sub">keeps your runs on every device</span></div>
+    <p class="card-sub" style="margin:0 0 12px">${code
+      ? `We emailed <b>${esc(authUi.email)}</b>. Tap the link in it on this device — or type the code from the email here.`
+      : 'No password. We email you a sign-in link; anything already in this browser moves into your account.'}</p>
+    <div class="field-row">${code
+      ? `<div class="field"><label for="si-code">Code from the email</label><input id="si-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>`
+      : `<div class="field"><label for="si-email">Email</label><input id="si-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(authUi.email)}"></div>`}</div>
+    <div class="btn-row" style="margin-top:14px">${code
+      ? `<button class="btn small primary" data-action="verify-code">Sign in</button><button class="link-btn" data-action="change-email">Use a different email</button><button class="link-btn" data-action="send-link">Resend</button>`
+      : `<button class="btn small primary" data-action="send-link"${authUi.busy ? ' disabled' : ''}>${authUi.busy ? 'Sending…' : 'Email me a link'}</button>`}</div></div>`;
+}
+function logItem(it){
+  return `<li>${statusIcon(it.status)}<span style="flex:1"><div class="s-main">${it.title}</div><div class="s-sub">${it.sub}</div>
+    ${it.makeTest ? `<div class="btn-row" style="margin-top:8px"><button class="btn small primary" data-make-test="${it.makeTest}">Yes — this is my flat test route</button></div>` : ''}
+    ${it.runId ? `<div style="margin-top:6px"><a href="#runs/${it.runId}" class="link-btn">Open run →</a></div>` : ''}</span></li>`;
+}
+// Page-level drop so a file dragged anywhere still lands.
+addEventListener('dragover', e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); });
+addEventListener('drop', e => {
+  if (!e.dataTransfer?.files?.length || e.target.closest?.('#drop')) return;
+  e.preventDefault(); location.hash = 'upload'; handleFiles([...e.dataTransfer.files]);
+});
+
+let sdkP, zipP;
+const loadSdk = () => sdkP ??= import(FITSDK_URL);
+const loadZip = () => zipP ??= import(JSZIP_URL).then(m => m.default);
+
+async function handleFiles(files){
+  if (!files.length) return;
+  if (location.hash !== '#upload') location.hash = 'upload';
+  const jobs = [];
+  for (const f of files){
+    const lower = f.name.toLowerCase();
+    try {
+      if (lower.endsWith('.zip')){
+        const Zip = await loadZip();
+        const z = await Zip.loadAsync(await f.arrayBuffer());
+        const fits = Object.values(z.files).filter(e => !e.dir && e.name.toLowerCase().endsWith('.fit'));
+        if (!fits.length) importLog.unshift({ status:'crit', title:esc(f.name), sub:'No .fit file inside this zip.' });
+        for (const e of fits) jobs.push([`${f.name} › ${e.name.split('/').pop()}`, await e.async('arraybuffer')]);
+      } else if (lower.endsWith('.fit')) jobs.push([f.name, await f.arrayBuffer()]);
+      else importLog.unshift({ status:'crit', title:esc(f.name), sub:'Not a .fit or .zip file — skipped.' });
+    } catch (err){
+      importLog.unshift({ status:'crit', title:esc(f.name), sub:`Couldn’t open it: ${esc(err.message)}` });
+    }
+  }
+  for (const [name, buf] of jobs){
+    try { importLog.unshift(await importFit(name, buf)); }
+    catch (err){ importLog.unshift({ status:'crit', title:esc(name), sub:`Couldn’t read it: ${esc(err.message)}` }); }
+  }
+  await save();
+  if (location.hash === '#upload') $('#log').innerHTML = importLog.map(logItem).join('');
+}
+
+function matchRoute(r){
+  if (!r.startLL || !r.endLL) return null;
+  for (const rt of doc.routes){
+    if (haversine(r.startLL, rt.start) <= 150 && haversine(r.endLL, rt.end) <= 150 && Math.abs(r.distMi - rt.distMi) / rt.distMi <= 0.2) return rt.id;
+  }
+  return null;
+}
+function makeTestRoute(r){
+  doc.routes.forEach(x => x.isTest = false);
+  const rt = { id:'rt' + Date.now().toString(36), name:'Test route', start:r.startLL, end:r.endLL, distMi:r.distMi, isTest:true, from:r.id };
+  doc.routes.push(rt);
+  for (const x of doc.runs) if (x.startLL){ x.routeId = matchRoute(x); if (x.testOverride === false && x.id === r.id) x.testOverride = null; }
+  r.routeId = rt.id; r.testOverride = null;
+}
+
+async function importFit(name, buf){
+  const { Decoder, Stream } = await loadSdk();
+  const decoder = new Decoder(Stream.fromArrayBuffer(buf));
+  if (!decoder.isFIT()) throw new Error('not a FIT file');
+  const { messages, errors } = decoder.read({ includeUnknownData:true, mergeHeartRates:true });
+  if (!messages.recordMesgs?.length) throw new Error(errors?.[0]?.message ?? 'no activity data (is this a settings file?)');
+  const { run, samples } = analyzeFit(messages, doc.profile);
+  const title = `${fmtDate(run.date)} · ${fmtMi(run.distMi)} mi`;
+  if (!/running|walking|generic/.test(run.sport)) return { status:'wait', title, sub:`A ${esc(run.sport || 'non-running')} activity — skipped.` };
+  if (runById(run.id)) return { status:'wait', title, sub:'Already imported — skipped.', runId:run.id };
+
+  // A FIT file for a day that came from the notes replaces that entry.
+  const seed = doc.runs.find(x => x.source === 'manual' && Math.abs(diffDays(x.date, run.date)) <= 1 && Math.abs(x.distMi - run.distMi) / run.distMi <= 0.2);
+  let sub = `${fmtDur(run.runSec)} jogging · ${fmtDur(run.walkSec)} walking`;
+  if (run.jogHr != null) sub += ` · jogging HR ${Math.round(run.jogHr)}`;
+  if (seed){
+    run.felt = seed.felt || run.felt;
+    run.recoveryHr ??= seed.recoveryHr;
+    doc.checkins.forEach(c => { if (c.runId === seed.id) c.runId = run.id; });
+    doc.runs = doc.runs.filter(x => x !== seed);
+    sub += ' · replaced the entry from your notes';
+  }
+  run.routeId = matchRoute(run);
+  doc.runs.push(run);
+  await putSamples(run.id, samples);
+
+  let makeTest = null;
+  if (seed?.testOverride && !testRoute() && run.startLL){ makeTestRoute(run); sub += ' · set as your test route'; }
+  else if (!testRoute() && run.startLL && (run.gainFt ?? 99) <= 50) makeTest = run.id;
+  else if (isTest(run)) sub += ' · test route ✓';
+  const fl = flagsFor(run).filter(f => f[0] === 'warn' || f[0] === 'crit');
+  return { status: fl.length ? 'warn' : 'good', title, sub: sub + (fl.length ? ` · ${fl.map(f => esc(f[1])).join(', ')}` : ''), runId:run.id, makeTest };
+}
+
+async function rescoreAll(){
+  for (const r of doc.runs){
+    if (!r.hasSamples) continue;
+    const s = await getSamples(r.id); if (!s) continue;
+    Object.assign(r, zoneStats(s, doc.profile));
+  }
+}
+
+async function exportBackup(){
+  const samples = {};
+  for (const r of doc.runs) if (r.hasSamples){ const s = await getSamples(r.id); if (s) samples[r.id] = s; }
+  const blob = new Blob([JSON.stringify({ app:'stride', exported:new Date().toISOString(), doc:blobOf(), samples })], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `stride-backup-${todayYmd()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+async function importBackup(file){
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (data.app !== 'stride' || !data.doc?.runs) throw new Error('not a Stride backup');
+    const { sync } = doc;
+    doc = normalize(data.doc);
+    if (sync) doc.sync = sync;
+    await idb.clear('samples').catch(() => {});
+    memSamples.clear();
+    for (const [id, s] of Object.entries(data.samples ?? {})) await putSamples(id, s);
+    await save(); toast(`Restored ${doc.runs.length} runs`); render();
+  } catch (err){ toast('Couldn’t import: ' + err.message); }
+}
+
+/* ── Actions ─────────────────────────────────────────────────────── */
+document.addEventListener('click', async e => {
+  const task = e.target.closest('[data-task]');
+  if (task){
+    const k = task.dataset.task;
+    if (doc.done[k]) delete doc.done[k]; else doc.done[k] = true;
+    task.setAttribute('aria-pressed', !!doc.done[k]);
+    save(); return;
+  }
+  const ck = e.target.closest('[data-checkin]');
+  if (ck){
+    const c = { runId:ck.dataset.run, stage:ck.dataset.stage, value:ck.dataset.checkin, at:new Date().toISOString() };
+    doc.checkins.push(c);
+    lastResponse = { c, html: c.value === 'red' ? RESPONSES.red : RESPONSES[c.stage][c.value], alarm: c.value === 'red' || (c.stage === '48' && c.value !== 'none') };
+    await save(); render(); return;
+  }
+  const rd = e.target.closest('[data-refday]');
+  if (rd && !rd.disabled){
+    const d = rd.dataset.refday;
+    doc.refDays = isRef(d) ? doc.refDays.filter(x => x !== d) : [...doc.refDays, d];
+    await save(); render(); return;
+  }
+  const row = e.target.closest('tr[data-run]');
+  if (row){ location.hash = 'runs/' + row.dataset.run; return; }
+  const mk = e.target.closest('[data-make-test]');
+  if (mk){
+    const r = runById(mk.dataset.makeTest); if (!r) return;
+    makeTestRoute(r); importLog.forEach(it => { if (it.makeTest === r.id) it.makeTest = null; });
+    await save(); toast('Test route set'); render(); return;
+  }
+  const dec = e.target.closest('[data-decide]');
+  if (dec){
+    if (dec.dataset.val) doc.decisions[dec.dataset.decide] = dec.dataset.val; else delete doc.decisions[dec.dataset.decide];
+    await save(); render(); return;
+  }
+  const act = e.target.closest('[data-action]')?.dataset.action;
+  if (!act) return;
+  const r = runById($('#page-runs').dataset.run);
+  switch (act){
+    case 'back': location.hash = 'runs'; break;
+    case 'clear-red': doc.redClearedAt = new Date().toISOString(); await save(); render(); break;
+    case 'undo-checkin': doc.checkins = doc.checkins.filter(c => c !== lastResponse?.c); lastResponse = null; await save(); render(); break;
+    case 'make-test': if (r){ makeTestRoute(r); await save(); toast('Test route set'); render(); } break;
+    case 'not-test': if (r){ r.testOverride = false; await save(); render(); } break;
+    case 'count-test': if (r){ r.testOverride = true; await save(); render(); } break;
+    case 'delete-ask': $('#del-confirm').classList.add('show'); break;
+    case 'delete-no': $('#del-confirm').classList.remove('show'); break;
+    case 'delete-yes':
+      if (r){
+        doc.runs = doc.runs.filter(x => x !== r);
+        doc.checkins = doc.checkins.filter(c => c.runId !== r.id);
+        memSamples.delete(r.id); idb.del('samples', r.id).catch(() => {}); dropSamples(r.id);
+        await save(); toast('Run deleted'); location.hash = 'runs';
+      } break;
+    case 'save-zones': {
+      const g = id => Math.round(+$(id).value);
+      const lthr = g('#s-lthr'), easy = g('#s-easy'), mod = g('#s-mod'), guard = g('#s-guard');
+      if (!(easy < mod && mod < lthr) || lthr > 230 || easy < 80){ toast('Zones must go easy < moderate < threshold'); break; }
+      Object.assign(doc.profile, { lthr, guardHr:guard, zones:{ easy, mod }, zonesSet:true });
+      await rescoreAll(); await save(); toast('Zones saved — every run re-scored'); render(); break;
+    }
+    case 'add-weight': {
+      const lbs = +$('#s-w').value, date = $('#s-wd').value;
+      if (!(lbs > 50 && lbs < 600) || !date){ toast('Enter a weight and a date'); break; }
+      doc.profile.weights = [...doc.profile.weights.filter(w => w.date !== date), { date, lbs }].sort((a, b) => a.date < b.date ? -1 : 1);
+      await save(); toast('Weigh-in saved'); render(); break;
+    }
+    case 'export': exportBackup(); break;
+    case 'reset-ask': $('#reset-confirm').classList.add('show'); break;
+    case 'reset-no': $('#reset-confirm').classList.remove('show'); break;
+    case 'reset-yes':
+      { const { sync } = doc; doc = freshDoc(); if (sync) doc.sync = sync; }
+      memSamples.clear(); importLog.length = 0; setUnsent([]);
+      await idb.clear('samples').catch(() => {}); dropSamples(); await save(); toast('Reset to the starting data'); render(); break;
+    case 'goto-signin': location.hash = 'upload'; setTimeout(() => $('#si-email, #si-code')?.focus(), 50); break;
+    case 'send-link': sendLink(); break;
+    case 'verify-code': verifyCode(); break;
+    case 'change-email': authUi.stage = 'email'; renderUpload(); break;
+    case 'signout': signOut(); break;
+    case 'sync-now': if (doc.sync?.dirty) pushRow().catch(e => setSync('error', e.message)); else { await refreshFromRemote(); setSync(SYNC.status === 'off' ? 'ok' : SYNC.status); toast('Up to date'); } break;
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id === 'si-email'){ sendLink(); return; }
+  if (e.key === 'Enter' && e.target.id === 'si-code'){ verifyCode(); return; }
+  if (e.key === 'Enter' && e.target.matches('tr[data-run]')) location.hash = 'runs/' + e.target.dataset.run;
+  if (e.target.closest('input,textarea') || e.metaKey || e.ctrlKey) return;
+  const pages = { 1:'today', 2:'progress', 3:'runs', 4:'plan', 5:'upload' };
+  if (pages[e.key]) location.hash = pages[e.key];
+});
+
+/* ── Routing ─────────────────────────────────────────────────────── */
+document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.page; }));
+function render(){
+  const [page, arg] = (location.hash.slice(1) || 'today').split('/');
+  const pg = ['today', 'progress', 'runs', 'plan', 'upload'].includes(page) ? page : 'today';
+  document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.dataset.page === pg ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + pg));
+  tip.classList.remove('show');
+  if (pg === 'today') renderToday();
+  if (pg === 'progress') renderProgress();
+  if (pg === 'runs'){ $('#page-runs').dataset.run = ''; arg ? renderRunDetail(arg) : renderRunsList(); }
+  if (pg === 'plan') renderPlan();
+  if (pg === 'upload') renderUpload();
+}
+let lastRoute = null;
+addEventListener('hashchange', () => { render(); if (location.hash !== lastRoute) scrollTo(0, 0); lastRoute = location.hash; });
+let rt, lastW = innerWidth;
+addEventListener('resize', () => {
+  if (innerWidth === lastW) return; lastW = innerWidth;
+  clearTimeout(rt); rt = setTimeout(() => { if (!/upload/.test(location.hash)) render(); }, 120);
+});
+
+/* ── Boot ────────────────────────────────────────────────────────── */
+const fromLink = syncOn() ? consumeAuthHash() : null;
+if (syncOn()) loadSession();
+try { doc = await idb.get('doc', 'main'); }
+catch { storageOk = false; }
+doc = doc ? normalize(doc) : freshDoc();
+await saveLocal();
+if (!storageOk) toast('Storage is blocked here — changes won’t survive a reload');
+lastRoute = location.hash;
+render();
+paintSync();
+syncInit(fromLink);
+</script>
+</body>
+</html>
