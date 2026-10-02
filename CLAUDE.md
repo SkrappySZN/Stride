@@ -15,15 +15,18 @@ data runs through it, so treat changes to data handling with care.
 
 ## Workflow
 
-1. Push to `main` and it's live for every user within about a minute. There's no build
+1. Claude Code hooks in `.claude/settings.json` pull from GitHub when a session starts
+   and again before every `git push`, so you and Neil don't overwrite each other. On a
+   conflict they change nothing and block the push: rebase, keep both people's work, retest.
+2. Push to `main` and it's live for every user within about a minute. There's no build
    step and no review gate, so test before you push. Use a branch for anything
    half-finished.
-2. To test locally, run `python3 -m http.server 8000` and open http://localhost:8000/.
+3. To test locally, run `python3 -m http.server 8000` and open http://localhost:8000/.
    - Sign-in only works on the live site, because the emailed link redirects there.
      Test signed-out: data stays in that browser's IndexedDB.
    - To get data in: import a backup (Setup → Import backup), drop FIT files on Setup, or
      connect your own intervals.icu API key.
-3. Before pushing, check every page you touched in light and dark mode and at phone width
+4. Before pushing, check every page you touched in light and dark mode and at phone width
    (~390px), with no console errors.
 
 ## How it fits together (sections of `index.html`, in order)
