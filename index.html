@@ -2412,6 +2412,7 @@ function renderPlan(){
               ${i === 0 && !mara ? `· <button class="link-btn" data-decide="${w.start}" data-val="${w.decision === 'advance' ? 'repeat' : 'advance'}">${w.decision === 'advance' ? 'Repeat instead' : 'Advance instead'}</button>${w.overridden ? ` · <button class="link-btn" data-decide="${w.start}" data-val="">Use gate</button>` : ''}` : ''}</span>
           </li>`).join('')}</ul>` : '<p class="card-sub" style="margin:0">First week in progress.</p>'}
         </div>
+        ${sportDaysCard()}
         ${mara ? `<div class="card"><div class="card-head"><h2>Rules that override the plan</h2></div>
           <ul class="rules">
             <li><b>Easy runs are easy.</b> Most of your miles should be under ${doc.profile.zones.easy} bpm. Going harder on easy days is the most common way to arrive at race day tired.</li>
@@ -2439,6 +2440,18 @@ function renderPlan(){
         </div>`}
       </div>
     </div></div>`;
+}
+
+// The Today strip only reaches forward; this logs a sport day after the fact.
+function sportDaysCard(){
+  const list = [...doc.refDays].sort().reverse().slice(0, 8);
+  return `<div class="card"><div class="card-head"><h2>Sport days</h2><span class="card-sub">games or a big day on your feet</span></div>
+    <div class="field-row">
+      <div class="field"><label for="ref-date">Date</label><input id="ref-date" type="date" value="${addDays(todayYmd(), -1)}"></div>
+    </div>
+    <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="add-refday">Add sport day</button></div>
+    ${list.length ? `<ul class="hist" style="margin-top:12px">${list.map(d => `<li><span>${fmtDate(d)}</span><button class="link-btn" data-del-refday="${d}">remove</button></li>`).join('')}</ul>` : ''}
+  </div>`;
 }
 
 /* ═══ WELCOME / CHOOSE A PLAN ════════════════════════════════════════ */
@@ -2859,6 +2872,8 @@ document.addEventListener('click', async e => {
   if (ps){ welcomeUi.start = ps.dataset.pickStart; renderWelcome(); return; }
   const br = e.target.closest('[data-body-range]');
   if (br){ prefs.set('bodyRange', +br.dataset.bodyRange); renderBody(); return; }
+  const dr = e.target.closest('[data-del-refday]');
+  if (dr){ doc.refDays = doc.refDays.filter(x => x !== dr.dataset.delRefday); await save(); render(); return; }
   const dm = e.target.closest('[data-del-measure]');
   if (dm){
     const [kind, date] = dm.dataset.delMeasure.split('|');
@@ -2952,6 +2967,12 @@ document.addEventListener('click', async e => {
       }
       welcomeUi.plan = welcomeUi.start = welcomeUi.race = null;
       await save(); location.hash = 'today'; render(); break;
+    }
+    case 'add-refday': {
+      const d = $('#ref-date').value;
+      if (!d){ toast('Pick a date'); break; }
+      if (!isRef(d)) doc.refDays = [...doc.refDays, d];
+      await save(); toast('Sport day added'); render(); break;
     }
     case 'add-measure': {
       const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
