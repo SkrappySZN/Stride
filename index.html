@@ -936,12 +936,12 @@ function freshDoc(){
     profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
-    routes: [], done: {}, refDays: [], decisions: {}, redClearedAt: null,
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null,
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], decisions:{}, redClearedAt:null, body:{}, ...d,
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, ...d,
     profile: { weights:[], comps:[], ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
@@ -1256,6 +1256,13 @@ const sortedRuns = () => [...doc.runs].sort((a, b) => a.start < b.start ? -1 : 1
 const runsOn = d => doc.runs.filter(r => r.date === d);
 const runById = id => doc.runs.find(r => r.id === id);
 const isRef = d => doc.refDays.includes(d);
+// Optional detail per sport day, kept beside refDays so older docs and devices stay valid.
+function refLabel(d){
+  const i = doc.refInfo[d] ?? {}, m = i.min;
+  return [i.games && `${i.games} game${i.games > 1 ? 's' : ''}`,
+    m && (m < 60 ? `${m} min` : `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ''}`)].filter(Boolean).join(' · ');
+}
+function dropRef(d){ doc.refDays = doc.refDays.filter(x => x !== d); delete doc.refInfo[d]; }
 const testRoute = () => doc.routes.find(r => r.isTest);
 const isTest = r => r.testOverride ?? (!!r.routeId && !!doc.routes.find(x => x.id === r.routeId)?.isTest);
 const isClean = r => isTest(r) && (r.idleSec ?? 0) <= IDLE_TOLERANCE;
@@ -1875,6 +1882,11 @@ function renderToday(){
   const days = schedule(today, 7), t = days[0];
   const pwo = planWeekObj(pw);
   let eyebrow = `${dateLine} · today’s assignment`, title, copy, tasks;
+  // Shown as text, not just the strip's hover tip, so it reads on a phone.
+  const yRef = addDays(today, -1);
+  const afterSport = isRef(yRef) && !todayRuns.length && !red
+    ? `<b>Sport day yesterday${refLabel(yRef) ? ` (${refLabel(yRef)})` : ''}.</b> If your legs are heavy, keep today all easy or skip it. `
+    : '';
   if (red){
     eyebrow = `${dateLine} · plan paused`;
     title = 'Get it <em>checked</em>';
@@ -1893,14 +1905,14 @@ function renderToday(){
     const s = sessionFor(pw, t.slot, today);
     eyebrow = `${dateLine} · week ${Math.min(pw, len)}, run ${t.slot}`;
     title = esc(s.title).replace(/^(\S+)/, '$1 <em>') + '</em>';
-    copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''}${isMarathon() ? '' : ' The protocol is below.'}`;
+    copy = `${afterSport}${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note && !afterSport ? ' ' + t.note + '.' : ''}${isMarathon() ? '' : ' The protocol is below.'}`;
     tasks = tasksFor(today, ['hip', 'calf']);
   } else {
     title = 'Rest <em>day</em>';
-    copy = isRef(addDays(today, 1)) ? 'Sport day tomorrow — rest today and go in fresh. Mobility only.'
+    copy = afterSport + (isRef(addDays(today, 1)) ? 'Sport day tomorrow — rest today and go in fresh. Mobility only.'
       : ranYesterday ? 'You ran yesterday. The 24–48 hours after a run are when soreness peaks — let the legs settle. Mobility only.'
       : t.note === 'Week’s runs are in' ? 'This week’s three runs are in. A walk is fine; keep the stretching going.'
-      : 'Mobility only today.';
+      : 'Mobility only today.');
     tasks = tasksFor(today, ranYesterday ? ['hip', 'calf', 'roll', 'bridge'] : ['hip', 'bridge']);
   }
 
@@ -2130,7 +2142,7 @@ function renderRunsList(){
         if (r.sport) return `<tr class="sport-row">
           <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">sport day</div></td>
           <td style="text-align:right"><span class="badge sport">Sport</span></td>
-          <td colspan="9" class="r-sub">Games or a big day on your feet. Not counted as a run.</td>
+          <td colspan="9" class="r-sub">${refLabel(r.date) || 'Games or a big day on your feet'}. Not counted as a run.</td>
         </tr>`;
         const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
         return `<tr data-run="${r.id}" tabindex="0">
@@ -2460,9 +2472,11 @@ function sportDaysCard(){
   return `<div class="card"><div class="card-head"><h2>Sport days</h2><span class="card-sub">games or a big day on your feet</span></div>
     <div class="field-row">
       <div class="field"><label for="ref-date">Date</label><input id="ref-date" type="date" value="${addDays(todayYmd(), -1)}"></div>
+      <div class="field"><label for="ref-games">Games (optional)</label><input id="ref-games" type="number" min="1" max="20" step="1" inputmode="numeric"></div>
+      <div class="field"><label for="ref-min">Minutes on your feet (optional)</label><input id="ref-min" type="number" min="1" max="600" step="5" inputmode="numeric"></div>
     </div>
-    <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="add-refday">Add sport day</button></div>
-    ${list.length ? `<ul class="hist" style="margin-top:12px">${list.map(d => `<li><span>${fmtDate(d)}</span><button class="link-btn" data-del-refday="${d}">remove</button></li>`).join('')}</ul>` : ''}
+    <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="add-refday">Save sport day</button></div>
+    ${list.length ? `<ul class="hist" style="margin-top:12px">${list.map(d => `<li><span>${fmtDate(d)}${refLabel(d) ? ` · ${refLabel(d)}` : ''}</span><button class="link-btn" data-del-refday="${d}">remove</button></li>`).join('')}</ul>` : ''}
   </div>`;
 }
 
@@ -2885,7 +2899,7 @@ document.addEventListener('click', async e => {
   const br = e.target.closest('[data-body-range]');
   if (br){ prefs.set('bodyRange', +br.dataset.bodyRange); renderBody(); return; }
   const dr = e.target.closest('[data-del-refday]');
-  if (dr){ doc.refDays = doc.refDays.filter(x => x !== dr.dataset.delRefday); await save(); render(); return; }
+  if (dr){ dropRef(dr.dataset.delRefday); await save(); render(); return; }
   const dm = e.target.closest('[data-del-measure]');
   if (dm){
     const [kind, date] = dm.dataset.delMeasure.split('|');
@@ -2910,7 +2924,7 @@ document.addEventListener('click', async e => {
   const rd = e.target.closest('[data-refday]');
   if (rd && !rd.disabled){
     const d = rd.dataset.refday;
-    doc.refDays = isRef(d) ? doc.refDays.filter(x => x !== d) : [...doc.refDays, d];
+    if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
   }
   const row = e.target.closest('tr[data-run]');
@@ -2983,8 +2997,15 @@ document.addEventListener('click', async e => {
     case 'add-refday': {
       const d = $('#ref-date').value;
       if (!d){ toast('Pick a date'); break; }
-      if (!isRef(d)) doc.refDays = [...doc.refDays, d];
-      await save(); toast('Sport day added'); render(); break;
+      const games = +$('#ref-games').value, min = +$('#ref-min').value;
+      if (games && !(Number.isInteger(games) && games <= 20)){ toast('Games should be a whole number up to 20'); break; }
+      if (min && !(min <= 600)){ toast('That’s more than 10 hours'); break; }
+      const had = isRef(d);
+      if (!had) doc.refDays = [...doc.refDays, d];
+      // Saving an existing day again only adds detail; blank fields keep what was there.
+      const info = { ...(doc.refInfo[d] ?? {}), ...(games ? { games } : {}), ...(min ? { min } : {}) };
+      if (Object.keys(info).length) doc.refInfo[d] = info;
+      await save(); toast(had ? 'Sport day updated' : 'Sport day added'); render(); break;
     }
     case 'add-measure': {
       const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
