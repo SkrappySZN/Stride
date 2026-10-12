@@ -432,6 +432,10 @@ table.runs tbody tr:hover td{background:var(--surface-2)}
 .badge.test{background:var(--accent); color:var(--accent-ink); border-color:transparent}
 .badge.warn{color:var(--warn-text); border-color:color-mix(in srgb, var(--warn) 50%, transparent)}
 .badge.crit{color:var(--crit-text); border-color:color-mix(in srgb, var(--crit) 50%, transparent)}
+.badge.sport{background:var(--ink); color:var(--surface); border-color:transparent}
+table.runs tbody tr.sport-row{cursor:default}
+table.runs tbody tr.sport-row:hover td{background:none}
+table.runs tr.sport-row td[colspan]{text-align:left}
 .flags{display:inline-flex; gap:4px}
 .flag-dot{width:8px; height:8px; border-radius:50%}
 
@@ -2105,7 +2109,10 @@ function renderProgress(){
 function renderRunsList(){
   const runs = sortedRuns().reverse();
   const page = $('#page-runs');
-  if (!runs.length){
+  // Past sport days sit among the runs so the week reads as it happened; they never count as runs.
+  const sport = doc.refDays.filter(d => d <= todayYmd());
+  const rows = [...runs, ...sport.map(date => ({ date, sport:true }))].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+  if (!runs.length && !sport.length){
     page.innerHTML = band({ eyebrow:'No runs yet', title:'Runs' }) + `<div class="wrap">
       <div class="empty"><b>No runs yet.</b><br>They appear once your watch syncs — <a href="#setup">set that up</a>, or upload a FIT file.</div></div>`;
     return;
@@ -2113,13 +2120,18 @@ function renderRunsList(){
   const dotColor = { crit:'var(--crit)', warn:'var(--warn)', wait:'var(--axis)' };
   const last30 = runs.filter(r => diffDays(r.date, todayYmd()) < 30);
   page.innerHTML = band({
-    eyebrow: `${runs.length} run${runs.length > 1 ? 's' : ''} · ${runs.filter(isClean).length} clean on the test route`,
+    eyebrow: `${runs.length} run${runs.length === 1 ? '' : 's'} · ${runs.filter(isClean).length} clean on the test route${sport.length ? ` · ${sport.length} sport day${sport.length > 1 ? 's' : ''}` : ''}`,
     title: 'Runs',
     stats: [['Last 30 days', last30.length, 'runs'], ['Miles · 30 days', last30.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)], ['All-time miles', runs.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)]],
   }) + `<div class="wrap">
     <div class="card"><div class="table-wrap"><table class="runs">
       <thead><tr><th>Date</th><th>Route</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
-      <tbody>${runs.map(r => {
+      <tbody>${rows.map(r => {
+        if (r.sport) return `<tr class="sport-row">
+          <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">sport day</div></td>
+          <td style="text-align:right"><span class="badge sport">Sport</span></td>
+          <td colspan="9" class="r-sub">Games or a big day on your feet. Not counted as a run.</td>
+        </tr>`;
         const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
         return `<tr data-run="${r.id}" tabindex="0">
           <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">${r.source === 'fit' ? fmtTime(r.start) + ' · FIT' : 'from notes'}</div></td>
