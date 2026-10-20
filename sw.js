@@ -19,7 +19,8 @@ self.addEventListener('activate', e => {
 async function networkFirst(req){
   const cache = await caches.open(CACHE);
   try {
-    const res = await Promise.race([fetch(req), new Promise((_, rej) => setTimeout(() => rej(new Error('slow')), 4000))]);
+    // no-cache: always ask the server (a cheap 304 when nothing changed) instead of a stale HTTP-cache copy.
+    const res = await Promise.race([fetch(req, { cache:'no-cache' }), new Promise((_, rej) => setTimeout(() => rej(new Error('slow')), 4000))]);
     if (res.ok) cache.put(req.mode === 'navigate' ? './' : req, res.clone());
     return res;
   } catch {

@@ -583,6 +583,16 @@ a.btn.primary{color:var(--accent-ink)}
   .player-info{display:grid; justify-items:center; text-align:center}
 }
 
+/* best time to run */
+.wx-best{display:flex; gap:14px; align-items:center; margin-bottom:14px}
+.wx-best .display{font-size:44px; line-height:1}
+.wx-strip{display:flex; gap:3px; overflow-x:auto; padding-bottom:4px}
+.wx-h{flex:1 0 30px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:3px; height:96px; font-size:11px; font-variant-numeric:tabular-nums}
+.wx-h i{width:100%; max-width:22px; border-radius:4px 4px 2px 2px}
+.wx-h span{font-weight:700}
+.wx-h small{color:var(--muted); font-size:10px}
+.wx-h.best span{color:var(--fig-hl)}
+
 /* plain-language help */
 .info-btn{
   width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
@@ -2087,6 +2097,58 @@ function guideCard(){
     ${guideSteps()}<p class="card-sub" style="margin:14px 0 0">Tap any <b>?</b> for what a number means. This guide stays in Setup.</p></div>`;
 }
 
+/* ── Best time to run: today's forecast where you usually run ─────────
+   Uses the start of your latest run (rounded to ~1 km), so there's no
+   location prompt. Fetched at most hourly; the card fills in when it lands. */
+const WX = { key:null, at:0, hours:null, busy:false };
+const IDEAL_F = 52;   // comfortable for most easy running; heat costs more beats than cold
+async function loadForecast(){
+  const r = sortedRuns().reverse().find(x => x.startLL);
+  if (!r || WX.busy) return;
+  const key = r.startLL.map(v => v.toFixed(2)).join(',');
+  if (WX.key === key && Date.now() - WX.at < 36e5) return;
+  WX.busy = true;
+  try {
+    const [lat, lon] = key.split(',');
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,apparent_temperature,precipitation_probability&temperature_unit=fahrenheit&timezone=auto&forecast_days=2`);
+    if (!res.ok) throw new Error();
+    const h = (await res.json()).hourly;
+    Object.assign(WX, { key, at:Date.now(), hours:h.time.map((t, i) => ({ t, temp:h.temperature_2m[i], feels:h.apparent_temperature[i], rain:h.precipitation_probability[i] ?? 0 })) });
+    const c = $('#wx-card'); if (c) c.outerHTML = weatherCard();
+  } catch {} finally { WX.busy = false; }
+}
+// Hours worth considering: 5am–9pm, from now on; tomorrow's once today is nearly over.
+function runHours(){
+  const now = new Date(), today = todayYmd(), hr = now.getHours();
+  const pick = day => WX.hours.filter(h => h.t.startsWith(day) && +h.t.slice(11, 13) >= 5 && +h.t.slice(11, 13) <= 21 && (day !== today || +h.t.slice(11, 13) >= hr));
+  const t = pick(today);
+  return t.length >= 2 ? { day:'Today', hours:t } : { day:'Tomorrow', hours:pick(addDays(today, 1)) };
+}
+const fmtH = h => `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`;
+const fmtHour = t => fmtH(+t.slice(11, 13));
+function weatherCard(){
+  if (!WX.hours){ loadForecast(); return sortedRuns().some(r => r.startLL) ? '<div class="card" id="wx-card"><div class="card-head"><h2>Best time to run</h2><span class="card-sub">checking the forecast…</span></div></div>' : ''; }
+  const { day, hours } = runHours();
+  if (!hours.length) return '';
+  // Lean toward the hour you usually run: a 5am suggestion is no use to an evening runner.
+  const usual = median(sortedRuns().slice(-10).map(r => new Date(r.start).getHours()));
+  const score = h => Math.abs(h.feels - IDEAL_F) + (h.feels > IDEAL_F ? (h.feels - IDEAL_F) * .5 : 0) + (h.rain >= 50 ? 25 : h.rain >= 30 ? 8 : 0)
+    + (usual == null ? 0 : Math.abs(+h.t.slice(11, 13) - usual) * 1.2);
+  const best = hours.reduce((a, b) => score(b) < score(a) ? b : a);
+  const hot = hours.every(h => h.feels >= HOT_F);
+  const lo = Math.min(...hours.map(h => h.feels)), hi = Math.max(...hours.map(h => h.feels));
+  const advice = hot ? `Hot all day. Go at ${fmtHour(best.t)}, keep it short, and expect your heart rate to run several beats high.`
+    : best.feels >= 75 ? 'Warm out. Slow down a little and take walk breaks early — heat adds beats.'
+    : best.feels <= 35 ? 'Cold. Layer up and warm up indoors first.'
+    : best.rain >= 50 ? 'Rain likely whenever you go.' : 'Good running weather.';
+  return `<div class="card" id="wx-card"><div class="card-head"><h2>Best time to run</h2><span class="card-sub">${day.toLowerCase()} · ${usual != null ? `near your usual ${fmtH(Math.round(usual))}` : 'where you last ran'}</span></div>
+    <div class="wx-best"><div class="display num">${fmtHour(best.t)}</div><div><b>Feels like ${Math.round(best.feels)}°F</b>${best.rain >= 20 ? ` · ${best.rain}% rain` : ''}<div class="card-sub">${advice}</div></div></div>
+    <div class="wx-strip">${hours.map(h => { const f = Math.round(h.feels), k = (h.feels - lo) / Math.max(1, hi - lo);
+      return `<div class="wx-h${h === best ? ' best' : ''}" data-tip="${fmtHour(h.t)} · feels like ${f}°F${h.rain >= 20 ? ` · ${h.rain}% rain` : ''}">
+        <i style="height:${Math.round(18 + k * 38)}px;background:${h.feels >= HOT_F ? 'var(--warn)' : h === best ? 'var(--fig-hl)' : 'var(--axis)'}"></i><span>${f}°</span><small>${fmtHour(h.t)}</small></div>`; }).join('')}</div>
+  </div>`;
+}
+
 function checkinCards(){
   const pc = pendingCheckin();
   let html = '';
@@ -2156,7 +2218,7 @@ function renderToday(){
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
     }) + `<div class="wrap">${checkinCards()}${guideCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
-      <div class="grid two" style="margin-top:16px">${routineCard()}</div>
+      <div class="grid two" style="margin-top:16px">${routineCard()}${weatherCard()}</div>
       <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
     return;
   }
@@ -2259,7 +2321,7 @@ function renderToday(){
     extra: `<ul class="task-list">${tasks}</ul>${cta}`,
   }) + `<div class="wrap">${checkinCards()}${guideCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
-    <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
+    <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
 }
 
@@ -2907,7 +2969,7 @@ function beep(freq = 880, ms = 120){
     g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.25, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + ms / 1000);
     o.start(t); o.stop(t + ms / 1000 + .02);
   }
-  navigator.vibrate?.(ms);
+  if (navigator.userActivation?.hasBeenActive !== false) navigator.vibrate?.(ms);
 }
 async function keepAwake(on){
   try {
