@@ -3264,25 +3264,26 @@ const up = (P, dy) => Object.fromEntries(Object.entries(P).map(([k, [x, y]]) => 
 // belong after it. The hip flexor is the exception: it earns its hold on anyone who sits all day.
 const MOVES = {
   march: { name:'March in place', cue:'Knees to hip height, arms swinging. Easy — just waking the legs up.', sec:45, dur:1.2,
-    a:S({ k1:[72,72], f1:[70,94], e1:[52,42], w1:[50,56], e2:[66,42], w2:[72,52] }),
-    b:S({ k2:[72,72], f2:[70,94], e2:[52,42], w2:[50,56], e1:[66,42], w1:[72,52] }) },
-  swingFB: { name:'Leg swings, front to back', cue:'One hand on a wall. Swing the outside leg loosely forward and back, a little higher each time. Stay tall.', sec:30, sides:true, prop:'wallL', dur:1.6, hl:1,
-    a:S({ k1:[78,77], f1:[95,92], t1:[101,88], e2:[44,36], w2:[28,40] }), b:S({ k1:[47,79], f1:[36,99], t1:[41,104], e2:[44,36], w2:[28,40] }) },
+    a:S({ k1:[83,62], f1:[82,84], t1:[88,88], e1:[53,43], w1:[49,57], e2:[68,40], w2:[78,35] }),
+    b:S({ k2:[83,62], f2:[82,84], t2:[88,88], e2:[53,43], w2:[49,57], e1:[68,40], w1:[78,35] }) },
+  swingFB: { name:'Leg swings, front to back', cue:'Stand side-on to a wall with one hand on it. Swing the outside leg loosely forward and back, a little higher each time. Stay tall.', sec:30, sides:true, prop:'post', dur:1.6, hl:1,
+    a:S({ k1:[78,77], f1:[95,92], t1:[101,88], e2:[55,38], w2:[49,46] }), b:S({ k1:[47,79], f1:[36,99], t1:[41,104], e2:[55,38], w2:[49,46] }) },
   swingSide: { name:'Leg swings, side to side', cue:'Hand on a wall beside you. Swing the leg across your body, then out to the side. Hips stay square.', sec:30, sides:true, prop:'wallL', front:true, dur:1.6, hl:1,
     a:F({ k1:[54,84], f1:[46,104], e2:[44,36], w2:[28,38] }), b:F({ k1:[74,82], f1:[86,100], e2:[44,36], w2:[28,38] }) },
   lunge: { name:'Walking lunges', cue:'Long step, lower the back knee toward the floor, chest up. Push off and alternate legs.', sec:40, dur:2.4,
     a:STAND, b:S({ h:[61,37], n:[61,48], p:[60,82], k1:[80,88], f1:[80,107], k2:[46,104], f2:[30,105], t2:[23,108], e1:[62,64], w1:[64,78], e2:[58,64], w2:[56,78] }) },
-  hipCircle: { name:'Hip openers', cue:'Hands on hips. Lift the knee up in front, open it out to the side, set it down. Slow and controlled.', sec:20, sides:true, front:true, dur:2, hl:1,
-    a:F({ k1:[63,70], f1:[61,91], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }),
-    b:F({ k1:[82,72], f1:[75,92], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }) },
+  hipCircle: { name:'Hip openers', cue:'Hands on hips. Lift the knee up in front to hip height, open it out to the side, set it down. Slow and controlled.', sec:20, sides:true, front:true, dur:1.4, hl:1,
+    a:F({ e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }),
+    b:F({ k1:[65,64], f1:[66,86], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }),
+    c:F({ k1:[86,62], f1:[85,84], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }) },
   hipKneel: { name:'Half-kneeling hip flexor stretch', cue:'Back knee down on something soft. Squeeze that glute and tuck the hips under until you feel the front of the hip. Don’t arch your back.', sec:30, sides:true, hold:true, dur:4, hl:1,
     a:{ h:[60,40], n:[60,51], p:[57,84], k1:[45,106], f1:[26,107], t1:[22,109], k2:[79,85], f2:[80,107], e1:[68,67], w1:[78,82], e2:[64,67], w2:[76,84] },
     b:{ h:[64,41], n:[63,52], p:[61,86], k1:[45,106], f1:[26,107], t1:[22,109], k2:[80,86], f2:[80,107], e1:[71,68], w1:[80,83], e2:[67,68], w2:[78,85] } },
   calfRaise: { name:'Calf raises', cue:'Rise onto your toes, pause, lower slowly. Hold something for balance if you need it.', sec:30, dur:1.6, hl:1,
     a:S({ t1:[67,107], t2:[65,107] }), b:{ ...up(S({}), 9), f1:[61,98], t1:[68,108], f2:[59,98], t2:[66,108] } },
   highKnees: { name:'High knees', cue:'Quick, light steps on the spot, knees up. A warm-up, not a sprint.', sec:20, dur:.6,
-    a:S({ k1:[74,68], f1:[72,90], e1:[52,40], w1:[50,54], e2:[68,40], w2:[74,50] }),
-    b:S({ k2:[74,68], f2:[72,90], e2:[52,40], w2:[50,54], e1:[68,40], w1:[74,50] }) },
+    a:S({ k1:[83,59], f1:[84,81], t1:[90,85], e1:[52,42], w1:[47,55], e2:[69,39], w2:[79,32] }),
+    b:S({ k2:[83,59], f2:[84,81], t2:[90,85], e2:[52,42], w2:[47,55], e1:[69,39], w1:[79,32] }) },
   calfStraight: { name:'Calf stretch, straight leg', cue:'Hands on a wall, back leg straight, heel down. Lean in until the calf pulls gently.', sec:30, sides:true, hold:true, prop:'wallR', dur:4, hl:2,
     a:{ h:[79,23], n:[74,33], p:[58,64], k1:[72,85], f1:[74,107], k2:[46,86], f2:[34,107], e1:[84,44], w1:[93,36], e2:[83,45], w2:[93,38] },
     b:{ h:[81,24], n:[76,34], p:[60,65], k1:[73,86], f1:[74,107], k2:[47,86], f2:[34,107], e1:[85,45], w1:[93,37], e2:[84,46], w2:[93,39] } },
@@ -3333,16 +3334,19 @@ function figure(m, { size = 240, still = false } = {}){
   const lines = P => [[P.p, P.k2, P.f2, toe(P, 2)], [P.n, P.e2, P.w2], [P.n, P.p], [P.p, P.k1, P.f1, toe(P, 1)], [P.n, P.e1, P.w1]]
     .map(l => l.map(q => q.join(',')).join(' '));
   const reduce = still || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const A = lines(m.a), B = lines(m.b);
-  const anim = (attr, a, b) => reduce || a === b ? '' : `<animate attributeName="${attr}" values="${a};${b};${a}" dur="${m.dur * 2}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/>`;
+  const A = lines(m.a), B = lines(m.b), C = m.c ? lines(m.c) : null;
+  const ease = n => Array(n).fill('.45 0 .55 1').join(';');
+  const anim = (attr, a, b, c) => reduce || (a === b && (c == null || a === c)) ? ''
+    : c == null ? `<animate attributeName="${attr}" values="${a};${b};${a}" dur="${m.dur * 2}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines="${ease(2)}"/>`
+    : `<animate attributeName="${attr}" values="${a};${b};${c};${a}" dur="${m.dur * 3}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.33;.67;1" keySplines="${ease(3)}"/>`;
   const cls = ['far', 'far', 'body', 'near', 'near'];
   const P = reduce ? B : A, hd = reduce ? m.b.h : m.a.h;
   const prop = { wallR:'<rect x="94" y="6" width="5" height="104" rx="2" class="prop"/>', wallL:'<rect x="21" y="6" width="5" height="104" rx="2" class="prop"/>',
-    couch:'<rect x="4" y="82" width="32" height="28" rx="5" class="prop"/>', mat:'<rect x="6" y="108" width="108" height="3" rx="1.5" class="prop"/>' }[m.prop] ?? '';
+    couch:'<rect x="4" y="82" width="32" height="28" rx="5" class="prop"/>', post:'<rect x="45" y="40" width="5" height="70" rx="2" class="prop"/>', mat:'<rect x="6" y="108" width="108" height="3" rx="1.5" class="prop"/>' }[m.prop] ?? '';
   return `<svg class="fig" viewBox="0 0 120 120" width="${size}" height="${size}" role="img" aria-label="${esc(m.name)}">
     ${prop}<line x1="2" y1="110" x2="118" y2="110" class="ground"/>
-    ${P.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0)) ? ' hl' : ''}">${anim('points', A[i], B[i])}</polyline>`).join('')}
-    <circle cx="${hd[0]}" cy="${hd[1]}" r="7" class="head">${anim('cx', m.a.h[0], m.b.h[0])}${anim('cy', m.a.h[1], m.b.h[1])}</circle>
+    ${P.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0)) ? ' hl' : ''}">${anim('points', A[i], B[i], C?.[i])}</polyline>`).join('')}
+    <circle cx="${hd[0]}" cy="${hd[1]}" r="7" class="head">${anim('cx', m.a.h[0], m.b.h[0], m.c?.h[0])}${anim('cy', m.a.h[1], m.b.h[1], m.c?.h[1])}</circle>
   </svg>`;
 }
 
