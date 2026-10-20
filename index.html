@@ -521,6 +521,32 @@ textarea.felt{
   .plan-row{grid-template-columns:48px 1fr}
   .plan-row > :last-child{grid-column:1 / -1}
 }
+/* plain-language help */
+.info-btn{
+  width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
+  font:inherit; font-size:12px; font-weight:800; line-height:1; cursor:pointer; vertical-align:2px; margin-left:6px; padding:0
+}
+.info-btn:hover, .info-btn[aria-expanded="true"]{border-color:var(--ink); color:var(--ink)}
+.explain{margin:-4px 0 14px; padding:10px 12px; border-radius:10px; background:var(--surface-2); font-size:13.5px; line-height:1.5; color:var(--ink-2)}
+.terms{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr)); gap:10px 28px; margin:0; font-size:13.5px}
+.terms dt{font-weight:700}
+.terms dd{margin:2px 0 0; color:var(--muted); line-height:1.45}
+.guide{counter-reset:g; list-style:none; margin:0; padding:0; display:grid; gap:14px}
+.guide li{counter-increment:g; display:grid; grid-template-columns:30px 1fr; gap:12px; font-size:14px; line-height:1.5; color:var(--ink-2)}
+.guide li::before{content:counter(g); width:28px; height:28px; border-radius:50%; background:var(--accent); color:var(--accent-ink); display:grid; place-items:center; font-weight:800}
+.guide b{display:block; color:var(--ink)}
+/* runs as cards on phones; the wide table stays on desktop */
+.run-cards{display:none; list-style:none; margin:0; padding:0}
+.run-cards li{border-top:1px solid var(--line)}
+.run-cards li:first-child{border-top:0}
+.run-cards a, .run-cards .rc-sport{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; color:inherit; text-decoration:none}
+.rc-main{font-weight:750; font-size:15px; font-variant-numeric:tabular-nums}
+.rc-nums{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
+.rc-right{grid-row:1 / span 2; grid-column:2; display:flex; align-items:center; gap:8px}
+@media (max-width:720px){
+  .runs-table-card .table-wrap{display:none}
+  .run-cards{display:block}
+}
 </style>
 </head>
 <body>
@@ -1731,7 +1757,7 @@ function chartHrTrend(host, runs){
   }
   el('line', { x1:m.l, x2:W - m.r, y1:H - m.b, y2:H - m.b, stroke:css('--axis') }, svg);
   el('line', { x1:m.l, x2:W - m.r, y1:y(p.lthr), y2:y(p.lthr), stroke:css('--crit'), 'stroke-width':1.5 }, svg);
-  el('text', { x:W - m.r + 6, y:y(p.lthr) + 4 }, svg).textContent = 'LT ' + p.lthr;
+  el('text', { x:W - m.r + 6, y:y(p.lthr) + 4 }, svg).textContent = 'Limit ' + p.lthr;
   el('text', { x:W - m.r + 6, y:y(p.zones.easy) + 4 }, svg).textContent = 'Easy';
   const td = diffDays(origin, todayYmd());
   if (td >= 0 && td <= span){
@@ -1884,7 +1910,7 @@ function routeSvg(path){
 /* ── Tooltip ─────────────────────────────────────────────────────── */
 const tip = $('#tip');
 let lastTipTarget = null;
-document.addEventListener('pointermove', e => {
+function showTip(e){
   const t = e.target.closest?.('[data-tip]');
   const live = e.target._tip ? e.target : null;
   if (lastTipTarget && lastTipTarget !== live && lastTipTarget._tipOut) lastTipTarget._tipOut();
@@ -1897,7 +1923,10 @@ document.addEventListener('pointermove', e => {
   if (lx + r.width > innerWidth - 8) lx = e.clientX - r.width - 14;
   if (ly < 8) ly = e.clientY + 16;
   tip.style.left = lx + 'px'; tip.style.top = ly + 'px';
-});
+}
+document.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') showTip(e); });
+// A finger tap shows the tip (and a tap anywhere else hides it).
+document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') showTip(e); });
 
 /* ═══ TODAY ══════════════════════════════════════════════════════════ */
 let lastResponse = null;
@@ -1927,6 +1956,39 @@ function taskHTML(key, main, sub, meta){
 }
 const tasksFor = (date, ids) => ids.map(id => taskHTML(`${date}|${id}`, ...TASKS[id])).join('');
 
+// Plain-English answers behind the "?" buttons. Tooltips don't exist on a
+// phone, so anything a newcomer needs to understand lives here instead.
+const EXPLAIN = {
+  jogHr: p => `Your average heart rate while jogging (walk breaks left out) on your test route. If the same pace costs fewer beats over the weeks, you’re getting fitter. Hot evenings push it up a few beats, so don’t panic over one warm run.`,
+  recovery: () => 'How far your heart rate falls in the 2 minutes after you stop. A bigger drop means a fitter heart, and it often improves before your pace does. The watch only records it if you stop the timer and stand still for 2 minutes before saving.',
+  anTE: () => 'Garmin’s 0–5 score for how much hard, out-of-breath work a run had. Easy runs should sit near 0. Above 1 means the run got harder than an easy run should be, so slow down or take walk breaks.',
+  hrTrend: p => `Each dot is a run. Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why. You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
+  consistency: () => 'How many runs you did each week. Fitness comes from stacking ordinary weeks, so a missed week costs you more than a slow run does.',
+  effort: () => 'How hard the run felt, from 1 (very easy) to 10 (all-out). Your watch asks when you save a run, or you can tap it in on the run’s page. The same route feeling easier over time is real progress, even when the numbers haven’t moved yet.',
+  jogWalk: () => 'Minutes spent jogging and walking in each run, from your watch’s run/walk detection. At very slow paces the watch can mistake a slow jog for walking, so treat this as rough.',
+  maxHr: p => `The highest heart rate in each run. The red line is your guardrail (${p.guardHr}): going over it means the run got too hard. Take a walk break before you reach it.`,
+  aboveLt: p => `Minutes at or above your threshold (${p.lthr} bpm), the point where effort stops being sustainable. Easy runs should have almost none.`,
+  load: () => 'Garmin’s estimate of how much a run taxed your body. Doing the same run for a lower load means you’re adapting to it.',
+  drift: () => 'How much your heart rate rose from the first half of the jog to the second at the same pace. Under about 5 bpm means your body is coping well and you’re ready to go a little longer.',
+  gate: () => 'Each Sunday night the plan looks back at the week: did you get your runs in, were your legs fine at 48 hours, and did you stay under your heart-rate limits? All green moves you up a week; otherwise you repeat it. Repeating a week is normal and keeps you healthy.',
+  zones: () => 'Your threshold is the heart rate where running stops feeling sustainable. Garmin estimates it after a few runs. Every zone, limit and chart in Stride is set from it, so it’s worth getting right.',
+  standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
+};
+const infoBtn = `<button class="info-btn" data-explain aria-expanded="false" aria-label="What does this mean?">?</button>`;
+const explain = key => `<p class="explain" hidden>${EXPLAIN[key](doc.profile)}</p>`;
+
+// What each number on a run's page means, in one line each.
+const RUN_TERMS = [
+  ['Jog HR / Jog pace', 'Heart rate and pace while jogging, with walk breaks left out. The fairest numbers to compare run to run.'],
+  ['Recovery HR', 'How far your heart rate dropped in the 2 minutes after you stopped. Higher is fitter.'],
+  ['Above threshold', 'Time spent at your hardest sustainable effort or beyond. Easy runs should show almost none.'],
+  ['Anaerobic TE', 'Garmin’s 0–5 score for hard, out-of-breath work. Near 0 is right for an easy run.'],
+  ['Aerobic TE', 'Garmin’s 0–5 score for how much the run built your base. 2–3 is a solid easy run.'],
+  ['Load', 'Garmin’s estimate of how much the run taxed you overall.'],
+  ['Drift', 'How much heart rate crept up from the first half of the jog to the second.'],
+  ['Idle', 'Time the timer ran while you stood still. Over 20 seconds keeps the run out of the trend.'],
+];
+
 // Shared poster band at the top of every page.
 function band({ eyebrow, title, sub = '', stats = [], extra = '' }){
   return `<section class="band"><div class="band-stripes"></div><div class="band-in">
@@ -1934,6 +1996,23 @@ function band({ eyebrow, title, sub = '', stats = [], extra = '' }){
     ${stats.length ? `<div class="band-stats">${stats.map(([l, v, u]) => `<div class="bstat"><div class="bstat-v display num">${v}${u ? `<small>${u}</small>` : ''}</div><div class="bstat-l">${l}</div></div>`).join('')}</div>` : ''}
     ${extra ? `<div class="band-wide">${extra}</div>` : ''}
   </div></section>`;
+}
+
+// The five ideas Stride runs on, for someone opening it for the first time.
+function guideSteps(){
+  const p = doc.profile;
+  return `<ol class="guide">
+    <li><span><b>Your runs come in on their own.</b>Connect intervals.icu once in <a href="#setup">Setup</a> and every run your watch records shows up here a few minutes after it syncs. You can also drop in FIT files.</span></li>
+    <li><span><b>${coached() ? 'Today tells you what to do.' : 'Today shows your week.'}</b>${coached() ? 'Run, rest or stretch. Each Sunday the plan looks at how the week went and moves you up a week or repeats it.' : 'Your recent runs, your body numbers and anything worth a look.'}</span></li>
+    <li><span><b>Progress answers one question: is the same run costing fewer heartbeats?</b>That’s the clearest sign you’re getting fitter, and it shows up weeks before you get faster.</span></li>
+    <li><span><b>Repeat one flat route.</b>Stride compares runs on your “test route” so the heart-rate trend is fair. Stop the timer at the finish and stand still for 2 minutes before saving, so the watch records your recovery.</span></li>
+    <li><span><b>Tell it how your legs feel.</b>The day after a run, tap how your legs are. Ordinary soreness is fine. Sharp pain, shin pain or one calf much worse than the other pauses the plan until it’s checked. Keep runs easy: walk if your heart rate passes ${p.zones.mod}.</span></li>
+  </ol>`;
+}
+function guideCard(){
+  if (prefs.get('guideHidden', false)) return '';
+  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>How Stride works</h2><button class="link-btn" data-guide="hide">Got it, hide this</button></div>
+    ${guideSteps()}<p class="card-sub" style="margin:14px 0 0">Tap any <b>?</b> for what a number means. This guide stays in Setup.</p></div>`;
 }
 
 function checkinCards(){
@@ -2003,7 +2082,7 @@ function renderToday(){
       eyebrow: `${dateLine} · just tracking`, title, sub,
       stats: [['Runs this week', weekRuns.length], ['Miles', weekMi.toFixed(1)], ['Jogging', Math.round(weekRuns.reduce((a, r) => a + (r.runSec ?? 0), 0) / 60), 'min']],
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
-    }) + `<div class="wrap">${checkinCards()}
+    }) + `<div class="wrap">${checkinCards()}${guideCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
     return;
@@ -2080,7 +2159,7 @@ function renderToday(){
 
   const g = cur.gate;
   const gate = `<div class="card">
-    <div class="card-head"><h2>Week ${Math.min(pw, len)} gate</h2><span class="card-sub">decides Sunday night</span></div>
+    <div class="card-head"><h2>Week ${Math.min(pw, len)}: move up or repeat?${infoBtn}</h2><span class="card-sub">decided Sunday night</span></div>${explain('gate')}
     <ul class="status-list">${g.items.map(([st, mm, sub]) => `<li class="status-row">${statusIcon(st)}<span><div class="s-main">${mm}</div><div class="s-sub">${sub}</div></span></li>`).join('')}</ul>
     <div class="verdict">${statusIcon(g.verdict[0])}<span><strong>${g.verdict[1]}</strong> ${g.verdict[2]}</span></div>
   </div>`;
@@ -2103,7 +2182,7 @@ function renderToday(){
     stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), `/${pwo.runs?.length ?? 3}`],
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>`,
-  }) + `<div class="wrap">${checkinCards()}
+  }) + `<div class="wrap">${checkinCards()}${guideCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
     <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}</div><div class="col">${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
@@ -2177,14 +2256,16 @@ function renderProgress(){
     sub: 'The question every chart answers: is the same effort costing fewer heartbeats?',
     stats: [['Runs', runs.length], ['Clean on test route', clean.length], ['Miles', totMi.toFixed(1)], ['Hours jogging', (totJog / 3600).toFixed(1)]],
   }) + `<div class="wrap">
+    <div class="section-label" style="margin-top:0">Getting fitter?</div>
     <div class="grid kpis">
-      <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · test route</div>${kpiHr}</div>
-      <div class="card kpi"><div class="eyebrow">Recovery HR · 2-min drop</div>${kpiRec}</div>
-      <div class="card kpi"><div class="eyebrow">Anaerobic TE · easy runs</div>${kpiTe}</div>
+      <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · test route${infoBtn}</div>${explain('jogHr')}${kpiHr}</div>
+      <div class="card kpi"><div class="eyebrow">Recovery HR · 2-min drop${infoBtn}</div>${explain('recovery')}${kpiRec}</div>
+      <div class="card kpi"><div class="eyebrow">Hard-effort score (anaerobic TE)${infoBtn}</div>${explain('anTE')}${kpiTe}</div>
     </div>
     <div class="card" style="margin-top:16px">
-      <div class="card-head"><div><h2>Heart rate on the test route</h2>
-        <div class="card-sub">Only clean runs on the flat route count toward the trend. Jogging-only HR where there’s a FIT file; whole-run average otherwise.</div></div></div>
+      <div class="card-head"><div><h2>Heart rate on the test route${infoBtn}</h2>
+        <div class="card-sub">Same route, same effort: lower over time means fitter.</div></div></div>
+      ${explain('hrTrend')}
       <div class="legend">
         <span><i class="dotf" style="background:var(--series-1)"></i>Clean test-route run</span>
         <span><i class="ring"></i>Excluded — hover for why</span>
@@ -2193,29 +2274,30 @@ function renderProgress(){
       </div>
       <div class="chart" id="c-hr"></div>
     </div>
-    <div class="grid two" style="margin-top:16px">
-      <div class="card"><div class="card-head"><h2>Consistency</h2><span class="card-sub">runs per week · ${sinceTxt}</span></div>
-        <div class="chart" id="c-weeks"></div>
+    <div class="section-label">Showing up</div>
+    <div class="grid two">
+      <div class="card"><div class="card-head"><h2>Consistency${infoBtn}</h2><span class="card-sub">runs per week · ${sinceTxt}</span></div>
+        ${explain('consistency')}<div class="chart" id="c-weeks"></div>
         <p class="card-sub" style="margin:8px 0 0">Gaps set you back more than slow runs do.</p></div>
-      <div class="card"><div class="card-head"><h2>Perceived effort</h2><span class="card-sub">1–10 · down on the same route is progress</span></div>
-        ${effRuns.length ? '<div class="chart" id="c-eff"></div>' : '<div class="pending-box">Answer the watch’s effort and feel prompts when you save a run,<br>or set them on the run’s page.</div>'}</div>
+      <div class="card"><div class="card-head"><h2>Perceived effort${infoBtn}</h2><span class="card-sub">1–10 · down on the same route is progress</span></div>
+        ${explain('effort')}${effRuns.length ? '<div class="chart" id="c-eff"></div>' : '<div class="pending-box">Answer the watch’s effort and feel prompts when you save a run,<br>or set them on the run’s page.</div>'}</div>
     </div>
     ${bestsCard(runs)}
-    <div class="eyebrow" style="margin:28px 0 12px">Secondary</div>
+    <div class="section-label">More detail</div>
     <div class="grid two">
-      <div class="card"><div class="card-head"><h2>Jogging vs walking</h2><span class="card-sub">minutes per run</span></div>
+      <div class="card"><div class="card-head"><h2>Jogging vs walking${infoBtn}</h2><span class="card-sub">minutes per run</span></div>${explain('jogWalk')}
         <div class="legend"><span><i style="background:var(--series-1)"></i>Jog</span><span><i style="background:var(--walk)"></i>Walk</span></div>
         <div class="chart" id="c-jog"></div></div>
-      <div class="card"><div class="card-head"><h2>Recovery HR</h2><span class="card-sub">2-min drop · higher is better</span></div>
+      <div class="card"><div class="card-head"><h2>Recovery HR${infoBtn}</h2><span class="card-sub">2-min drop · higher is better</span></div>${explain('recovery')}
         ${rec.length ? '<div class="chart" id="c-rec"></div>' : '<div class="pending-box">No recovery HR captured yet.<br>Stand still 2 min before saving, or type it in on a run’s page.</div>'}</div>
-      <div class="card"><div class="card-head"><h2>Max HR per run</h2><span class="card-sub">guardrail ~${p.guardHr}</span></div>
+      <div class="card"><div class="card-head"><h2>Max HR per run${infoBtn}</h2><span class="card-sub">guardrail ~${p.guardHr}</span></div>${explain('maxHr')}
         <div class="legend"><span><i style="background:var(--series-1)"></i>Max HR</span><span><i style="background:var(--crit);height:2px;border-radius:0"></i>Guardrail</span></div>
         <div class="chart" id="c-max"></div></div>
-      <div class="card"><div class="card-head"><h2>Time above ${p.lthr} bpm</h2><span class="card-sub">should trend to zero</span></div>
+      <div class="card"><div class="card-head"><h2>Time above ${p.lthr} bpm${infoBtn}</h2><span class="card-sub">should trend to zero</span></div>${explain('aboveLt')}
         ${withS.length ? '<div class="chart" id="c-lt"></div>' : '<div class="pending-box">Needs second-by-second HR from a FIT file.<br>Fills in with your first upload.</div>'}</div>
-      <div class="card"><div class="card-head"><h2>Exercise load</h2><span class="card-sub">lower for the same work is better</span></div>
+      <div class="card"><div class="card-head"><h2>Exercise load${infoBtn}</h2><span class="card-sub">lower for the same work is better</span></div>${explain('load')}
         <div class="chart" id="c-load"></div></div>
-      <div class="card"><div class="card-head"><h2>Cardiac drift</h2><span class="card-sub">2nd half vs 1st half of the jogging</span></div>
+      <div class="card"><div class="card-head"><h2>Heart-rate drift${infoBtn}</h2><span class="card-sub">2nd half vs 1st half of the jogging</span></div>${explain('drift')}
         ${runs.some(r => r.drift != null) ? '<div class="chart" id="c-drift"></div>' : '<div class="pending-box">Needs a FIT file with 8+ minutes of jogging.<br>Small drift means you’re ready to go longer.</div>'}</div>
     </div>
     <div class="card" style="margin-top:16px">
@@ -2325,7 +2407,15 @@ function renderRunsList(){
     title: 'Runs',
     stats: [['Last 30 days', last30.length, 'runs'], ['Miles · 30 days', last30.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)], ['All-time miles', runs.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)]],
   }) + `<div class="wrap">
-    <div class="card"><div class="table-wrap"><table class="runs">
+    <div class="card runs-table-card">
+    <ul class="run-cards">${rows.map(r => r.sport
+      ? `<li><div class="rc-sport"><div class="rc-main">${fmtDate(r.date)}</div><div class="rc-right"><span class="badge sport">Sport</span></div><div class="rc-nums">${refLabel(r.date) || 'Sport day'} · not counted as a run</div></div></li>`
+      : `<li><a href="#runs/${r.id}">
+          <div class="rc-main">${fmtDate(r.date)} · ${fmtMi(r.distMi)} mi</div>
+          <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? '<span class="badge test">Test</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
+          <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}</div>
+        </a></li>`).join('')}</ul>
+    <div class="table-wrap"><table class="runs">
       <thead><tr><th>Date</th><th>Route</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>Effort</th><th>Temp</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
       <tbody>${rows.map(r => {
         if (r.sport) return `<tr class="sport-row">
@@ -2351,7 +2441,7 @@ function renderRunsList(){
         </tr>`;
       }).join('')}</tbody>
     </table></div></div>
-    <p class="card-sub" style="margin-top:12px">Missing one? <a href="#setup">Upload its FIT file</a>.</p></div>`;
+    <p class="card-sub" style="margin-top:12px">An amber or red dot means something on that run is worth a look. Missing a run? <a href="#setup">Upload its FIT file</a>.</p></div>`;
 }
 
 async function renderRunDetail(id){
@@ -2394,6 +2484,9 @@ async function renderRunDetail(id){
       ${stat('Drift', r.drift != null ? (r.drift > 0 ? '+' : '') + r.drift : '—', r.drift != null ? 'bpm' : '')}
       ${stat('Idle', fmtDur(r.idleSec), '', (r.idleSec ?? 0) > IDLE_TOLERANCE ? 'timer left running' : '')}
     </div>
+    <details class="card" style="margin-top:12px"><summary class="card-head" style="margin:0;cursor:pointer"><h2 style="font-size:15px">What do these numbers mean?</h2><span class="card-sub">tap to open ›</span></summary>
+      <dl class="terms" style="margin-top:14px">${RUN_TERMS.map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl>
+    </details>
 
     <div class="grid today-grid" style="margin-top:16px">
       <div class="col">
@@ -2418,7 +2511,7 @@ async function renderRunDetail(id){
         </div>
       </div>
       <div class="col">
-        <div class="card"><div class="card-head"><h2>Protocol check</h2><span class="card-sub">${isClean(r) ? 'counts toward the trend' : 'kept out of the trend'}</span></div>
+        <div class="card"><div class="card-head"><h2>Fair to compare?</h2><span class="card-sub">${isClean(r) ? 'yes, counts toward your trend' : 'kept out of your trend'}</span></div>
           ${flags.length ? `<ul class="status-list">${flags.map(([st, mm, sub]) => `<li class="status-row">${statusIcon(st)}<span><div class="s-main">${esc(mm)}</div><div class="s-sub">${esc(sub)}</div></span></li>`).join('')}</ul>`
             : `<div class="verdict" style="margin:0">${statusIcon('good')}<span><strong>Clean.</strong> Test route, no idle time, recovery HR captured.</span></div>`}
         </div>
@@ -2542,8 +2635,9 @@ function bodyTodayCard(){
 
 function standardsCard(){
   const p = doc.profile, missing = [!p.sex && 'sex', !p.birthYear && 'birth year', !p.heightIn && 'height'].filter(Boolean);
-  return `<div class="card"><div class="card-head"><h2>How you compare</h2>
+  return `<div class="card"><div class="card-head"><h2>How you compare${infoBtn}</h2>
       <span class="card-sub">${missing.length ? '' : `${p.sex === 'm' ? 'Man' : 'Woman'}, ${ageNow()}, ${fmtHeight(p.heightIn)} · `}<a href="#setup">edit</a></span></div>
+    ${explain('standards')}
     ${missing.length ? `<div class="note" style="margin-bottom:8px">${WARN_SVG}<div><b>Add your ${missing.join(', ')} in <a href="#setup">Setup</a></b> to see the standards for your age and size.</div></div>` : ''}
     <ul class="status-list std-list">${standardRows().map(([st, l, v, n]) => `<li class="status-row">${statusIcon(st)}<span style="flex:1">
       <div class="s-main std-v"><span>${l}</span><b>${v}</b></div><div class="s-sub">${n}</div></span></li>`).join('')}</ul>
@@ -2781,7 +2875,7 @@ function renderSetup(){
       <div class="col">
         ${accountCard()}
         ${intervalsCard()}
-        <div class="card"><div class="card-head"><h2>Zones & thresholds</h2><span class="card-sub">changing these re-scores every run</span></div>
+        <div class="card"><div class="card-head"><h2>Zones & thresholds${infoBtn}</h2><span class="card-sub">changing these re-scores every run</span></div>${explain('zones')}
           <div class="field-row">
             <div class="field"><label for="s-lthr">Lactate threshold HR</label><input id="s-lthr" type="number" value="${p.lthr}"></div>
             <div class="field"><label for="s-easy">Easy below</label><input id="s-easy" type="number" value="${p.zones.easy}"></div>
@@ -2827,7 +2921,11 @@ function renderSetup(){
           </div>
         </div>
       </div>
-    </div></div>`;
+    </div>
+    <details class="card" style="margin-top:16px"${prefs.get('guideHidden', false) ? '' : ' open'}><summary class="card-head" style="margin:0;cursor:pointer"><h2>How Stride works</h2><span class="card-sub">the 5 ideas behind it ›</span></summary>
+      <div style="margin-top:14px">${guideSteps()}</div>
+      ${prefs.get('guideHidden', false) ? `<button class="link-btn" data-guide="show" style="margin-top:14px">Show this on Today again</button>` : ''}
+    </details></div>`;
 
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
@@ -3201,6 +3299,13 @@ document.addEventListener('click', async e => {
     if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
   }
+  const ex = e.target.closest('[data-explain]');
+  if (ex){
+    const box = ex.closest('.card, .kpi')?.querySelector('.explain'); if (!box) return;
+    box.hidden = !box.hidden; ex.setAttribute('aria-expanded', !box.hidden); return;
+  }
+  const gd = e.target.closest('[data-guide]');
+  if (gd){ prefs.set('guideHidden', gd.dataset.guide === 'hide'); render(); return; }
   const ef = e.target.closest('[data-effort], [data-feel]');
   if (ef){
     const r = runById($('#page-runs').dataset.run); if (!r) return;

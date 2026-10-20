@@ -81,5 +81,8 @@ data runs through it, so treat changes to data handling with care.
   `addDays()`, `weekStart()` = Monday).
 - Health copy is advice, not diagnosis. Keep the hard-stop rules (sharp pain, bone pain,
   red-flag check-in pauses the plan).
+- **Keep it understandable for non-runners.** Any new number or chart gets a plain-English
+  entry in `EXPLAIN` (or `RUN_TERMS` on the run page) behind an `infoBtn` "?". Tooltips
+  are extra, not the explanation: phones don't hover.
 - Match the surrounding code: terse comments that say *why*, template-string rendering,
   `data-action` click delegation in the single click handler.
