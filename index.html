@@ -576,7 +576,7 @@ a.btn.primary{color:var(--accent-ink)}
 .player-ctl{margin-bottom:10px}
 @media (max-width:720px){
   .player-main{grid-template-columns:minmax(0,1fr); gap:14px}
-  .player-fig .fig{width:200px; height:200px}
+  .player-fig .fig{width:min(100%,300px); height:auto}
   .player-cue{font-size:15px}
   .ring-wrap, .ring{width:120px; height:120px}
   .ring-num{font-size:42px}
@@ -3263,42 +3263,42 @@ const up = (P, dy) => Object.fromEntries(Object.entries(P).map(([k, [x, y]]) => 
 // sec is per side when `sides` is set. Before a run everything moves; holds
 // belong after it. The hip flexor is the exception: it earns its hold on anyone who sits all day.
 const MOVES = {
-  march: { name:'March in place', cue:'Knees to hip height, arms swinging. Easy — just waking the legs up.', sec:45, dur:1.2,
-    a:S({ k1:[83,62], f1:[82,84], t1:[88,88], e1:[53,43], w1:[49,57], e2:[68,40], w2:[78,35] }),
-    b:S({ k2:[83,62], f2:[82,84], t2:[88,88], e2:[53,43], w2:[49,57], e1:[68,40], w1:[78,35] }) },
+  march: { name:'March in place', cue:'Knees to hip height, arms swinging. Easy — just waking the legs up.', sec:45, dur:.6, alt:true,
+    a:S({ k1:[83,62], f1:[82,84], t1:[88,88], e1:[52.8,42.4], w1:[50.2,57.2], e2:[68.5,41.7], w2:[82.6,36.6] }),
+    b:S({ k2:[83,62], f2:[82,84], t2:[88,88], e2:[52.8,42.4], w2:[50.2,57.2], e1:[68.5,41.7], w1:[82.6,36.6] }) },
   swingFB: { name:'Leg swings, front to back', cue:'Stand side-on to a wall with one hand on it. Swing the outside leg loosely forward and back, a little higher each time. Stay tall.', sec:30, sides:true, prop:'post', dur:1.6, hl:1,
     a:S({ k1:[78,77], f1:[95,92], t1:[101,88], e2:[55,38], w2:[49,46] }), b:S({ k1:[47,79], f1:[36,99], t1:[41,104], e2:[55,38], w2:[49,46] }) },
   swingSide: { name:'Leg swings, side to side', cue:'Hand on a wall beside you. Swing the leg across your body, then out to the side. Hips stay square.', sec:30, sides:true, prop:'wallL', front:true, dur:1.6, hl:1,
     a:F({ k1:[54,84], f1:[46,104], e2:[44,36], w2:[28,38] }), b:F({ k1:[74,82], f1:[86,100], e2:[44,36], w2:[28,38] }) },
-  lunge: { name:'Walking lunges', cue:'Long step, lower the back knee toward the floor, chest up. Push off and alternate legs.', sec:40, dur:2.4,
-    a:STAND, b:S({ h:[61,37], n:[61,48], p:[60,82], k1:[80,88], f1:[80,107], k2:[46,104], f2:[30,105], t2:[23,108], e1:[62,64], w1:[64,78], e2:[58,64], w2:[56,78] }) },
+  lunge: { name:'Walking lunges', cue:'Long step, lower the back knee toward the floor, chest up. Push off and alternate legs.', sec:40, dur:1.1, step:true,
+    a:STAND, b:S({ h:[57.3,35], n:[57.3,46], p:[57.3,81], k1:[80,85], f1:[80,107], k2:[47.9,102], f2:[26,104.5], t2:[20,108], e1:[58,63], w1:[59,78], e2:[56,63], w2:[55,78] }) },
   hipCircle: { name:'Hip openers', cue:'Hands on hips. Lift the knee up in front to hip height, open it out to the side, set it down. Slow and controlled.', sec:20, sides:true, front:true, dur:1.4, hl:1,
     a:F({ e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }),
     b:F({ k1:[65,64], f1:[66,86], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }),
-    c:F({ k1:[86,62], f1:[85,84], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }) },
+    c:F({ k1:[83,62], f1:[82,84], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }) },
   hipKneel: { name:'Half-kneeling hip flexor stretch', cue:'Back knee down on something soft. Squeeze that glute and tuck the hips under until you feel the front of the hip. Don’t arch your back.', sec:30, sides:true, hold:true, dur:4, hl:1,
     a:{ h:[60,40], n:[60,51], p:[57,84], k1:[45,106], f1:[26,107], t1:[22,109], k2:[79,85], f2:[80,107], e1:[68,67], w1:[78,82], e2:[64,67], w2:[76,84] },
-    b:{ h:[64,41], n:[63,52], p:[61,86], k1:[45,106], f1:[26,107], t1:[22,109], k2:[80,86], f2:[80,107], e1:[71,68], w1:[80,83], e2:[67,68], w2:[78,85] } },
+    b:{ h:[64,41], n:[63,52], p:[61,86], k1:[45,106], f1:[26,107], t1:[22,109], k2:[83,86], f2:[80,107], e1:[71,68], w1:[80,83], e2:[67,68], w2:[78,85] } },
   calfRaise: { name:'Calf raises', cue:'Rise onto your toes, pause, lower slowly. Hold something for balance if you need it.', sec:30, dur:1.6, hl:1,
-    a:S({ t1:[67,107], t2:[65,107] }), b:{ ...up(S({}), 9), f1:[61,98], t1:[68,108], f2:[59,98], t2:[66,108] } },
-  highKnees: { name:'High knees', cue:'Quick, light steps on the spot, knees up. A warm-up, not a sprint.', sec:20, dur:.6,
-    a:S({ k1:[83,59], f1:[84,81], t1:[90,85], e1:[52,42], w1:[47,55], e2:[69,39], w2:[79,32] }),
-    b:S({ k2:[83,59], f2:[84,81], t2:[90,85], e2:[52,42], w2:[47,55], e1:[69,39], w1:[79,32] }) },
+    a:S({ t1:[68,107], t2:[66,107] }), b:{ ...up(S({}), 7), f1:[62,100], t1:[68,107], f2:[60,100], t2:[66,107] } },
+  highKnees: { name:'High knees', cue:'Quick, light steps on the spot, knees up. A warm-up, not a sprint.', sec:20, dur:.3, alt:true,
+    a:S({ k1:[83,59], f1:[84,81], t1:[90,85], e1:[52.8,42.4], w1:[50.2,57.2], e2:[68.5,41.7], w2:[82.6,36.6] }),
+    b:S({ k2:[83,59], f2:[84,81], t2:[90,85], e2:[52.8,42.4], w2:[50.2,57.2], e1:[68.5,41.7], w1:[82.6,36.6] }) },
   calfStraight: { name:'Calf stretch, straight leg', cue:'Hands on a wall, back leg straight, heel down. Lean in until the calf pulls gently.', sec:30, sides:true, hold:true, prop:'wallR', dur:4, hl:2,
     a:{ h:[79,23], n:[74,33], p:[58,64], k1:[72,85], f1:[74,107], k2:[46,86], f2:[34,107], e1:[84,44], w1:[93,36], e2:[83,45], w2:[93,38] },
     b:{ h:[81,24], n:[76,34], p:[60,65], k1:[73,86], f1:[74,107], k2:[47,86], f2:[34,107], e1:[85,45], w1:[93,37], e2:[84,46], w2:[93,39] } },
   calfBent: { name:'Calf stretch, bent knee', cue:'Same stance, now bend the back knee and keep the heel down. You’ll feel it lower, near the Achilles.', sec:30, sides:true, hold:true, prop:'wallR', dur:4, hl:2,
-    a:{ h:[77,28], n:[72,38], p:[58,70], k1:[72,90], f1:[74,107], k2:[50,90], f2:[38,107], e1:[84,48], w1:[93,40], e2:[83,49], w2:[93,42] },
-    b:{ h:[77,31], n:[72,41], p:[58,73], k1:[73,92], f1:[74,107], k2:[52,92], f2:[38,107], e1:[84,51], w1:[93,43], e2:[83,52], w2:[93,45] } },
+    a:{ h:[77,28], n:[72,38], p:[58,70], k1:[72,89], f1:[74,107], k2:[50,90], f2:[38,107], e1:[84,48], w1:[93,40], e2:[83,49], w2:[93,42] },
+    b:{ h:[77,31], n:[72,41], p:[58,73], k1:[73,89], f1:[74,107], k2:[52,92], f2:[38,107], e1:[84,51], w1:[93,43], e2:[83,52], w2:[93,45] } },
   couch: { name:'Couch stretch', cue:'Back knee on the floor against a couch, shin up its front. Squeeze the glute and tuck the pelvis: feel it in the front of the hip, not the lower back.', sec:40, sides:true, hold:true, prop:'couch', dur:4, hl:1,
     a:{ h:[57,38], n:[56,49], p:[54,84], k1:[40,106], f1:[36,86], t1:[37,79], k2:[78,84], f2:[78,107], e1:[64,66], w1:[75,82], e2:[60,66], w2:[73,84] },
-    b:{ h:[60,40], n:[59,51], p:[58,86], k1:[40,106], f1:[36,86], t1:[37,79], k2:[79,85], f2:[78,107], e1:[67,68], w1:[77,83], e2:[63,68], w2:[75,85] } },
+    b:{ h:[60,40], n:[59,51], p:[58,86], k1:[40,106], f1:[36,86], t1:[37,79], k2:[81,85], f2:[78,107], e1:[67,68], w1:[77,83], e2:[63,68], w2:[75,85] } },
   quad: { name:'Standing quad stretch', cue:'Hand on a wall. Pull your heel toward your seat, knees together, hips tucked.', sec:30, sides:true, hold:true, prop:'wallR', dur:4, hl:1,
     a:S({ k1:[62,86], f1:[50,68], t1:[46,71], e1:[54,46], w1:[50,66], e2:[76,36], w2:[93,38] }),
     b:S({ k1:[61,87], f1:[52,66], t1:[48,68], e1:[55,46], w1:[52,64], e2:[76,36], w2:[93,38] }) },
   figure4: { name:'Figure-4 stretch', cue:'On your back, ankle over the opposite knee. Pull that thigh toward your chest until you feel the outside of the hip.', sec:30, sides:true, hold:true, prop:'mat', dur:4, hl:1,
     a:L({ k2:[70,82], f2:[84,103], t2:[88,97], k1:[64,84], f1:[74,80], t1:[80,77], e1:[40,92], w1:[60,88], e2:[40,94], w2:[62,90] }),
-    b:L({ k2:[64,76], f2:[78,94], t2:[82,90], k1:[58,80], f1:[68,74], t1:[74,71], e1:[38,90], w1:[56,84], e2:[38,92], w2:[58,86] }) },
+    b:L({ k2:[64,76], f2:[78,94], t2:[83,89], k1:[58,80], f1:[68,74], t1:[74,71], e1:[38,90], w1:[56,84], e2:[38,92], w2:[58,86] }) },
   hamstring: { name:'Hamstring stretch', cue:'On your back, hold behind one thigh and straighten that leg toward the ceiling. Stop at a gentle pull.', sec:30, sides:true, hold:true, prop:'mat', dur:4, hl:1,
     a:L({ k1:[66,80], f1:[74,58], t1:[80,56], k2:[80,103], f2:[102,104], t2:[104,97], e1:[40,92], w1:[62,86], e2:[40,94], w2:[63,88] }),
     b:L({ k1:[63,79], f1:[66,56], t1:[72,53], k2:[80,103], f2:[102,104], t2:[104,97], e1:[40,91], w1:[60,85], e2:[40,93], w2:[61,87] }) },
@@ -3306,8 +3306,8 @@ const MOVES = {
     a:{ h:[57,20], n:[57,31], p:[58,66], k2:[74,86], f2:[76,107], k1:[46,88], f1:[36,104], t1:[30,108], e1:[50,46], w1:[56,62], e2:[66,46], w2:[62,62] },
     b:{ h:[61,23], n:[61,34], p:[62,69], k2:[76,88], f2:[76,107], k1:[49,90], f1:[36,104], t1:[30,108], e1:[54,49], w1:[60,65], e2:[70,49], w2:[66,65] } },
   bridge: { name:'Glute bridges', cue:'On your back, knees bent, feet flat. Squeeze your glutes and lift until knees, hips and shoulders line up. Lower slowly. 12–15 reps.', sec:45, prop:'mat', dur:2.4, hl:1,
-    a:L({ k1:[72,80], f1:[84,104], t1:[91,105], k2:[71,81], f2:[83,105], t2:[90,106] }),
-    b:L({ p:[56,85], k1:[76,78], f1:[83,104], t1:[90,105], k2:[75,79], f2:[82,105], t2:[89,106] }) },
+    a:L({ k1:[70,82], f1:[80,104], t1:[87,105], k2:[69,83], f2:[79,105], t2:[86,106] }),
+    b:L({ p:[56,85], k1:[78,79], f1:[80,104], t1:[87,105], k2:[77,80], f2:[79,105], t2:[86,106] }) },
   sideRaise: { name:'Side-lying leg raises', cue:'Lie on your side, legs straight. Lift the top leg slightly behind you, toes forward, then lower slowly. 12–15 reps.', sec:40, sides:true, prop:'mat', dur:2.4, hl:1,
     a:{ h:[14,88], n:[24,94], p:[58,100], k1:[80,101], f1:[102,102], t1:[103,96], k2:[80,103], f2:[102,104], t2:[103,98], e1:[40,94], w1:[52,100], e2:[20,104], w2:[12,92] },
     b:{ h:[14,88], n:[24,94], p:[58,100], k1:[80,92], f1:[100,82], t1:[102,76], k2:[80,103], f2:[102,104], t2:[103,98], e1:[40,94], w1:[52,100], e2:[20,104], w2:[12,92] } },
@@ -3326,28 +3326,85 @@ const ROUTINES = {
   strength: { name:'Strength', title:'Get <em>strong</em>', sub:'Twice a week. Strong glutes and calves take load off your knees and hips.', tasks:['bridge'],
     moves:[['bridge', 45], 'rest', ['bridge', 45], 'rest', ['calfRaise', 45], 'rest', ['calfRaise', 45], 'sideRaise', 'plank'] },
 };
+// Alternating moves put each foot down before lifting the other: knee up, stand, other knee up, stand.
+for (const m of Object.values(MOVES)) if (m.alt) m.seq = [m.a, STAND, m.b, STAND];
+// A lunge steps into a split stance first, then lowers, so neither foot leaves the floor on the way down.
+const SPLIT = S({ h:[60,20], n:[60,31], p:[60,66], k1:[70,86], f1:[78,107], k2:[50,86], f2:[40,104], t2:[34,108], e1:[61,48], w1:[62,63], e2:[59,48], w2:[58,63] });
+MOVES.lunge.seq = [STAND, SPLIT, MOVES.lunge.b, SPLIT];
 const PREP_SEC = 5, SWITCH_SEC = 3;
 
 // A move's figure as SVG. Static when someone prefers reduced motion.
+/* Figures move like a body: each bone keeps its length and turns at its
+   joint, so a swinging foot travels an arc instead of sliding straight
+   across and shrinking the leg. Poses are stored as joint positions and
+   converted to bone angles; the pelvis is the only point that translates. */
+const BONES = [['n','p'], ['h','n'], ['k1','p'], ['f1','k1'], ['t1','f1'], ['k2','p'], ['f2','k2'], ['t2','f2'], ['e1','n'], ['w1','e1'], ['e2','n'], ['w2','e2']];
+const fullPose = (m, P) => ({ ...P,
+  t1:P.t1 ?? (m.front ? P.f1 : [P.f1[0] + 7, P.f1[1]]), t2:P.t2 ?? (m.front ? P.f2 : [P.f2[0] + 7, P.f2[1]]) });
+function toRig(m, P){
+  const F = fullPose(m, P), rig = { p:F.p };
+  for (const [j, par] of BONES){ const dx = F[j][0] - F[par][0], dy = F[j][1] - F[par][1]; rig[j] = [Math.atan2(dy, dx), Math.hypot(dx, dy)]; }
+  return rig;
+}
+function fromRig(R){
+  const P = { p:R.p };
+  for (const [j, par] of BONES){ const [a, l] = R[j]; P[j] = [P[par][0] + Math.cos(a) * l, P[par][1] + Math.sin(a) * l]; }
+  return P;
+}
+function lerpRig(A, B, t){
+  const R = { p:[A.p[0] + (B.p[0] - A.p[0]) * t, A.p[1] + (B.p[1] - A.p[1]) * t] };
+  for (const [j] of BONES){
+    let d = B[j][0] - A[j][0]; d = Math.atan2(Math.sin(d), Math.cos(d));   // the short way round
+    R[j] = [A[j][0] + d * t, A[j][1] + (B[j][1] - A[j][1]) * t];
+  }
+  return R;
+}
+// The poses a move loops through: a → b → a, a → b → c → a, or its own `seq`.
+const moveKeys = m => m.seq ? [...m.seq, m.seq[0]] : m.c ? [m.a, m.b, m.c, m.a] : [m.a, m.b, m.a];
+// Where the figure is at a point in its loop (0–1).
+function poseAt(m, phase){
+  const keys = moveKeys(m), legs = keys.length - 1;
+  const x = (((phase % 1) + 1) % 1) * legs, i = Math.min(legs - 1, Math.floor(x)), t = (1 - Math.cos((x - i) * Math.PI)) / 2;
+  m._rigs ??= keys.map(P => toRig(m, P));
+  return fromRig(lerpRig(m._rigs[i], m._rigs[i + 1], t));
+}
+const figLines = P => [[P.p, P.k2, P.f2, P.t2], [P.n, P.e2, P.w2], [P.n, P.p], [P.p, P.k1, P.f1, P.t1], [P.n, P.e1, P.w1]]
+  .map(l => l.map(q => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' '));
+
+// A move's figure as SVG. Still when asked, or when someone prefers reduced motion.
 function figure(m, { size = 240, still = false } = {}){
-  const toe = (P, i) => P['t' + i] ?? (m.front ? P['f' + i] : [P['f' + i][0] + 7, P['f' + i][1]]);
-  const lines = P => [[P.p, P.k2, P.f2, toe(P, 2)], [P.n, P.e2, P.w2], [P.n, P.p], [P.p, P.k1, P.f1, toe(P, 1)], [P.n, P.e1, P.w1]]
-    .map(l => l.map(q => q.join(',')).join(' '));
-  const reduce = still || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const A = lines(m.a), B = lines(m.b), C = m.c ? lines(m.c) : null;
-  const ease = n => Array(n).fill('.45 0 .55 1').join(';');
-  const anim = (attr, a, b, c) => reduce || (a === b && (c == null || a === c)) ? ''
-    : c == null ? `<animate attributeName="${attr}" values="${a};${b};${a}" dur="${m.dur * 2}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines="${ease(2)}"/>`
-    : `<animate attributeName="${attr}" values="${a};${b};${c};${a}" dur="${m.dur * 3}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.33;.67;1" keySplines="${ease(3)}"/>`;
+  const moving = !still && !matchMedia('(prefers-reduced-motion: reduce)').matches && (m.b !== m.a);
+  const P = fullPose(m, moving ? m.a : m.b), L = figLines(P);
   const cls = ['far', 'far', 'body', 'near', 'near'];
-  const P = reduce ? B : A, hd = reduce ? m.b.h : m.a.h;
+  const id = Object.keys(MOVES).find(k => MOVES[k] === m);
   const prop = { wallR:'<rect x="94" y="6" width="5" height="104" rx="2" class="prop"/>', wallL:'<rect x="21" y="6" width="5" height="104" rx="2" class="prop"/>',
     couch:'<rect x="4" y="82" width="32" height="28" rx="5" class="prop"/>', post:'<rect x="45" y="40" width="5" height="70" rx="2" class="prop"/>', mat:'<rect x="6" y="108" width="108" height="3" rx="1.5" class="prop"/>' }[m.prop] ?? '';
-  return `<svg class="fig" viewBox="0 0 120 120" width="${size}" height="${size}" role="img" aria-label="${esc(m.name)}">
+  // Floor moves only use the bottom of the box, so frame them tighter and bigger.
+  const vb = m.prop === 'mat' ? [0, 46, 120, 70] : [0, 0, 120, 120];
+  return `<svg class="fig" viewBox="${vb.join(' ')}" width="${size}" height="${Math.round(size * vb[3] / 120)}" role="img" aria-label="${esc(m.name)}"${moving && id ? ` data-move="${id}"` : ''}>
     ${prop}<line x1="2" y1="110" x2="118" y2="110" class="ground"/>
-    ${P.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0)) ? ' hl' : ''}">${anim('points', A[i], B[i], C?.[i])}</polyline>`).join('')}
-    <circle cx="${hd[0]}" cy="${hd[1]}" r="7" class="head">${anim('cx', m.a.h[0], m.b.h[0], m.c?.h[0])}${anim('cy', m.a.h[1], m.b.h[1], m.c?.h[1])}</circle>
+    ${L.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0)) ? ' hl' : ''}"/>`).join('')}
+    <circle cx="${P.h[0]}" cy="${P.h[1]}" r="7" class="head"/>
   </svg>`;
+}
+// One animation loop for whatever moving figures are on screen.
+let figRaf = 0;
+function animateFigures(){
+  cancelAnimationFrame(figRaf);
+  const t0 = performance.now();
+  const step = now => {
+    const figs = document.querySelectorAll('svg.fig[data-move]');
+    if (!figs.length) return;
+    for (const svg of figs){
+      const m = MOVES[svg.dataset.move], loop = m.dur * (moveKeys(m).length - 1) * 1000;
+      // A frame's timestamp can predate t0 by a few ms; a negative phase would index past the poses.
+      const P = poseAt(m, (Math.max(0, now - t0) % loop) / loop), L = figLines(P), pl = svg.querySelectorAll('polyline');
+      L.forEach((pts, i) => pl[i].setAttribute('points', pts));
+      const hd = svg.querySelector('.head'); hd.setAttribute('cx', P.h[0].toFixed(1)); hd.setAttribute('cy', P.h[1].toFixed(1));
+    }
+    figRaf = requestAnimationFrame(step);
+  };
+  figRaf = requestAnimationFrame(step);
 }
 
 // The routine as timed steps. Sore spots from the last few days get longer holds.
@@ -3500,6 +3557,7 @@ function paintPlayer(full){
           <p class="card-sub">${next ? `Next: ${MOVES[next.id].name}${next.side ? ` · ${next.side.toLowerCase()} side` : ''}` : 'Last one!'}</p>
         </div>
       </div></div>`;
+    animateFigures();
     return;
   }
   $('#ring-num') && ($('#ring-num').textContent = secLeft);

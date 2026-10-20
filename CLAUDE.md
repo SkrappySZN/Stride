@@ -74,8 +74,11 @@ data runs through it, so treat changes to data handling with care.
 - **Standards**: `standardRows()` (Body tab) and `bestsCard()` (Progress) compare against
   published norms: BMI, ACE body fat, Garmin/Cooper VO2 max, WHO activity minutes, and an
   approximate age grade. They need `profile.sex`, `birthYear` and `heightIn` (Setup → About you).
-- **Routines**: `MOVES` (each a stick figure animating between poses `a` and `b`, joints in a
-  120×120 box) and `ROUTINES` (before/after a run, desk break, strength). The player
+- **Routines**: `MOVES` (each a stick figure looping through poses `a`, `b`, optional `c`, or
+  its own `seq`; joints in a 120×120 box). Poses are converted to bone angles and animated
+  by rotation (`poseAt`, `animateFigures`), so keep each bone's length the same in every
+  pose: thigh 23, shin 22, upper arm 17, forearm 15. Check new moves on a filmstrip of
+  frames, not just the end poses. and `ROUTINES` (before/after a run, desk break, strength). The player
   (`RP`, `#routine/<id>`) times from the clock, keeps the screen awake and beeps on changes.
   Finishing ticks the matching Today tasks and appends to `doc.routines`.
 - **Charts**: hand-built SVG (`chartLine`, `chartColumns`, `chartDaily`, `chartTrace`)
