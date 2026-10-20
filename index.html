@@ -610,6 +610,21 @@ a.btn.primary{color:var(--accent-ink)}
 .recap-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:720px){ .recap-stats{grid-template-columns:repeat(2,minmax(0,1fr))} }
 
+/* body map */
+.pain-grid{display:grid; grid-template-columns:minmax(0,320px) minmax(0,1fr); gap:24px; align-items:start}
+@media (max-width:720px){ .pain-grid{grid-template-columns:minmax(0,1fr)} }
+.bodymap{width:100%; max-width:320px; display:block; margin:0 auto}
+.bm-base{fill:var(--surface-2); stroke:var(--axis); stroke-width:1}
+.bm-zone{fill:transparent; stroke:transparent; cursor:pointer}
+.bm-zone:hover, .bm-zone:focus-visible{fill:color-mix(in srgb, var(--accent) 45%, transparent); stroke:var(--ink); stroke-width:.6; outline:none}
+.bm-zone.on{fill:var(--accent); stroke:var(--ink); stroke-width:.8}
+.bm-cap{font-size:9px; font-weight:700; fill:var(--muted); letter-spacing:.08em; text-transform:uppercase}
+.bm-dot{pointer-events:none; stroke:var(--surface); stroke-width:1}
+.bm-dot.l1, .bm-key.l1{fill:color-mix(in srgb, var(--warn) 55%, transparent); background:color-mix(in srgb, var(--warn) 55%, transparent)}
+.bm-dot.l2, .bm-key.l2{fill:var(--warn); background:var(--warn)}
+.bm-dot.l3, .bm-key.l3{fill:var(--crit); background:var(--crit)}
+.bm-key{display:inline-block; width:10px; height:10px; border-radius:50%}
+
 /* plain-language help */
 .info-btn{
   width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
@@ -1080,12 +1095,12 @@ function freshDoc(){
     profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, heightIn:null }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null,
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [],
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, ...d,
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
@@ -2174,6 +2189,7 @@ function checkinCards(){
     html = `<div class="card">
       <div class="card-head"><h2>How are the legs after ${dn}’s run?</h2><span class="card-sub">${pc.stage === '48' ? '48-hour check' : '~' + Math.round(pc.hours) + ' hrs after'}</span></div>
       <div class="pill-row">${Object.entries(SORE).map(([k, l]) => `<button class="pill${k === 'red' ? ' flag' : ''}" data-checkin="${k}" data-run="${pc.run.id}" data-stage="${pc.stage}">${l}</button>`).join('')}</div>
+      <p class="card-sub" style="margin:12px 0 0">Somewhere else? <a href="#body/pain">Mark it on the body map</a>.</p>
     </div>`;
   }
   if (lastResponse){
@@ -2891,7 +2907,7 @@ async function renderRunDetail(id){
           <div class="eyebrow" style="margin:14px 0 8px">Feel</div>
           <div class="pill-row" style="margin-bottom:14px">${Object.entries(FEEL).map(([v, l]) => `<button class="pill" data-feel="${v}" aria-pressed="${r.feel != null && feelLabel(r.feel) === l}">${l}</button>`).join('')}</div>
           <textarea class="felt" id="felt" placeholder="Legs, breathing, anything odd…">${esc(r.felt)}</textarea>
-          ${checks.length ? `<div class="pill-row" style="margin-top:12px">${checks.map(c => `<span class="badge${c.value === 'none' ? '' : c.value === 'red' ? ' crit' : ' warn'}">${c.stage} hr · ${esc(SORE[c.value])}${c.side ? ` · ${c.side}` : ''}</span>`).join('')}</div>` : ''}
+          ${checks.length ? `<div class="pill-row" style="margin-top:12px">${checks.map(c => `<span class="badge${c.value === 'none' ? '' : c.value === 'red' ? ' crit' : ' warn'}">${c.stage === 'map' ? `Body map · ${esc(sideName(c.area, c.side))}` : `${c.stage} hr · ${esc(SORE[c.value])}${c.side ? ` · ${c.side}` : ''}`}</span>`).join('')}</div>` : ''}
         </div>
       </div>
       <div class="col">
@@ -3018,6 +3034,85 @@ function bodyTodayCard(){
   </a>`;
 }
 
+/* ── Aches & pains: a tap-where-it-hurts body map ─────────────────────
+   Front and back outlines, legs split into zones. Front view shows the
+   person's right leg on the viewer's left; the back view is the other way
+   round. The plan's hard stops apply: shin or Achilles pain, or a sharp knee,
+   pauses the plan until it's been looked at. */
+const PAIN_AREAS = {
+  hipF:'Hip / groin', quad:'Thigh, front', knee:'Knee', shin:'Shin', ankle:'Ankle', foot:'Foot',
+  back:'Lower back', glute:'Glute', ham:'Hamstring', calf:'Calf', achilles:'Achilles', heel:'Heel / sole',
+};
+const PAIN_LEVELS = { 1:'Mild', 2:'Moderate', 3:'Sharp' };
+// Zone bands down each leg: [area, y0, y1]. x0/x1 are the leg's edges.
+const FRONT_ZONES = [['hipF', 104, 124], ['quad', 124, 164], ['knee', 164, 182], ['shin', 182, 222], ['ankle', 222, 232], ['foot', 232, 246]];
+const BACK_ZONES = [['glute', 104, 130], ['ham', 130, 166], ['calf', 166, 208], ['achilles', 208, 230], ['heel', 230, 246]];
+const painUi = { area:null, side:null, level:null, msg:null };
+const painRed = p => ((p.area === 'shin' || p.area === 'achilles') && p.level >= 2) || (p.area === 'knee' && p.level === 3);
+const sideName = (area, side) => `${side === 'center' ? '' : side === 'left' ? 'Left ' : 'Right '}${PAIN_AREAS[area].toLowerCase()}`.replace(/^./, c => c.toUpperCase());
+
+function bodyMapSvg(){
+  const recent = (doc.pains ?? []).filter(p => diffDays(p.date, todayYmd()) <= 30);
+  const fig = (ox, view) => {
+    const zones = view === 'front' ? FRONT_ZONES : BACK_ZONES;
+    // Viewer-left leg is the person's right from the front, their left from behind.
+    const legs = [[31, 49, view === 'front' ? 'right' : 'left'], [51, 69, view === 'front' ? 'left' : 'right']];
+    let s = `<g transform="translate(${ox} 0)">
+      <circle cx="50" cy="16" r="11" class="bm-base"/><rect x="44" y="26" width="12" height="8" class="bm-base"/>
+      <rect x="29" y="32" width="42" height="74" rx="11" class="bm-base"/>
+      <rect x="17" y="35" width="10" height="70" rx="5" class="bm-base"/><rect x="73" y="35" width="10" height="70" rx="5" class="bm-base"/>
+      ${legs.map(([x0, x1]) => `<rect x="${x0}" y="102" width="${x1 - x0}" height="132" rx="7" class="bm-base"/><rect x="${x0 - (view === 'front' ? 1 : 0)}" y="232" width="${x1 - x0 + 2}" height="13" rx="5" class="bm-base"/>`).join('')}
+      <text x="50" y="258" text-anchor="middle" class="bm-cap">${view === 'front' ? 'Front' : 'Back'}</text>`;
+    if (view === 'back') s += zoneRect(34, 80, 66, 103, 'back', 'center');
+    for (const [x0, x1, side] of legs) for (const [area, y0, y1] of zones) s += zoneRect(x0, y0, x1, y1, area, side);
+    // Recent aches as dots, sized and coloured by how bad.
+    for (const p of recent){
+      const z = zones.find(q => q[0] === p.area); if (!z && p.area !== 'back') continue;
+      const leg = legs.find(l => l[2] === p.side), cx = p.area === 'back' ? 50 : leg ? (leg[0] + leg[1]) / 2 : null;
+      if (cx == null || (p.area === 'back' && view !== 'back')) continue;
+      const cy = p.area === 'back' ? 92 : (z[1] + z[2]) / 2;
+      s += `<circle cx="${cx}" cy="${cy}" r="${3 + p.level}" class="bm-dot l${p.level}"/>`;
+    }
+    return s + '</g>';
+  };
+  function zoneRect(x0, y0, x1, y1, area, side){
+    const on = painUi.area === area && painUi.side === side;
+    return `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="3" class="bm-zone${on ? ' on' : ''}" data-pain-zone="${area}|${side}" tabindex="0" role="button" aria-label="${sideName(area, side)}"><title>${sideName(area, side)}</title></rect>`;
+  }
+  return `<svg viewBox="0 0 230 262" class="bodymap" role="group" aria-label="Body map">${fig(5, 'front')}${fig(125, 'back')}</svg>`;
+}
+
+function painCard(){
+  const pains = [...(doc.pains ?? [])].sort((a, b) => a.at < b.at ? 1 : -1), recent = pains.filter(p => diffDays(p.date, todayYmd()) <= 30);
+  // The same spot three times in two weeks deserves more than guessing.
+  const counts = {}; for (const p of pains.filter(p => diffDays(p.date, todayYmd()) <= 14)){ const k = p.area + '|' + p.side; counts[k] = (counts[k] ?? 0) + 1; }
+  const repeat = Object.entries(counts).filter(([, n]) => n >= 3).map(([k]) => sideName(...k.split('|')));
+  return `<div class="card" id="pain-map"><div class="card-head"><h2>Aches & pains</h2><span class="card-sub">tap where it hurts</span></div>
+    <div class="pain-grid">
+      <div>${bodyMapSvg()}
+        <div class="legend" style="justify-content:center"><span><i class="bm-key l1"></i>Mild</span><span><i class="bm-key l2"></i>Moderate</span><span><i class="bm-key l3"></i>Sharp</span><span class="card-sub">last 30 days</span></div></div>
+      <div>
+        ${painUi.msg ? `<div class="response show${painUi.msg.alarm ? ' alarm' : ''}" style="margin:0 0 14px">${painUi.msg.html}</div>` : ''}
+        ${painUi.area ? `<div class="eyebrow" style="margin-bottom:8px">${sideName(painUi.area, painUi.side)} · how bad?</div>
+          <div class="pill-row">${Object.entries(PAIN_LEVELS).map(([k, l]) => `<button class="pill" data-pain-level="${k}" aria-pressed="${painUi.level === +k}">${l}</button>`).join('')}</div>
+          <div class="field" style="margin-top:12px"><label for="pain-note">Note (optional)</label><input id="pain-note" placeholder="e.g. tight going downstairs"></div>
+          <div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="save-pain" ${painUi.level ? '' : 'disabled'}>Log it</button><button class="link-btn" data-action="cancel-pain">Cancel</button></div>`
+        : `<p class="card-sub" style="margin:0 0 12px">Tap the spot on the outline. It builds a picture over time, so a niggle that keeps coming back stands out early. This is a log, not a diagnosis.</p>`}
+        ${repeat.length ? `<div class="note" style="margin-top:14px">${WARN_SVG}<div><b>${esc(repeat.join(', '))} keeps coming back.</b> Three times in two weeks is worth a physical therapist rather than more guessing.</div></div>` : ''}
+        ${recent.length ? `<table class="quiet" style="margin-top:14px">${recent.slice(0, 8).map(p => `<tr><td>${fmtDate(p.date)}</td><td>${sideName(p.area, p.side)}</td><td>${PAIN_LEVELS[p.level]}${p.note ? ' · ' + esc(p.note) : ''} <button class="link-btn" data-del-pain="${p.id}">remove</button></td></tr>`).join('')}</table>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+function painResponse(p){
+  const where = sideName(p.area, p.side).toLowerCase();
+  if (painRed(p)) return { alarm:true, html:`<b>Stop running and get it looked at.</b> ${p.area === 'knee' ? 'A sharp knee' : p.area === 'shin' ? 'Shin pain' : 'Achilles pain'} is one of the plan’s hard stops, so it’s paused until a doctor or physical therapist has checked it. Walking is fine if it doesn’t hurt.` };
+  if (p.area === 'knee') return { alarm:false, html:`<b>Don’t run through knee pain</b> the way you would tight muscles — joints don’t loosen up as they warm. If it shows up earlier in your next run, swells, catches or makes you limp, get it checked.` };
+  if (p.area === 'calf' && p.level >= 2) return { alarm:true, html:`<b>One calf sore${p.level === 3 ? ' and sharp' : ''} is the early warning.</b> If it’s clearly worse than the other side or pulls during a run, stop the run. Repeat this week instead of moving up.` };
+  if (p.level === 3) return { alarm:true, html:`<b>Sharp ${where} pain: skip running until it settles.</b> If it’s still sharp in a couple of days, get it looked at. Sharp is different from the dull ache of normal soreness.` };
+  return { alarm:false, html:`Logged. Dull, achy and easing as you move is normal soreness. Still there in 48 hours means repeat the week instead of moving up.` };
+}
+
 function standardsCard(){
   const p = doc.profile, missing = [!p.sex && 'sex', !p.birthYear && 'birth year', !p.heightIn && 'height'].filter(Boolean);
   return `<div class="card"><div class="card-head"><h2>How you compare${infoBtn}</h2>
@@ -3079,6 +3174,8 @@ function renderBody(){
         ${fatG ? `<p class="card-sub" style="margin:12px 0 0">Garmin last reported ${fatG.v}% body fat on ${fmtDate(fatG.date)}.</p>` : ''}
       </div>
     </div>
+    <div class="section-label">Aches & pains</div>
+    ${painCard()}
     <div class="section-label">Standards</div>
     ${standardsCard()}
   </div>`;
@@ -3961,6 +4058,12 @@ document.addEventListener('click', async e => {
     if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
   }
+  const pz = e.target.closest('[data-pain-zone]');
+  if (pz){ const [area, side] = pz.dataset.painZone.split('|'); Object.assign(painUi, { area, side, level:null, msg:null }); renderBody(); return; }
+  const pl = e.target.closest('[data-pain-level]');
+  if (pl){ painUi.level = +pl.dataset.painLevel; renderBody(); return; }
+  const dp = e.target.closest('[data-del-pain]');
+  if (dp){ doc.pains = doc.pains.filter(p => p.id !== dp.dataset.delPain); painUi.msg = null; await save(); renderBody(); return; }
   const rw = e.target.closest('[data-recap-week]');
   if (rw && !rw.disabled){ recapWs = addDays(recapWs ?? addDays(weekStart(todayYmd()), -7), +rw.dataset.recapWeek); renderProgress(); return; }
   const rsn = e.target.closest('[data-recap-seen]');
@@ -4038,6 +4141,16 @@ document.addEventListener('click', async e => {
       if (!(easy < mod && mod < lthr) || lthr > 230 || easy < 80){ toast('Zones must go easy < moderate < threshold'); break; }
       Object.assign(doc.profile, { lthr, guardHr:guard, zones:{ easy, mod }, zonesSet:true });
       await rescoreAll(); await save(); toast('Zones saved — every run re-scored'); render(); break;
+    }
+    case 'cancel-pain': Object.assign(painUi, { area:null, side:null, level:null }); renderBody(); break;
+    case 'save-pain': {
+      if (!painUi.area || !painUi.level) break;
+      const p = { id:'pn' + Date.now().toString(36), at:new Date().toISOString(), date:todayYmd(), area:painUi.area, side:painUi.side, level:painUi.level, note:$('#pain-note').value.trim() };
+      doc.pains = [...(doc.pains ?? []), p].slice(-500);
+      // A hard stop pauses the plan through the same red flag as the check-in.
+      if (painRed(p)) doc.checkins.push({ runId:sortedRuns().at(-1)?.id ?? null, stage:'map', value:'red', at:p.at, area:p.area, side:p.side });
+      Object.assign(painUi, { area:null, side:null, level:null, msg:painResponse(p) });
+      await save(); render(); setTimeout(() => $('#pain-map')?.scrollIntoView({ block:'start' }), 50); break;
     }
     case 'add-shoe': {
       const name = $('#sh-name').value.trim(), since = $('#sh-since').value, startMi = +$('#sh-start').value || 0, limit = Math.round(+$('#sh-limit').value) || SHOE_LIMIT;
@@ -4140,6 +4253,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.id === 'si-code'){ verifyCode(); return; }
   if (e.key === 'Enter' && e.target.id === 'icu-key'){ connectIntervals(); return; }
   if (e.key === 'Enter' && e.target.matches('tr[data-run]')) location.hash = 'runs/' + e.target.dataset.run;
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-pain-zone]')){ e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles:true })); return; }
   if (e.target.closest('input,textarea') || e.metaKey || e.ctrlKey) return;
   const pages = { 1:'today', 2:'progress', 3:'runs', 4:'body', 5:'plan', 6:'setup' };
   if (pages[e.key]) location.hash = pages[e.key];
@@ -4176,7 +4290,7 @@ function render(){
   if (pg === 'today') renderToday();
   if (pg === 'progress') renderProgress();
   if (pg === 'runs'){ $('#page-runs').dataset.run = ''; arg ? renderRunDetail(arg) : renderRunsList(); }
-  if (pg === 'body') renderBody();
+  if (pg === 'body'){ renderBody(); if (arg === 'pain') setTimeout(() => $('#pain-map')?.scrollIntoView({ block:'start' }), 50); }
   if (pg === 'plan') renderPlan();
   if (pg === 'setup') renderSetup();
   if (pg === 'routine') renderRoutine(arg);
