@@ -60,6 +60,14 @@ data runs through it, so treat changes to data handling with care.
   min). It pulls new runs' original FIT files, plus wellness data (weight in kg →
   stored in lbs) into `doc.body[date]`. Only the API key is synced (`doc.intervals.key`).
   What's been seen is per-device, in localStorage.
+- **Crew board**: the third table, `stride_crew`, holds one opt-in row per person: display
+  name, crew code, and this week's runs/minutes/miles/streak. Nothing else. RLS lets you
+  read only your own crew (via `stride_my_crew()`) and write only your own row. The
+  card shows "almost ready" until the SQL has been run.
+- **Also in the doc**: `goals`, `shoes`/`defaultShoe` (`run.shoeId`), `pains` (body
+  map; shin/Achilles or a sharp knee adds a red check-in with `stage:'map'`),
+  `routines`, `crew`. Per-device niceties (dismissed cards, sound) live in
+  `prefs` (localStorage).
 - **Fill-ins**: `enrichRuns()` runs after sync and after imports. It adds fields that older
   runs lack: `best` (fastest mile/5K, from samples) and `tempF` (Open-Meteo hourly
   history at the start point rounded to ~1 km; no key). `undefined` means not tried yet.

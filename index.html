@@ -625,6 +625,9 @@ a.btn.primary{color:var(--accent-ink)}
 .bm-dot.l3, .bm-key.l3{fill:var(--crit); background:var(--crit)}
 .bm-key{display:inline-block; width:10px; height:10px; border-radius:50%}
 
+table.crew tr.me td{font-weight:750}
+table.crew td:nth-child(2){white-space:nowrap}
+
 /* plain-language help */
 .info-btn{
   width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
@@ -1095,12 +1098,12 @@ function freshDoc(){
     profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, heightIn:null }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [],
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null,
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], ...d,
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
@@ -2447,6 +2450,7 @@ function renderProgress(){
     </div>
     <div class="section-label">Showing up</div>
     ${recapCard()}
+    ${crewCard() ? `<div style="margin-top:16px">${crewCard()}</div>` : ''}
     <div class="grid two" style="margin-top:16px">
       <div class="card"><div class="card-head"><h2>Consistency${infoBtn}</h2><span class="card-sub">runs per week · ${sinceTxt}</span></div>
         ${explain('consistency')}<div class="chart" id="c-weeks"></div>
@@ -2757,6 +2761,63 @@ async function shareRecap(ws){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast('Saved the image');
+}
+
+/* ── Crew: an opt-in weekly board with friends ───────────────────────
+   Only a display name and this week's totals leave the device (stride_crew);
+   the crew code and name live in the synced doc. Until the table exists the
+   card says so instead of erroring. */
+const CREW = { rows:null, state:'idle', at:0, pushed:null };
+function crewStats(){
+  const ws = weekStart(todayYmd()), wk = doc.runs.filter(r => r.date >= ws);
+  return { week_start:ws, runs:wk.length, minutes:Math.round(wk.reduce((a, r) => a + (r.timerSec ?? 0), 0) / 60),
+    miles:Math.round(wk.reduce((a, r) => a + (r.distMi ?? 0), 0) * 10) / 10, streak:milestones().streak ?? 0 };
+}
+const crewCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', b = crypto.getRandomValues(new Uint8Array(10)); return [...b].map(x => a[x % a.length]).join(''); };
+async function crewPush(force = false){
+  if (!signedIn() || !doc.crew?.code) return;
+  const row = { user_id:SESSION.user_id, group_code:doc.crew.code, name:doc.crew.name, ...crewStats(), updated_at:new Date().toISOString() };
+  const sig = JSON.stringify({ ...row, updated_at:0 });
+  if (!force && sig === CREW.pushed) return;
+  if (!await ensureToken()) return;
+  const r = await sb('/rest/v1/stride_crew?on_conflict=user_id', { method:'POST', body:JSON.stringify(row), headers:{ Prefer:'resolution=merge-duplicates,return=minimal' } });
+  if (r.status === 404){ CREW.state = 'missing'; return; }
+  if (!r.ok) throw new Error('crew ' + r.status);
+  CREW.pushed = sig;
+}
+async function crewLoad(force = false){
+  if (!signedIn() || !doc.crew?.code || CREW.state === 'loading') return;
+  // Throttled from the attempt, not the success, so a failing request can't loop through the card's redraw.
+  if (!force && Date.now() - CREW.at < 60e3) return;
+  CREW.state = 'loading'; CREW.at = Date.now();
+  try {
+    await crewPush();
+    if (CREW.state === 'missing') return;
+    const r = await sb('/rest/v1/stride_crew?select=user_id,name,week_start,runs,minutes,miles,streak&order=name');
+    if (r.status === 404){ CREW.state = 'missing'; return; }
+    if (!r.ok) throw new Error();
+    CREW.rows = await r.json(); CREW.state = 'ok';
+  } catch { CREW.state = 'error'; }
+  finally { const c = $('#crew-card'); if (c) c.outerHTML = crewCard(); }
+}
+function crewCard(){
+  const head = sub => `<div class="card-head"><h2>Crew</h2><span class="card-sub">${sub}</span></div>`;
+  if (!syncOn()) return '';
+  if (!signedIn()) return `<div class="card" id="crew-card">${head('run with friends')}<p class="card-sub" style="margin:0">Sign in under <a href="#setup">Setup</a> to share weekly totals with friends on a private board.</p></div>`;
+  if (!doc.crew?.code) return `<div class="card" id="crew-card">${head('run with friends')}
+    <p class="card-sub" style="margin:0 0 12px">A private board for you and your friends: each person’s runs, minutes and miles this week, and their streak. Nothing else is shared — no heart rate, no weight, no routes.</p>
+    <div class="field-row"><div class="field"><label for="crew-name">Your name on the board</label><input id="crew-name" maxlength="40" placeholder="e.g. Neil"></div>
+      <div class="field"><label for="crew-join">Got a code? (leave blank to start a crew)</label><input id="crew-join" maxlength="10" placeholder="ABCD234XYZ" style="text-transform:uppercase"></div></div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="crew-go">Start or join</button></div></div>`;
+  if (CREW.state === 'missing') return `<div class="card" id="crew-card">${head('almost ready')}<p class="card-sub" style="margin:0">The crew board isn’t switched on yet — it needs a one-time database update. Your settings are saved and it’ll appear once that’s done.</p></div>`;
+  if (!CREW.rows){ if (CREW.state !== 'error' || Date.now() - CREW.at > 60e3) crewLoad(); return `<div class="card" id="crew-card">${head(CREW.state === 'error' ? 'couldn’t load — try again soon' : 'loading…')}</div>`; }
+  const ws = weekStart(todayYmd());
+  const rows = CREW.rows.map(r => r.week_start === ws ? r : { ...r, runs:0, minutes:0, miles:0 }).sort((a, b) => b.runs - a.runs || b.minutes - a.minutes);
+  return `<div class="card" id="crew-card">${head(`this week · code <b class="num" style="letter-spacing:.06em">${esc(doc.crew.code)}</b>`)}
+    <table class="quiet crew">${rows.map(r => `<tr${r.user_id === SESSION.user_id ? ' class="me"' : ''}><td>${esc(r.name)}${r.streak >= 2 ? ` <span class="badge">${r.streak} wk streak</span>` : ''}</td>
+      <td>${r.runs} run${r.runs === 1 ? '' : 's'}</td><td>${r.minutes} min · ${Number(r.miles).toFixed(1)} mi</td></tr>`).join('')}</table>
+    <p class="card-sub" style="margin:12px 0 0">Share the code with friends so they can join. <button class="link-btn" data-action="crew-copy">Copy invite</button> · <button class="link-btn" data-action="crew-leave">Leave crew</button></p>
+  </div>`;
 }
 
 /* ── Shoes: mileage per pair ────────────────────────────────────────
@@ -3902,7 +3963,7 @@ async function checkIntervals({ manual = false } = {}){
     setIcuLocal({ ...loc, seen:[...seen].slice(-500), lastChecked:new Date().toISOString() });
     icuUi.status = 'idle';
     icuUi.msg = added ? `${added} new run${added > 1 ? 's' : ''} just now` : problems ? `${problems} couldn’t be imported — see the log` : '';
-    if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); enrichRuns(); }
+    if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); enrichRuns(); crewPush().catch(() => {}); }
     else if (bodyChanged){ await save(); if (['', '#today', '#body'].includes(location.hash)) render(); }
     else if (manual) toast(problems ? 'Some runs couldn’t be imported' : 'No new runs');
   } catch (err){
@@ -4142,6 +4203,24 @@ document.addEventListener('click', async e => {
       Object.assign(doc.profile, { lthr, guardHr:guard, zones:{ easy, mod }, zonesSet:true });
       await rescoreAll(); await save(); toast('Zones saved — every run re-scored'); render(); break;
     }
+    case 'crew-go': {
+      const name = $('#crew-name').value.trim(), join = $('#crew-join').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!name){ toast('Pick a name for the board'); break; }
+      if (join && join.length !== 10){ toast('Crew codes are 10 letters and numbers'); break; }
+      doc.crew = { code:join || crewCode(), name };
+      Object.assign(CREW, { rows:null, state:'idle', at:0, pushed:null });
+      await save(); render(); toast(join ? 'Joined the crew' : 'Crew started — share the code'); break;
+    }
+    case 'crew-copy': {
+      const msg = `Join my running crew on Stride: ${location.origin + location.pathname}#progress — sign in, then enter code ${doc.crew.code}`;
+      try { if (navigator.share) await navigator.share({ text:msg }); else { await navigator.clipboard.writeText(msg); toast('Invite copied'); } } catch {}
+      break;
+    }
+    case 'crew-leave': {
+      if (signedIn() && await ensureToken()) await sb(`/rest/v1/stride_crew?user_id=eq.${SESSION.user_id}`, { method:'DELETE' }).catch(() => {});
+      doc.crew = null; Object.assign(CREW, { rows:null, state:'idle', pushed:null });
+      await save(); render(); toast('Left the crew'); break;
+    }
     case 'cancel-pain': Object.assign(painUi, { area:null, side:null, level:null }); renderBody(); break;
     case 'save-pain': {
       if (!painUi.area || !painUi.level) break;
@@ -4315,7 +4394,7 @@ if (!storageOk) toast('Storage is blocked here — changes won’t survive a rel
 lastRoute = location.hash;
 render();
 paintSync();
-syncInit(fromLink).finally(() => checkIntervals().finally(enrichRuns));
+syncInit(fromLink).finally(() => checkIntervals().finally(() => { enrichRuns(); crewPush().catch(() => {}); }));
 </script>
 </body>
 </html>
