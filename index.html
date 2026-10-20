@@ -607,6 +607,9 @@ a.btn.primary{color:var(--accent-ink)}
 .shoe-pick{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:650}
 .shoe-pick select{font:inherit; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 
+.recap-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:720px){ .recap-stats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
 /* plain-language help */
 .info-btn{
   width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
@@ -2231,7 +2234,7 @@ function renderToday(){
       eyebrow: `${dateLine} · just tracking`, title, sub,
       stats: [['Runs this week', weekRuns.length], ['Miles', weekMi.toFixed(1)], ['Jogging', Math.round(weekRuns.reduce((a, r) => a + (r.runSec ?? 0), 0) / 60), 'min']],
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
-    }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${guideCard()}
+    }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${guideCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid two" style="margin-top:16px">${routineCard()}${weatherCard()}</div>
       <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
@@ -2334,7 +2337,7 @@ function renderToday(){
     stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), `/${pwo.runs?.length ?? 3}`],
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>${cta}`,
-  }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${guideCard()}
+  }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${guideCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
     <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
@@ -2427,7 +2430,8 @@ function renderProgress(){
       <div class="chart" id="c-hr"></div>
     </div>
     <div class="section-label">Showing up</div>
-    <div class="grid two">
+    ${recapCard()}
+    <div class="grid two" style="margin-top:16px">
       <div class="card"><div class="card-head"><h2>Consistency${infoBtn}</h2><span class="card-sub">runs per week · ${sinceTxt}</span></div>
         ${explain('consistency')}<div class="chart" id="c-weeks"></div>
         <p class="card-sub" style="margin:8px 0 0">Gaps set you back more than slow runs do.</p></div>
@@ -2640,6 +2644,103 @@ function milestoneCard(){
   if (!fresh.length) return '';
   return `<div class="card milestone-new" style="margin-bottom:16px"><div class="card-head"><h2>🎉 New milestone${fresh.length > 1 ? 's' : ''}</h2><button class="link-btn" data-seen-milestones="${fresh.map(x => x.id).join(',')}">Nice, hide this</button></div>
     <div class="badges">${fresh.map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div></div>`;
+}
+
+/* ── Week in review ───────────────────────────────────────────────── */
+function recap(ws){
+  const we = addDays(ws, 6), inWk = d => d >= ws && d <= we;
+  const runs = sortedRuns().filter(r => inWk(r.date));
+  const mi = runs.reduce((a, r) => a + (r.distMi ?? 0), 0), min = runs.reduce((a, r) => a + (r.timerSec ?? 0), 0) / 60;
+  const sportMin = doc.refDays.filter(inWk).reduce((a, d) => a + (doc.refInfo[d]?.min ?? 0), 0);
+  const rts = (doc.routines ?? []).filter(x => inWk(x.date));
+  const clean = runs.filter(isClean), before = sortedRuns().filter(r => isClean(r) && r.date < ws && diffDays(r.date, ws) <= 28);
+  const hr = clean.length ? avgOf(clean.map(hrMetric)) : null, hrBefore = before.length ? avgOf(before.map(hrMetric)) : null;
+  const eff = runs.filter(r => r.effort != null);
+  // Rounded once, half away from zero, so the headline and the detail agree.
+  const hrDelta = hr != null && hrBefore != null ? Math.sign(hr - hrBefore) * Math.round(Math.abs(hr - hrBefore)) : null;
+  // Compare against every earlier week, for "your most yet".
+  const first = sortedRuns()[0]?.date;
+  const prevMi = [];
+  if (first) for (let w = weekStart(first); w < ws; w = addDays(w, 7)) prevMi.push(sortedRuns().filter(r => r.date >= w && r.date <= addDays(w, 6)).reduce((a, r) => a + (r.distMi ?? 0), 0));
+  const ms = milestones().filter(x => inWk(x.date));
+  const headline = !runs.length ? (sportMin ? 'A sport week — no runs logged.' : 'No runs this week.')
+    : hrDelta != null && hrDelta <= -2 ? `Heart rate down ${-hrDelta} bpm on the test route — that’s fitness.`
+    : prevMi.length && mi > Math.max(...prevMi) + 0.05 ? 'Your biggest week yet.'
+    : ms.length ? `New milestone: ${ms.at(-1).label}.`
+    : runs.length >= 3 ? 'Three runs in. That’s the habit.' : `${runs.length} run${runs.length > 1 ? 's' : ''} in.`;
+  return { ws, we, runs, mi, min, sportMin, strength:rts.filter(x => x.id === 'strength').length, stretches:rts.filter(x => x.id !== 'strength').length,
+    longest:runs.reduce((a, r) => Math.max(a, r.distMi ?? 0), 0), hr, hrBefore, hrDelta, effort:eff.length ? avgOf(eff.map(r => r.effort)) : null, ms, headline };
+}
+let recapWs = null;   // the week shown on Progress; null = last week
+function recapCard({ compact = false } = {}){
+  const thisWk = weekStart(todayYmd()), ws = compact ? addDays(thisWk, -7) : (recapWs ?? addDays(thisWk, -7)), R = recap(ws);
+  const label = ws === thisWk ? 'This week so far' : ws === addDays(thisWk, -7) ? 'Last week' : `Week of ${fmtDate(ws).slice(4)}`;
+  const stat = (l, v, u = '') => `<div><div class="ms-l">${l}</div><div class="ms-v display num">${v}<small>${u}</small></div></div>`;
+  return `<div class="card"><div class="card-head"><h2>${compact ? 'Last week' : 'Week in review'}</h2>
+      ${compact ? `<button class="link-btn" data-recap-seen="${ws}">hide</button>` : `<span class="btn-row">
+        <button class="btn small" data-recap-week="-7" aria-label="Previous week">‹</button><span class="card-sub" style="min-width:110px;text-align:center">${label}</span>
+        <button class="btn small" data-recap-week="7" aria-label="Next week" ${ws >= thisWk ? 'disabled' : ''}>›</button></span>`}</div>
+    <p style="margin:0 0 14px;font-weight:700">${esc(R.headline)}</p>
+    <div class="mini-stats recap-stats">
+      ${stat('Runs', R.runs.length)}${stat('Miles', R.mi.toFixed(1))}${stat('Minutes', Math.round(R.min))}${stat('Longest', R.longest ? fmtMi(R.longest) : '—', R.longest ? 'mi' : '')}
+    </div>
+    <div class="card-sub" style="margin-top:12px">${[
+      R.hr != null && `Test-route HR ${Math.round(R.hr)}${R.hrDelta != null ? ` (${R.hrDelta > 0 ? '+' : ''}${R.hrDelta} vs the 4 weeks before)` : ''}`,
+      R.effort != null && `effort ${R.effort.toFixed(1)}/10 on average`,
+      R.sportMin && `${R.sportMin} sport minutes`,
+      R.strength && `${R.strength} strength session${R.strength > 1 ? 's' : ''}`,
+      R.stretches && `${R.stretches} stretch routine${R.stretches > 1 ? 's' : ''}`,
+    ].filter(Boolean).join(' · ') || 'Nothing else logged.'}</div>
+    ${R.ms.length ? `<div class="badges" style="margin-top:12px">${R.ms.map(x => `<span class="mbadge"><b>${esc(x.label)}</b></span>`).join('')}</div>` : ''}
+    <div class="btn-row" style="margin-top:14px"><button class="btn small" data-share-recap="${ws}">Share this week</button>${compact ? '<a class="link-btn" href="#progress">More on Progress</a>' : ''}</div>
+  </div>`;
+}
+// Mondays and Tuesdays, Today shows last week once.
+function recapTodayCard(){
+  const dow = new Date().getDay(), ws = addDays(weekStart(todayYmd()), -7);
+  if (!(dow === 1 || dow === 2) || prefs.get('recapSeen', null) === ws || !recap(ws).runs.length) return '';
+  return `<div style="margin-bottom:16px">${recapCard({ compact:true })}</div>`;
+}
+
+// A poster of the week, for sharing to a group chat. Drawn on a canvas in the site's look.
+async function shareRecap(ws){
+  const R = recap(ws), W = 1080, H = 1350, c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  try { await Promise.all(['italic 800 100px Archivo', '700 40px Archivo'].map(f => document.fonts.load(f))); } catch {}
+  g.fillStyle = '#0c0d0e'; g.fillRect(0, 0, W, H);
+  g.save(); g.globalAlpha = .12; g.strokeStyle = '#d4ff3a'; g.lineWidth = 60;
+  for (let x = 560; x < W + 400; x += 150){ g.beginPath(); g.moveTo(x, -20); g.lineTo(x - 360, H + 20); g.stroke(); }
+  g.restore();
+  const disp = px => `italic 800 ${px}px Archivo, system-ui, sans-serif`;
+  g.fillStyle = '#d4ff3a'; g.font = '700 34px Archivo, system-ui, sans-serif';
+  g.fillText(`STRIDE · WEEK OF ${MON[parseYmd(ws).getMonth()].toUpperCase()} ${parseYmd(ws).getDate()}`, 80, 120);
+  // The headline takes the biggest size that fits in three lines.
+  const words = R.headline.replace(/[.—\s]+$/, '').toUpperCase().split(' ');
+  const wrap = px => { g.font = disp(px); const lines = []; let line = '';
+    for (const w of words){ const t = line ? line + ' ' + w : w; if (line && g.measureText(t).width > W - 160){ lines.push(line); line = w; } else line = t; }
+    return [...lines, line]; };
+  let px = 120, lines = wrap(px);
+  while (lines.length > 3 && px > 64){ px -= 8; lines = wrap(px); }
+  g.fillStyle = '#f4f4f0';
+  lines.forEach((l, i) => g.fillText(l, 80, 250 + i * px * 1.02));
+  const stats = [['RUNS', R.runs.length], ['MILES', R.mi.toFixed(1)], ['MINUTES', Math.round(R.min)], ['LONGEST', R.longest ? fmtMi(R.longest) : '—']];
+  stats.forEach(([l, v], i) => {
+    const x = 80 + (i % 2) * 460, yy = 820 + Math.floor(i / 2) * 230;
+    g.fillStyle = '#d4ff3a'; g.font = disp(150); g.fillText(String(v), x, yy);
+    g.fillStyle = '#9a9ea5'; g.font = '700 30px Archivo, system-ui, sans-serif'; g.fillText(l, x, yy + 50);
+  });
+  g.fillStyle = '#9a9ea5'; g.font = '600 30px Archivo, system-ui, sans-serif';
+  const extra = [R.ms.length && `New: ${R.ms.map(x => x.label).join(' · ')}`, R.strength && `${R.strength}× strength`, R.stretches && `${R.stretches}× stretching`].filter(Boolean).join('   ');
+  if (extra){ let t = extra; while (g.measureText(t).width > W - 160) t = t.slice(0, -2); g.fillText(t === extra ? t : t + '…', 80, H - 80); }
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  const file = new File([blob], `stride-week-${ws}.png`, { type:'image/png' });
+  try {
+    if (navigator.canShare?.({ files:[file] })){ await navigator.share({ files:[file], title:'My running week' }); return; }
+  } catch (err){ if (err.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Saved the image');
 }
 
 /* ── Shoes: mileage per pair ────────────────────────────────────────
@@ -3860,6 +3961,12 @@ document.addEventListener('click', async e => {
     if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
   }
+  const rw = e.target.closest('[data-recap-week]');
+  if (rw && !rw.disabled){ recapWs = addDays(recapWs ?? addDays(weekStart(todayYmd()), -7), +rw.dataset.recapWeek); renderProgress(); return; }
+  const rsn = e.target.closest('[data-recap-seen]');
+  if (rsn){ prefs.set('recapSeen', rsn.dataset.recapSeen); render(); return; }
+  const shr = e.target.closest('[data-share-recap]');
+  if (shr){ shareRecap(shr.dataset.shareRecap).catch(() => toast('Couldn’t make the image')); return; }
   const sd2 = e.target.closest('[data-shoe-default]');
   if (sd2){ doc.defaultShoe = sd2.dataset.shoeDefault; await save(); toast('New runs will go on this pair'); render(); return; }
   const sr = e.target.closest('[data-shoe-retire]');
