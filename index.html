@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Running tracker: automatic Garmin import, heart-rate trends, body metrics and a plan that adapts week to week.">
 <title>Stride</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#eef0ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d0e" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stride">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='48' height='48' rx='11' fill='%23131416'/%3E%3Cg transform='translate%284 4%29 scale%280.83%29 rotate%28-18 24 24%29'%3E%3Crect x='4' y='12' width='40' height='24' rx='12' fill='none' stroke='%23F4F4F0' stroke-width='5'/%3E%3Cpath d='M24 30 H18 a6 6 0 0 1 0 -12 H30 a6 6 0 0 1 0 12' fill='none' stroke='%23d4ff3a' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='24' r='5' fill='%23d4ff3a'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -521,6 +529,60 @@ textarea.felt{
   .plan-row{grid-template-columns:48px 1fr}
   .plan-row > :last-child{grid-column:1 / -1}
 }
+/* routines */
+a.btn{text-decoration:none; color:inherit}
+a.btn.primary{color:var(--accent-ink)}
+.btn.big{padding:14px 22px; font-size:16px; font-weight:750}
+.band-cta{margin-top:14px}
+.fig{display:block; max-width:100%; height:auto}
+.fig polyline{fill:none; stroke-width:5.5; stroke-linecap:round; stroke-linejoin:round}
+.fig .body, .fig .near{stroke:var(--ink)}
+.fig .far{stroke:var(--muted); opacity:.55}
+.fig .hl{stroke:var(--fig-hl); opacity:1}
+.fig .head{fill:var(--ink)}
+.fig .ground{stroke:var(--axis); stroke-width:1.5}
+.fig .prop{fill:var(--surface-2); stroke:var(--axis); stroke-width:1.2}
+:root{--fig-hl:#5f8f00}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){--fig-hl:var(--accent)} }
+:root[data-theme="dark"]{--fig-hl:var(--accent)}
+.routine-list{display:grid; gap:8px}
+.routine-pick{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); text-decoration:none; color:inherit}
+.routine-pick:hover{border-color:var(--ink-2)}
+.routine-pick b{display:block; font-size:15px}
+.routine-pick small{color:var(--muted); font-size:12.5px}
+.routine-pick.pick{background:var(--accent); color:var(--accent-ink); border-color:transparent}
+.routine-pick.pick small{color:var(--accent-ink); opacity:.75}
+.move-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr)); gap:12px}
+.move-card{display:grid; grid-template-columns:96px 1fr; gap:14px; align-items:center}
+.move-card p{margin:6px 0 0; font-size:13.5px; color:var(--ink-2); line-height:1.45}
+.player{padding-top:16px; padding-bottom:40px}
+.player-top{display:flex; justify-content:space-between; align-items:center; gap:8px}
+.player-bar{display:flex; gap:3px; margin:14px 0 18px}
+.player-bar i{flex:1; height:5px; border-radius:3px; background:var(--line)}
+.player-bar i.done{background:var(--ink-2)}
+.player-bar i.now{background:var(--accent); box-shadow:inset 0 0 0 1px var(--ink)}
+.player-main{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:center}
+.player-fig{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:12px; display:grid; place-items:center}
+.player-name{font-size:clamp(34px,6vw,56px); line-height:.95; margin:6px 0 10px}
+.player-cue{font-size:16px; line-height:1.5; color:var(--ink-2); margin:0 0 16px}
+.player-info .eyebrow.prep{color:var(--warn-text)}
+.ring-wrap{position:relative; width:150px; height:150px; margin:0 0 16px}
+.ring{width:150px; height:150px; transform:rotate(-90deg)}
+.ring circle{fill:none; stroke-width:9}
+.ring-bg{stroke:var(--line)}
+.ring-fg{stroke:var(--fig-hl); stroke-linecap:round; transition:stroke-dashoffset .1s linear}
+.ring-fg.prep{stroke:var(--warn)}
+.ring-num{position:absolute; inset:0; display:grid; place-items:center; font-size:52px}
+.player-ctl{margin-bottom:10px}
+@media (max-width:720px){
+  .player-main{grid-template-columns:minmax(0,1fr); gap:14px}
+  .player-fig .fig{width:200px; height:200px}
+  .player-cue{font-size:15px}
+  .ring-wrap, .ring{width:120px; height:120px}
+  .ring-num{font-size:42px}
+  .player-info{display:grid; justify-items:center; text-align:center}
+}
+
 /* plain-language help */
 .info-btn{
   width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
@@ -589,6 +651,7 @@ textarea.felt{
   <section class="page" id="page-plan"></section>
   <section class="page" id="page-setup"></section>
   <section class="page" id="page-welcome"></section>
+  <section class="page" id="page-routine"></section>
 </main>
 
 <script type="module">
@@ -990,12 +1053,12 @@ function freshDoc(){
     profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, heightIn:null }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null,
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [],
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, ...d,
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
@@ -1262,12 +1325,21 @@ async function sendLink(){
   } catch { toast('Network error'); }
   authUi.busy = false; renderSetup();
 }
+// Takes the code or the whole sign-in link. Pasting the link matters on an
+// iPhone home-screen app: tapping it opens Safari, which has separate storage.
 async function verifyCode(){
-  const token = $('#si-code')?.value.replace(/\s/g, '');
-  if (!/^\d{6,10}$/.test(token || '')){ toast('Enter the code from the email'); return; }
+  const raw = $('#si-code')?.value.trim() ?? '';
+  let body;
+  if (/^\d{6,10}$/.test(raw.replace(/\s/g, ''))) body = { email:authUi.email, token:raw.replace(/\s/g, ''), type:'email' };
+  else {
+    let u = null; try { u = new URL(raw); } catch {}
+    const hash = u?.searchParams.get('token');
+    if (!hash){ toast('Paste the link or the code from the email'); return; }
+    body = { token_hash:hash, type:u.searchParams.get('type') || 'magiclink' };
+  }
   try {
-    const r = await sb('/auth/v1/verify', { method:'POST', body:JSON.stringify({ email:authUi.email, token, type:'email' }) }, false);
-    if (!r.ok){ toast('That code didn’t work'); return; }
+    const r = await sb('/auth/v1/verify', { method:'POST', body:JSON.stringify(body) }, false);
+    if (!r.ok){ toast(body.token_hash ? 'That link didn’t work — it may have expired or been used' : 'That code didn’t work'); return; }
     setSession(await r.json()); await fetchUser();
     authUi.stage = 'email'; paintSync(); render(); toast('Signed in');
     await firstSync();
@@ -2084,6 +2156,7 @@ function renderToday(){
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
     }) + `<div class="wrap">${checkinCards()}${guideCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
+      <div class="grid two" style="margin-top:16px">${routineCard()}</div>
       <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
     return;
   }
@@ -2177,14 +2250,16 @@ function renderToday(){
   </div>`;
 
   const runsDone = weekRuns.length;
+  const cta = red ? '' : t.kind === 'run' ? `<a class="btn primary big band-cta" href="#routine/pre">▶ Start the ${Math.round(routineSec(routineSteps('pre')) / 60)}-min warm-up</a>`
+    : t.kind === 'done' ? `<a class="btn primary big band-cta" href="#routine/post">▶ Start the cool-down</a>` : '';
   $('#page-today').innerHTML = band({
     eyebrow, title, sub: copy,
     stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), `/${pwo.runs?.length ?? 3}`],
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
-    extra: `<ul class="task-list">${tasks}</ul>`,
+    extra: `<ul class="task-list">${tasks}</ul>${cta}`,
   }) + `<div class="wrap">${checkinCards()}${guideCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
-    <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}</div><div class="col">${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
+    <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
 }
 
@@ -2705,6 +2780,260 @@ function renderBody(){
   if (vo2.length > 1) chartDaily($('#c-vo2'), vo2, { days:Math.max(days, 90), unit:'', step:2, gapDays:60 });
 }
 
+/* ═══ ROUTINES: follow-along stretching and strength ═════════════════
+   Each move is a side-on stick figure in a 120×120 box (ground at y 110)
+   that animates between two poses. Joints are [x, y]: h head, n neck,
+   p pelvis, k/f/t knee/ankle/toe, e/w elbow/wrist; 1 is the near limb, drawn
+   solid, 2 the far one, drawn faint. A toe left out sits 7 px ahead of the
+   ankle (or on it, for front-on figures). */
+const STAND = { h:[60,16], n:[60,27], p:[60,62], k1:[61,85], f1:[60,107], k2:[59,85], f2:[58,107], e1:[62,44], w1:[64,59], e2:[57,44], w2:[55,59] };
+const FRONT = { ...STAND, k1:[64,85], f1:[65,107], k2:[56,85], f2:[55,107], e1:[68,44], w1:[70,60], e2:[52,44], w2:[50,60] };
+const SUPINE = { h:[14,96], n:[24,100], p:[56,102], e1:[40,104], w1:[54,105], e2:[40,105], w2:[54,106] };
+const S = o => ({ ...STAND, ...o }), F = o => ({ ...FRONT, ...o }), L = o => ({ ...SUPINE, ...o });
+const up = (P, dy) => Object.fromEntries(Object.entries(P).map(([k, [x, y]]) => [k, [x, y - dy]]));
+
+// sec is per side when `sides` is set. Before a run everything moves; holds
+// belong after it. The hip flexor is the exception: it earns its hold on anyone who sits all day.
+const MOVES = {
+  march: { name:'March in place', cue:'Knees to hip height, arms swinging. Easy — just waking the legs up.', sec:45, dur:1.2,
+    a:S({ k1:[72,72], f1:[70,94], e1:[52,42], w1:[50,56], e2:[66,42], w2:[72,52] }),
+    b:S({ k2:[72,72], f2:[70,94], e2:[52,42], w2:[50,56], e1:[66,42], w1:[72,52] }) },
+  swingFB: { name:'Leg swings, front to back', cue:'One hand on a wall. Swing the outside leg loosely forward and back, a little higher each time. Stay tall.', sec:30, sides:true, prop:'wallL', dur:1.6, hl:1,
+    a:S({ k1:[78,77], f1:[95,92], t1:[101,88], e2:[44,36], w2:[28,40] }), b:S({ k1:[47,79], f1:[36,99], t1:[41,104], e2:[44,36], w2:[28,40] }) },
+  swingSide: { name:'Leg swings, side to side', cue:'Hand on a wall beside you. Swing the leg across your body, then out to the side. Hips stay square.', sec:30, sides:true, prop:'wallL', front:true, dur:1.6, hl:1,
+    a:F({ k1:[54,84], f1:[46,104], e2:[44,36], w2:[28,38] }), b:F({ k1:[74,82], f1:[86,100], e2:[44,36], w2:[28,38] }) },
+  lunge: { name:'Walking lunges', cue:'Long step, lower the back knee toward the floor, chest up. Push off and alternate legs.', sec:40, dur:2.4,
+    a:STAND, b:S({ h:[61,37], n:[61,48], p:[60,82], k1:[80,88], f1:[80,107], k2:[46,104], f2:[30,105], t2:[23,108], e1:[62,64], w1:[64,78], e2:[58,64], w2:[56,78] }) },
+  hipCircle: { name:'Hip openers', cue:'Hands on hips. Lift the knee up in front, open it out to the side, set it down. Slow and controlled.', sec:20, sides:true, front:true, dur:2, hl:1,
+    a:F({ k1:[63,70], f1:[61,91], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }),
+    b:F({ k1:[82,72], f1:[75,92], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }) },
+  hipKneel: { name:'Half-kneeling hip flexor stretch', cue:'Back knee down on something soft. Squeeze that glute and tuck the hips under until you feel the front of the hip. Don’t arch your back.', sec:30, sides:true, hold:true, dur:4, hl:1,
+    a:{ h:[60,40], n:[60,51], p:[57,84], k1:[45,106], f1:[26,107], t1:[22,109], k2:[79,85], f2:[80,107], e1:[68,67], w1:[78,82], e2:[64,67], w2:[76,84] },
+    b:{ h:[64,41], n:[63,52], p:[61,86], k1:[45,106], f1:[26,107], t1:[22,109], k2:[80,86], f2:[80,107], e1:[71,68], w1:[80,83], e2:[67,68], w2:[78,85] } },
+  calfRaise: { name:'Calf raises', cue:'Rise onto your toes, pause, lower slowly. Hold something for balance if you need it.', sec:30, dur:1.6, hl:1,
+    a:S({ t1:[67,107], t2:[65,107] }), b:{ ...up(S({}), 9), f1:[61,98], t1:[68,108], f2:[59,98], t2:[66,108] } },
+  highKnees: { name:'High knees', cue:'Quick, light steps on the spot, knees up. A warm-up, not a sprint.', sec:20, dur:.6,
+    a:S({ k1:[74,68], f1:[72,90], e1:[52,40], w1:[50,54], e2:[68,40], w2:[74,50] }),
+    b:S({ k2:[74,68], f2:[72,90], e2:[52,40], w2:[50,54], e1:[68,40], w1:[74,50] }) },
+  calfStraight: { name:'Calf stretch, straight leg', cue:'Hands on a wall, back leg straight, heel down. Lean in until the calf pulls gently.', sec:30, sides:true, hold:true, prop:'wallR', dur:4, hl:2,
+    a:{ h:[79,23], n:[74,33], p:[58,64], k1:[72,85], f1:[74,107], k2:[46,86], f2:[34,107], e1:[84,44], w1:[93,36], e2:[83,45], w2:[93,38] },
+    b:{ h:[81,24], n:[76,34], p:[60,65], k1:[73,86], f1:[74,107], k2:[47,86], f2:[34,107], e1:[85,45], w1:[93,37], e2:[84,46], w2:[93,39] } },
+  calfBent: { name:'Calf stretch, bent knee', cue:'Same stance, now bend the back knee and keep the heel down. You’ll feel it lower, near the Achilles.', sec:30, sides:true, hold:true, prop:'wallR', dur:4, hl:2,
+    a:{ h:[77,28], n:[72,38], p:[58,70], k1:[72,90], f1:[74,107], k2:[50,90], f2:[38,107], e1:[84,48], w1:[93,40], e2:[83,49], w2:[93,42] },
+    b:{ h:[77,31], n:[72,41], p:[58,73], k1:[73,92], f1:[74,107], k2:[52,92], f2:[38,107], e1:[84,51], w1:[93,43], e2:[83,52], w2:[93,45] } },
+  couch: { name:'Couch stretch', cue:'Back knee on the floor against a couch, shin up its front. Squeeze the glute and tuck the pelvis: feel it in the front of the hip, not the lower back.', sec:40, sides:true, hold:true, prop:'couch', dur:4, hl:1,
+    a:{ h:[57,38], n:[56,49], p:[54,84], k1:[40,106], f1:[36,86], t1:[37,79], k2:[78,84], f2:[78,107], e1:[64,66], w1:[75,82], e2:[60,66], w2:[73,84] },
+    b:{ h:[60,40], n:[59,51], p:[58,86], k1:[40,106], f1:[36,86], t1:[37,79], k2:[79,85], f2:[78,107], e1:[67,68], w1:[77,83], e2:[63,68], w2:[75,85] } },
+  quad: { name:'Standing quad stretch', cue:'Hand on a wall. Pull your heel toward your seat, knees together, hips tucked.', sec:30, sides:true, hold:true, prop:'wallR', dur:4, hl:1,
+    a:S({ k1:[62,86], f1:[50,68], t1:[46,71], e1:[54,46], w1:[50,66], e2:[76,36], w2:[93,38] }),
+    b:S({ k1:[61,87], f1:[52,66], t1:[48,68], e1:[55,46], w1:[52,64], e2:[76,36], w2:[93,38] }) },
+  figure4: { name:'Figure-4 stretch', cue:'On your back, ankle over the opposite knee. Pull that thigh toward your chest until you feel the outside of the hip.', sec:30, sides:true, hold:true, prop:'mat', dur:4, hl:1,
+    a:L({ k2:[70,82], f2:[84,103], t2:[88,97], k1:[64,84], f1:[74,80], t1:[80,77], e1:[40,92], w1:[60,88], e2:[40,94], w2:[62,90] }),
+    b:L({ k2:[64,76], f2:[78,94], t2:[82,90], k1:[58,80], f1:[68,74], t1:[74,71], e1:[38,90], w1:[56,84], e2:[38,92], w2:[58,86] }) },
+  hamstring: { name:'Hamstring stretch', cue:'On your back, hold behind one thigh and straighten that leg toward the ceiling. Stop at a gentle pull.', sec:30, sides:true, hold:true, prop:'mat', dur:4, hl:1,
+    a:L({ k1:[66,80], f1:[74,58], t1:[80,56], k2:[80,103], f2:[102,104], t2:[104,97], e1:[40,92], w1:[62,86], e2:[40,94], w2:[63,88] }),
+    b:L({ k1:[63,79], f1:[66,56], t1:[72,53], k2:[80,103], f2:[102,104], t2:[104,97], e1:[40,91], w1:[60,85], e2:[40,93], w2:[61,87] }) },
+  hipStand: { name:'Standing hip flexor stretch', cue:'Split stance, back heel up. Squeeze the back glute and ease the hips forward. Stay tall.', sec:30, sides:true, hold:true, dur:4, hl:1,
+    a:{ h:[57,20], n:[57,31], p:[58,66], k2:[74,86], f2:[76,107], k1:[46,88], f1:[36,104], t1:[30,108], e1:[50,46], w1:[56,62], e2:[66,46], w2:[62,62] },
+    b:{ h:[61,23], n:[61,34], p:[62,69], k2:[76,88], f2:[76,107], k1:[49,90], f1:[36,104], t1:[30,108], e1:[54,49], w1:[60,65], e2:[70,49], w2:[66,65] } },
+  bridge: { name:'Glute bridges', cue:'On your back, knees bent, feet flat. Squeeze your glutes and lift until knees, hips and shoulders line up. Lower slowly. 12–15 reps.', sec:45, prop:'mat', dur:2.4, hl:1,
+    a:L({ k1:[72,80], f1:[84,104], t1:[91,105], k2:[71,81], f2:[83,105], t2:[90,106] }),
+    b:L({ p:[56,85], k1:[76,78], f1:[83,104], t1:[90,105], k2:[75,79], f2:[82,105], t2:[89,106] }) },
+  sideRaise: { name:'Side-lying leg raises', cue:'Lie on your side, legs straight. Lift the top leg slightly behind you, toes forward, then lower slowly. 12–15 reps.', sec:40, sides:true, prop:'mat', dur:2.4, hl:1,
+    a:{ h:[14,88], n:[24,94], p:[58,100], k1:[80,101], f1:[102,102], t1:[103,96], k2:[80,103], f2:[102,104], t2:[103,98], e1:[40,94], w1:[52,100], e2:[20,104], w2:[12,92] },
+    b:{ h:[14,88], n:[24,94], p:[58,100], k1:[80,92], f1:[100,82], t1:[102,76], k2:[80,103], f2:[102,104], t2:[103,98], e1:[40,94], w1:[52,100], e2:[20,104], w2:[12,92] } },
+  plank: { name:'Forearm plank', cue:'Elbows under shoulders, body in one straight line. Breathe. Drop to your knees if your back sags.', sec:30, hold:true, prop:'mat', dur:3,
+    a:{ h:[14,82], n:[24,86], e1:[24,106], w1:[38,107], e2:[23,106], w2:[37,108], p:[58,93], k1:[79,99], f1:[99,104], t1:[100,109], k2:[79,100], f2:[99,105], t2:[100,110] },
+    b:{ h:[14,81], n:[24,85], e1:[24,106], w1:[38,107], e2:[23,106], w2:[37,108], p:[58,91], k1:[79,98], f1:[99,104], t1:[100,109], k2:[79,99], f2:[99,105], t2:[100,110] } },
+  rest: { name:'Rest', cue:'Shake it out and breathe. Next set coming up.', sec:20, dur:3, rest:true, a:STAND, b:up(STAND, 1) },
+};
+const ROUTINES = {
+  pre: { name:'Before you run', title:'Warm <em>up</em>', sub:'Moving, not holding. Wakes the legs up so the first mile isn’t the warm-up.', tasks:['p2'],
+    moves:['march', 'swingFB', 'swingSide', 'lunge', 'hipCircle', 'hipKneel', 'calfRaise', 'highKnees'] },
+  post: { name:'After you run', title:'Cool <em>down</em>', sub:'Gentle holds, while you’re still warm. Stretch to mild tension, never pain.', tasks:['calf', 'hip'],
+    moves:['calfStraight', 'calfBent', 'couch', 'quad', 'figure4', 'hamstring'] },
+  desk: { name:'Desk break', title:'Desk <em>break</em>', sub:'For long sitting days. Sitting is what tightens the hip flexors, so undo it through the day.', tasks:['hip'],
+    moves:['march', 'hipStand', 'quad', 'calfRaise'] },
+  strength: { name:'Strength', title:'Get <em>strong</em>', sub:'Twice a week. Strong glutes and calves take load off your knees and hips.', tasks:['bridge'],
+    moves:[['bridge', 45], 'rest', ['bridge', 45], 'rest', ['calfRaise', 45], 'rest', ['calfRaise', 45], 'sideRaise', 'plank'] },
+};
+const PREP_SEC = 5, SWITCH_SEC = 3;
+
+// A move's figure as SVG. Static when someone prefers reduced motion.
+function figure(m, { size = 240, still = false } = {}){
+  const toe = (P, i) => P['t' + i] ?? (m.front ? P['f' + i] : [P['f' + i][0] + 7, P['f' + i][1]]);
+  const lines = P => [[P.p, P.k2, P.f2, toe(P, 2)], [P.n, P.e2, P.w2], [P.n, P.p], [P.p, P.k1, P.f1, toe(P, 1)], [P.n, P.e1, P.w1]]
+    .map(l => l.map(q => q.join(',')).join(' '));
+  const reduce = still || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const A = lines(m.a), B = lines(m.b);
+  const anim = (attr, a, b) => reduce || a === b ? '' : `<animate attributeName="${attr}" values="${a};${b};${a}" dur="${m.dur * 2}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/>`;
+  const cls = ['far', 'far', 'body', 'near', 'near'];
+  const P = reduce ? B : A, hd = reduce ? m.b.h : m.a.h;
+  const prop = { wallR:'<rect x="94" y="6" width="5" height="104" rx="2" class="prop"/>', wallL:'<rect x="21" y="6" width="5" height="104" rx="2" class="prop"/>',
+    couch:'<rect x="4" y="82" width="32" height="28" rx="5" class="prop"/>', mat:'<rect x="6" y="108" width="108" height="3" rx="1.5" class="prop"/>' }[m.prop] ?? '';
+  return `<svg class="fig" viewBox="0 0 120 120" width="${size}" height="${size}" role="img" aria-label="${esc(m.name)}">
+    ${prop}<line x1="2" y1="110" x2="118" y2="110" class="ground"/>
+    ${P.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0)) ? ' hl' : ''}">${anim('points', A[i], B[i])}</polyline>`).join('')}
+    <circle cx="${hd[0]}" cy="${hd[1]}" r="7" class="head">${anim('cx', m.a.h[0], m.b.h[0])}${anim('cy', m.a.h[1], m.b.h[1])}</circle>
+  </svg>`;
+}
+
+// The routine as timed steps. Sore spots from the last few days get longer holds.
+function routineSteps(rid){
+  const recent = v => doc.checkins.some(c => c.value === v && Date.now() - Date.parse(c.at) < 4 * 864e5);
+  const extra = { hipKneel:recent('hip'), hipStand:recent('hip'), couch:recent('hip'), calfStraight:recent('calves'), calfBent:recent('calves') };
+  const steps = [];
+  for (const it of ROUTINES[rid].moves){
+    const [id, over] = Array.isArray(it) ? it : [it, null], m = MOVES[id];
+    const sec = (over ?? m.sec) + (extra[id] ? 15 : 0);
+    const prep = m.rest ? 0 : PREP_SEC;
+    if (m.sides){ steps.push({ id, side:'Left', sec, prep, extra:extra[id] }, { id, side:'Right', sec, prep:SWITCH_SEC, extra:extra[id] }); }
+    else steps.push({ id, sec, prep, extra:extra[id] });
+  }
+  return steps;
+}
+const routineSec = steps => steps.reduce((a, s) => a + s.sec + s.prep, 0);
+const routinesThisWeek = id => (doc.routines ?? []).filter(r => r.id === id && r.date >= weekStart(todayYmd())).length;
+
+/* Player. Time comes from the clock, not from counting ticks, so a slow phone
+   or a backgrounded tab never stretches a hold. */
+const RP = { rid:null, steps:[], i:0, phase:'idle', endAt:0, left:0, paused:false, timer:null, lastBeep:null, started:0 };
+let audioCtx = null, wakeLock = null;
+const soundOn = () => prefs.get('sound', true);
+function beep(freq = 880, ms = 120){
+  if (soundOn() && audioCtx){
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime;
+    o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.25, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + ms / 1000);
+    o.start(t); o.stop(t + ms / 1000 + .02);
+  }
+  navigator.vibrate?.(ms);
+}
+async function keepAwake(on){
+  try {
+    if (on && !wakeLock && 'wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    if (!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  } catch {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && RP.phase !== 'idle' && RP.phase !== 'done' && !RP.paused){ wakeLock = null; keepAwake(true); }
+});
+
+function startRoutine(rid){
+  try { audioCtx ??= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch {}
+  Object.assign(RP, { rid, steps:routineSteps(rid), i:0, paused:false, started:Date.now() });
+  enterStep(0); keepAwake(true);
+  clearInterval(RP.timer); RP.timer = setInterval(tickRoutine, 100);
+}
+function enterStep(i){
+  RP.i = i; RP.lastBeep = null;
+  const s = RP.steps[i];
+  if (s.prep){ RP.phase = 'prep'; RP.endAt = Date.now() + s.prep * 1000; }
+  else { RP.phase = 'go'; RP.endAt = Date.now() + s.sec * 1000; beep(1320, 220); }
+  paintPlayer(true);
+}
+function tickRoutine(){
+  if (RP.paused || RP.phase === 'idle' || RP.phase === 'done') return;
+  const left = Math.max(0, RP.endAt - Date.now()), whole = Math.ceil(left / 1000);
+  if (RP.phase === 'go' && whole <= 3 && whole > 0 && RP.lastBeep !== whole){ RP.lastBeep = whole; beep(880, 90); }
+  if (left > 0){ paintPlayer(false); return; }
+  if (RP.phase === 'prep'){ RP.phase = 'go'; RP.endAt = Date.now() + RP.steps[RP.i].sec * 1000; RP.lastBeep = null; beep(1320, 220); paintPlayer(true); return; }
+  if (RP.i + 1 < RP.steps.length){ enterStep(RP.i + 1); return; }
+  finishRoutine();
+}
+async function finishRoutine(){
+  clearInterval(RP.timer); RP.phase = 'done'; keepAwake(false); beep(1320, 400);
+  const today = todayYmd(), r = ROUTINES[RP.rid];
+  for (const t of r.tasks) doc.done[`${today}|${t}`] = true;
+  doc.routines = [...(doc.routines ?? []), { date:today, id:RP.rid, sec:Math.round((Date.now() - RP.started) / 1000) }].slice(-300);
+  await save();
+  if (location.hash.startsWith('#routine')) renderRoutine(RP.rid);
+}
+function stopRoutine(){ clearInterval(RP.timer); RP.phase = 'idle'; RP.paused = false; keepAwake(false); }
+function pauseRoutine(p){
+  if (p === RP.paused || RP.phase === 'idle' || RP.phase === 'done') return;
+  if (p){ RP.left = RP.endAt - Date.now(); RP.paused = true; keepAwake(false); }
+  else { RP.endAt = Date.now() + RP.left; RP.paused = false; keepAwake(true); }
+  paintPlayer(true);
+}
+
+function routineCard(){
+  const today = todayYmd(), ran = runsOn(today).length > 0;
+  const nextRun = coached() ? schedule(today, 1)[0]?.kind === 'run' : false;
+  const str = routinesThisWeek('strength');
+  const pick = ran ? 'post' : nextRun ? 'pre' : str < 2 ? 'strength' : 'desk';
+  const why = { pre:'Run day: do this right before you head out.', post:'You ran today: cool down while you’re still warm.', strength:`Rest day: a good day for strength (${str}/2 this week).`, desk:'Rest day: keep the hips loose between sitting.' }[pick];
+  return `<div class="card"><div class="card-head"><h2>Stretch & strength</h2><span class="card-sub">follow along, with a timer</span></div>
+    <p class="card-sub" style="margin:0 0 12px">${why}</p>
+    <div class="routine-list">${Object.entries(ROUTINES).map(([id, r]) => {
+      const m = Math.round(routineSec(routineSteps(id)) / 60), done = (doc.routines ?? []).some(x => x.id === id && x.date === today);
+      return `<a class="routine-pick${id === pick ? ' pick' : ''}" href="#routine/${id}">
+        <span><b>${r.name}</b><small>${m} min${done ? ' · done today ✓' : id === 'strength' ? ` · ${str}/2 this week` : ''}</small></span><span aria-hidden="true">▶</span></a>`;
+    }).join('')}</div></div>`;
+}
+
+const RING_R = 54, RING_C = 2 * Math.PI * RING_R;
+function renderRoutine(rid){
+  const page = $('#page-routine'), r = ROUTINES[rid];
+  if (!r){ location.hash = 'today'; return; }
+  if (RP.rid === rid && RP.phase !== 'idle' && RP.phase !== 'done'){ paintPlayer(true); return; }
+  const steps = routineSteps(rid), total = routineSec(steps);
+  if (RP.rid === rid && RP.phase === 'done'){
+    page.innerHTML = band({ eyebrow:`${r.name} · done`, title:'Nice <em>work</em>', sub:`${fmtDur((Date.now() - RP.started) / 1000)} well spent. It’s ticked off on Today.`,
+      extra:`<div class="btn-row"><a class="btn primary" href="#today">Back to Today</a><button class="btn" data-routine-start="${rid}">Do it again</button></div>` }) + `<div class="wrap">${routineCard()}</div>`;
+    return;
+  }
+  const ids = [...new Set(steps.map(s => s.id))].filter(id => !MOVES[id].rest);
+  const longer = ids.filter(id => steps.find(s => s.id === id).extra);
+  page.innerHTML = band({
+    eyebrow:`Routine · ${Math.round(total / 60)} minutes`, title:r.title, sub:r.sub,
+    stats:[['Moves', ids.length], ['Minutes', Math.round(total / 60)]],
+    extra:`<div class="btn-row"><button class="btn primary big" data-routine-start="${rid}">▶ Start</button>
+      <button class="btn" data-action="toggle-sound" aria-pressed="${soundOn()}">${soundOn() ? 'Sound on' : 'Sound off'}</button></div>`,
+  }) + `<div class="wrap">
+    ${longer.length ? `<div class="note" style="margin-bottom:16px">${WARN_SVG}<div><b>Longer holds today.</b> You logged ${[...new Set(longer.map(id => /calf/.test(id) ? 'sore calves' : 'a tight hip'))].join(' and ')} in the last few days, so ${longer.length > 1 ? 'these stretches get' : `the ${MOVES[longer[0]].name.toLowerCase()} gets`} an extra 15 seconds a side.</div></div>` : ''}
+    <div class="move-grid">${ids.map(id => { const m = MOVES[id], s = steps.find(x => x.id === id);
+      return `<div class="card move-card">${figure(m, { size:96, still:true })}<div><b>${m.name}</b><div class="card-sub">${s.sec} sec${m.sides ? ' each side' : ''}${m.hold ? ' · hold' : ''}</div><p>${esc(m.cue)}</p></div></div>`; }).join('')}</div>
+    <p class="card-sub" style="margin-top:14px">Keep your phone where you can see it — the screen stays on, and a beep marks each change. Stretch to mild tension, never pain.</p>
+  </div>`;
+}
+// Full repaint on a new step; otherwise only the clock moves, so the figure's animation isn't restarted.
+function paintPlayer(full){
+  const page = $('#page-routine');
+  if (!location.hash.startsWith('#routine') || RP.phase === 'idle' || RP.phase === 'done') return;
+  const s = RP.steps[RP.i], m = MOVES[s.id], next = RP.steps[RP.i + 1];
+  const left = RP.paused ? RP.left : RP.endAt - Date.now(), secLeft = Math.max(0, Math.ceil(left / 1000));
+  const span = (RP.phase === 'prep' ? s.prep : s.sec) * 1000, frac = Math.max(0, Math.min(1, left / span));
+  if (full){
+    const label = RP.phase === 'prep' ? (s.prep === SWITCH_SEC ? 'Switch sides' : 'Get ready') : m.rest ? 'Rest' : m.hold ? 'Hold' : 'Go';
+    page.innerHTML = `<div class="wrap player">
+      <div class="player-top"><button class="btn small" data-action="routine-exit">✕ End</button>
+        <span class="card-sub num">${RP.i + 1} / ${RP.steps.length}</span>
+        <button class="btn small" data-action="toggle-sound" aria-pressed="${soundOn()}">${soundOn() ? 'Sound on' : 'Sound off'}</button></div>
+      <div class="player-bar">${RP.steps.map((_, i) => `<i class="${i < RP.i ? 'done' : i === RP.i ? 'now' : ''}"></i>`).join('')}</div>
+      <div class="player-main">
+        <div class="player-fig">${figure(m, { size:260 })}</div>
+        <div class="player-info">
+          <div class="eyebrow ${RP.phase === 'prep' ? 'prep' : 'go'}">${label}${s.side ? ` · ${s.side} side` : ''}</div>
+          <h1 class="display player-name">${m.name}</h1>
+          <p class="player-cue">${esc(m.cue)}</p>
+          <div class="ring-wrap"><svg viewBox="0 0 120 120" class="ring"><circle cx="60" cy="60" r="${RING_R}" class="ring-bg"/>
+            <circle cx="60" cy="60" r="${RING_R}" class="ring-fg ${RP.phase}" id="ring-fg" stroke-dasharray="${RING_C}" stroke-dashoffset="${RING_C * (1 - frac)}"/></svg>
+            <div class="ring-num display num" id="ring-num">${secLeft}</div></div>
+          <div class="btn-row player-ctl">
+            <button class="btn" data-action="routine-prev" ${RP.i === 0 ? 'disabled' : ''} aria-label="Previous">◀</button>
+            <button class="btn primary big" data-action="routine-pause">${RP.paused ? '▶ Resume' : '❚❚ Pause'}</button>
+            <button class="btn" data-action="routine-next" aria-label="Skip">▶▶</button>
+          </div>
+          <p class="card-sub">${next ? `Next: ${MOVES[next.id].name}${next.side ? ` · ${next.side.toLowerCase()} side` : ''}` : 'Last one!'}</p>
+        </div>
+      </div></div>`;
+    return;
+  }
+  $('#ring-num') && ($('#ring-num').textContent = secLeft);
+  $('#ring-fg')?.setAttribute('stroke-dashoffset', RING_C * (1 - frac));
+}
+
 /* ═══ PLAN ═══════════════════════════════════════════════════════════ */
 function renderPlan(){
   const plan = activePlan(), len = planLen();
@@ -2873,6 +3202,7 @@ function renderSetup(){
     stats: [['Runs', doc.runs.length], ['Threshold', p.lthr, 'bpm'], ['Easy below', p.zones.easy, 'bpm']],
   }) + `<div class="wrap"><div class="grid two" style="align-items:start">
       <div class="col">
+        ${installCard()}
         ${accountCard()}
         ${intervalsCard()}
         <div class="card"><div class="card-head"><h2>Zones & thresholds${infoBtn}</h2><span class="card-sub">changing these re-scores every run</span></div>${explain('zones')}
@@ -2935,6 +3265,25 @@ function renderSetup(){
   $('#backup-in').addEventListener('change', e => { importBackup(e.target.files[0]); e.target.value = ''; });
   paintIcu();
 }
+/* ── Home-screen install ────────────────────────────────────────────
+   Chrome and Edge hand over an install prompt; iPhone only installs from
+   Safari's Share menu, so it gets instructions instead. */
+let installPrompt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; if (location.hash.startsWith('#setup')) renderSetup(); });
+addEventListener('appinstalled', () => { installPrompt = null; toast('Stride is on your home screen'); });
+const installed = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function installCard(){
+  if (installed()) return '';
+  const how = installPrompt ? `<button class="btn primary" data-action="install-app">Install Stride</button>`
+    : isIos() ? `<ol class="how"><li><span>Open this page in <b>Safari</b>.</span></li><li><span>Tap the <b>Share</b> button (the square with an arrow).</span></li><li><span>Choose <b>Add to Home Screen</b>.</span></li></ol>`
+    : `<p class="card-sub" style="margin:0">In your browser’s menu, choose <b>Install app</b> or <b>Add to Home screen</b>.</p>`;
+  return `<div class="card"><div class="card-head"><h2>Put Stride on your home screen</h2><span class="card-sub">opens like an app, works offline</span></div>
+    ${how}
+    ${isIos() && syncOn() ? `<p class="card-sub" style="margin:12px 0 0">On iPhone the home-screen app keeps its own sign-in. Sign in once inside it: it’ll ask you to copy the link from the email and paste it in.</p>` : ''}
+  </div>`;
+}
+
 function accountCard(){
   if (!syncOn()) return '';
   if (SESSION) return `<div class="card"><div class="card-head"><h2>Account</h2><span class="card-sub">${esc(SESSION.email)}</span></div>
@@ -2944,10 +3293,12 @@ function accountCard(){
   const code = authUi.stage === 'code';
   return `<div class="card" id="signin"><div class="card-head"><h2>Sign in</h2><span class="card-sub">keeps your runs on every device</span></div>
     <p class="card-sub" style="margin:0 0 12px">${code
-      ? `We emailed <b>${esc(authUi.email)}</b>. Open it on this device and tap <b>Sign in</b>. It can take a minute — check spam if it doesn’t show.`
+      ? installed() && isIos()
+        ? `We emailed <b>${esc(authUi.email)}</b>. In the email, <b>press and hold</b> the sign-in link, tap <b>Copy</b>, then paste it below. (Tapping it would open Safari instead of this app.)`
+        : `We emailed <b>${esc(authUi.email)}</b>. Open it on this device and tap <b>Sign in</b>. It can take a minute — check spam if it doesn’t show.`
       : 'No password. We email you a sign-in link; anything already in this browser moves into your account.'}</p>
     <div class="field-row">${code
-      ? `<div class="field"><label for="si-code">Got a code instead? Enter it here</label><input id="si-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>`
+      ? `<div class="field" style="grid-column:1 / -1"><label for="si-code">Or paste the link from the email (press and hold it, then Copy)</label><input id="si-code" autocomplete="one-time-code" placeholder="https://… or a 6-digit code"></div>`
       : `<div class="field"><label for="si-email">Email</label><input id="si-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(authUi.email)}"></div>`}</div>
     <div class="btn-row" style="margin-top:14px">${code
       ? `<button class="btn small primary" data-action="verify-code">Sign in</button><button class="link-btn" data-action="change-email">Use a different email</button><button class="link-btn" data-action="send-link">Resend</button>`
@@ -3299,6 +3650,8 @@ document.addEventListener('click', async e => {
     if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
   }
+  const rs = e.target.closest('[data-routine-start]');
+  if (rs){ startRoutine(rs.dataset.routineStart); return; }
   const ex = e.target.closest('[data-explain]');
   if (ex){
     const box = ex.closest('.card, .kpi')?.querySelector('.explain'); if (!box) return;
@@ -3331,6 +3684,11 @@ document.addEventListener('click', async e => {
   const r = runById($('#page-runs').dataset.run);
   switch (act){
     case 'back': location.hash = 'runs'; break;
+    case 'toggle-sound': prefs.set('sound', !soundOn()); if (RP.phase === 'idle' || RP.phase === 'done') renderRoutine(RP.rid ?? location.hash.split('/')[1]); else paintPlayer(true); break;
+    case 'routine-pause': pauseRoutine(!RP.paused); break;
+    case 'routine-next': if (RP.i + 1 < RP.steps.length){ RP.paused = false; enterStep(RP.i + 1); } else finishRoutine(); break;
+    case 'routine-prev': if (RP.i > 0){ RP.paused = false; enterStep(RP.i - 1); } break;
+    case 'routine-exit': { const id = RP.rid; stopRoutine(); renderRoutine(id); break; }
     case 'clear-red': doc.redClearedAt = new Date().toISOString(); await save(); render(); break;
     case 'undo-checkin': doc.checkins = doc.checkins.filter(c => c !== lastResponse?.c); lastResponse = null; await save(); render(); break;
     case 'make-test': if (r){ makeTestRoute(r); await save(); toast('Test route set'); render(); } break;
@@ -3412,6 +3770,7 @@ document.addEventListener('click', async e => {
       await save(); toast('Saved'); renderBody(); break;
     }
     case 'export': exportBackup(); break;
+    case 'install-app': if (installPrompt){ installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; installPrompt = null; if (outcome !== 'accepted') renderSetup(); } break;
     case 'icu-connect': connectIntervals(); break;
     case 'icu-check': checkIntervals({ manual:true }); break;
     case 'icu-off': delete doc.intervals; try { localStorage.removeItem(ICUKEY); } catch {} await save(); render(); toast('Disconnected from intervals.icu'); break;
@@ -3453,9 +3812,11 @@ document.querySelectorAll('.tab[data-page]').forEach(b => b.addEventListener('cl
 function render(){
   let [page, arg] = (location.hash.slice(1) || 'today').split('/');
   if (page === 'upload') page = 'setup';   // older links
-  let pg = ['today', 'progress', 'runs', 'body', 'plan', 'setup', 'welcome'].includes(page) ? page : 'today';
+  let pg = ['today', 'progress', 'runs', 'body', 'plan', 'setup', 'welcome', 'routine'].includes(page) ? page : 'today';
+  // Leaving the player mid-routine pauses it rather than letting it run on unseen.
+  if (pg !== 'routine') pauseRoutine(true);
   // No plan chosen yet: everything but Setup (where you can sign in) waits on the welcome screen.
-  if (!doc.planId && pg !== 'setup') pg = 'welcome';
+  if (!doc.planId && pg !== 'setup' && pg !== 'routine') pg = 'welcome';
   document.querySelectorAll('.tab[data-page]').forEach(b => b.dataset.page === pg ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + pg));
   tip.classList.remove('show');
@@ -3466,6 +3827,7 @@ function render(){
   if (pg === 'body') renderBody();
   if (pg === 'plan') renderPlan();
   if (pg === 'setup') renderSetup();
+  if (pg === 'routine') renderRoutine(arg);
 }
 let lastRoute = null;
 addEventListener('hashchange', () => { render(); if (location.hash !== lastRoute) scrollTo(0, 0); lastRoute = location.hash; });
@@ -3476,6 +3838,7 @@ addEventListener('resize', () => {
 });
 
 /* ── Boot ────────────────────────────────────────────────────────── */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 const fromLink = syncOn() ? consumeAuthHash() : null;
 if (syncOn()) loadSession();
 try { doc = await idb.get('doc', 'main'); }

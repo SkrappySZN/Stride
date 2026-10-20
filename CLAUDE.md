@@ -10,6 +10,8 @@ data runs through it, so treat changes to data handling with care.
 | File | What it is |
 |---|---|
 | `index.html` | The app. GitHub Pages serves it straight from `main`. |
+| `manifest.webmanifest`, `icons/` | Home-screen install (name, icons, colours). |
+| `sw.js` | Service worker: lets the installed app open offline. The page is network-first, so pushes still go live on the next open; data APIs are never cached. Bump `CACHE` if you change what it stores. |
 | `.githooks/pre-commit` | Refuses commits containing personal data (only active on Neil's machine). |
 | `supabase-setup.sql` | The database schema and row-level security. |
 
@@ -64,6 +66,10 @@ data runs through it, so treat changes to data handling with care.
 - **Standards**: `standardRows()` (Body tab) and `bestsCard()` (Progress) compare against
   published norms: BMI, ACE body fat, Garmin/Cooper VO2 max, WHO activity minutes, and an
   approximate age grade. They need `profile.sex`, `birthYear` and `heightIn` (Setup → About you).
+- **Routines**: `MOVES` (each a stick figure animating between poses `a` and `b`, joints in a
+  120×120 box) and `ROUTINES` (before/after a run, desk break, strength). The player
+  (`RP`, `#routine/<id>`) times from the clock, keeps the screen awake and beeps on changes.
+  Finishing ticks the matching Today tasks and appends to `doc.routines`.
 - **Charts**: hand-built SVG (`chartLine`, `chartColumns`, `chartDaily`, `chartTrace`)
   with hover via `_tip`. One measure per chart, never two y-axes.
 
