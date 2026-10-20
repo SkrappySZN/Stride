@@ -593,6 +593,17 @@ a.btn.primary{color:var(--accent-ink)}
 .wx-h small{color:var(--muted); font-size:10px}
 .wx-h.best span{color:var(--fig-hl)}
 
+/* goals & milestones */
+.goal-list{list-style:none; margin:0 0 4px; padding:0; display:grid; gap:14px}
+.goal-top{display:flex; justify-content:space-between; gap:10px; align-items:baseline}
+.pbar{height:8px; border-radius:4px; background:var(--line); overflow:hidden; margin:6px 0 4px}
+.pbar i{display:block; height:100%; background:var(--fig-hl); border-radius:4px}
+.badges{display:flex; flex-wrap:wrap; gap:8px}
+.mbadge{display:inline-flex; flex-direction:column; padding:8px 12px; border-radius:12px; background:var(--accent); color:var(--accent-ink)}
+.mbadge b{font-size:13.5px}
+.mbadge small{font-size:11.5px; opacity:.75}
+.goal-form{margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
+
 /* plain-language help */
 .info-btn{
   width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
@@ -1063,12 +1074,12 @@ function freshDoc(){
     profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, heightIn:null }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [],
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [],
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], ...d,
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
@@ -2216,7 +2227,7 @@ function renderToday(){
       eyebrow: `${dateLine} · just tracking`, title, sub,
       stats: [['Runs this week', weekRuns.length], ['Miles', weekMi.toFixed(1)], ['Jogging', Math.round(weekRuns.reduce((a, r) => a + (r.runSec ?? 0), 0) / 60), 'min']],
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
-    }) + `<div class="wrap">${checkinCards()}${guideCard()}
+    }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${guideCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid two" style="margin-top:16px">${routineCard()}${weatherCard()}</div>
       <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
@@ -2319,7 +2330,7 @@ function renderToday(){
     stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), `/${pwo.runs?.length ?? 3}`],
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>${cta}`,
-  }) + `<div class="wrap">${checkinCards()}${guideCard()}
+  }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${guideCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
     <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
@@ -2420,6 +2431,8 @@ function renderProgress(){
         ${explain('effort')}${effRuns.length ? '<div class="chart" id="c-eff"></div>' : '<div class="pending-box">Answer the watch’s effort and feel prompts when you save a run,<br>or set them on the run’s page.</div>'}</div>
     </div>
     ${bestsCard(runs)}
+    <div class="section-label">Goals & milestones</div>
+    ${goalsCard()}
     <div class="section-label">More detail</div>
     <div class="grid two">
       <div class="card"><div class="card-head"><h2>Jogging vs walking${infoBtn}</h2><span class="card-sub">minutes per run</span></div>${explain('jogWalk')}
@@ -2523,6 +2536,106 @@ function bestsCard(runs){
     </div>
     <p class="card-sub" style="margin:12px 0 0">Age grade compares a time with the best possible for your age and sex (approximate). These are for later in a build: speed arrives on its own as the easy base grows, and chasing it early is how calves get hurt.</p>
   </div>`;
+}
+
+/* ── Milestones (earned automatically) and goals (set by you) ─────── */
+const LONG_MARKS = [[1, 'First full mile'], [2, '2 miles in one go'], [3.1, '5K distance'], [5, '5 miles in one go'], [6.2, '10K distance'], [10, '10 miles in one go'], [13.1, 'Half marathon distance'], [26.2, 'Marathon distance']];
+const RUN_MARKS = [1, 10, 25, 50, 100, 200, 365];
+const MILE_MARKS = [10, 25, 50, 100, 250, 500, 1000];
+const WEEK_MARKS = [2, 4, 8, 12, 26];
+const GPS_SLACK = 0.02;   // a "mile" that reads 0.99 still counts
+// Walk the runs in order and note the date each milestone fell.
+function milestones(){
+  const got = [], add = (id, label, date) => got.push({ id, label, date });
+  let n = 0, mi = 0, longest = 0;
+  for (const r of sortedRuns()){
+    n++; mi += r.distMi ?? 0; longest = Math.max(longest, r.distMi ?? 0);
+    for (const t of RUN_MARKS) if (n === t) add('runs' + t, t === 1 ? 'First run' : `${t} runs`, r.date);
+    for (const t of MILE_MARKS) if (mi >= t && !got.some(g => g.id === 'mi' + t)) add('mi' + t, `${t} miles total`, r.date);
+    for (const [t, l] of LONG_MARKS) if (longest >= t - GPS_SLACK && !got.some(g => g.id === 'long' + t)) add('long' + t, l, r.date);
+  }
+  // Weeks in a row with 3+ runs, credited on the Sunday that completes them.
+  const runs = sortedRuns();
+  if (runs.length){
+    let streak = 0;
+    for (let w = weekStart(runs[0].date); w <= weekStart(todayYmd()); w = addDays(w, 7)){
+      const k = runs.filter(r => r.date >= w && r.date < addDays(w, 7)).length;
+      if (k >= 3){ streak++; for (const t of WEEK_MARKS) if (streak === t) add('wk' + t, `${t} weeks in a row of 3+ runs`, addDays(w, 6) > todayYmd() ? todayYmd() : addDays(w, 6)); }
+      else if (w < weekStart(todayYmd())) streak = 0;   // the current week can still get there
+    }
+    got.streak = streak;
+  }
+  got.n = n; got.mi = mi; got.longest = longest;
+  return got;
+}
+// The next one in each family, with how close you are.
+function nextMilestones(m){
+  const nx = [];
+  const r = RUN_MARKS.find(t => t > m.n); if (r) nx.push([`${r} runs`, m.n / r, `${m.n} of ${r}`]);
+  const d = MILE_MARKS.find(t => t > m.mi); if (d) nx.push([`${d} miles total`, m.mi / d, `${m.mi.toFixed(1)} of ${d}`]);
+  const l = LONG_MARKS.find(([t]) => t - GPS_SLACK > m.longest); if (l) nx.push([l[1], m.longest / l[0], `longest ${fmtMi(m.longest)} of ${l[0]} mi`]);
+  const w = WEEK_MARKS.find(t => t > (m.streak ?? 0)); if (w) nx.push([`${w} weeks in a row of 3+ runs`, (m.streak ?? 0) / w, `${m.streak ?? 0} so far`]);
+  return nx;
+}
+
+const GOAL_TYPES = {
+  long:  { label:'Run a distance in one go', unit:'mi', ph:'2', fmt:v => `${v} mi in one go` },
+  total: { label:'Total miles', unit:'mi', ph:'50', fmt:v => `${v} miles total` },
+  mi:    { label:'Mile under a time', unit:'m:ss', ph:'10:00', fmt:v => `Mile under ${fmtDur(v)}` },
+  k5:    { label:'5K under a time', unit:'m:ss', ph:'35:00', fmt:v => `5K under ${fmtDur(v)}` },
+};
+const parseDur = s => { const m = String(s).trim().match(/^(\d+):([0-5]\d)$/); return m ? +m[1] * 60 + +m[2] : null; };
+// Where a goal stands: current value, 0–1 progress, and the date it was hit.
+function goalState(g){
+  const runs = sortedRuns();
+  if (g.type === 'long'){
+    const hit = runs.find(r => r.distMi >= g.target - GPS_SLACK);
+    const cur = Math.max(0, ...runs.map(r => r.distMi ?? 0));
+    return { cur, pct:Math.min(1, cur / g.target), hit:hit?.date, txt:`longest ${fmtMi(cur)} of ${g.target} mi` };
+  }
+  if (g.type === 'total'){
+    let sum = 0, hit = null;
+    for (const r of runs) if (r.date >= g.since && (!g.by || r.date <= g.by)){ sum += r.distMi ?? 0; if (!hit && sum >= g.target) hit = r.date; }
+    return { cur:sum, pct:Math.min(1, sum / g.target), hit, txt:`${sum.toFixed(1)} of ${g.target} mi since ${fmtDate(g.since).slice(4)}` };
+  }
+  const k = g.type, withB = runs.filter(r => r.best?.[k]);
+  const best = withB.length ? Math.min(...withB.map(r => r.best[k])) : null;
+  return { cur:best, pct:best ? Math.min(1, g.target / best) : 0, hit:withB.find(r => r.best[k] <= g.target)?.date,
+    txt:best ? `best ${fmtDur(best)}, ${best <= g.target ? 'done' : `${fmtDur(best - g.target)} to go`}` : 'no time yet' };
+}
+
+function goalsCard(){
+  const goals = doc.goals ?? [], today = todayYmd(), m = milestones();
+  const earned = [...m].sort((a, b) => a.date < b.date ? 1 : -1);
+  const bar = pct => `<div class="pbar"><i style="width:${Math.round(pct * 100)}%"></i></div>`;
+  return `<div class="grid two">
+    <div class="card"><div class="card-head"><h2>Your goals</h2><span class="card-sub">set your own targets</span></div>
+      ${goals.length ? `<ul class="goal-list">${goals.map(g => { const st = goalState(g), late = g.by && g.by < today && !st.hit;
+        return `<li><div class="goal-top"><b>${GOAL_TYPES[g.type].fmt(g.target)}</b><button class="link-btn" data-del-goal="${g.id}" aria-label="Remove goal">remove</button></div>
+          ${bar(st.hit ? 1 : st.pct)}
+          <div class="card-sub">${st.hit ? `<b style="color:var(--good-text)">✓ Done ${fmtDate(st.hit)}</b>` : esc(st.txt)}${g.by && !st.hit ? ` · ${late ? 'deadline passed' : `by ${fmtDate(g.by)} (${diffDays(today, g.by)} days)`}` : ''}</div></li>`; }).join('')}</ul>`
+        : '<p class="card-sub" style="margin:0 0 12px">Something to aim at makes the easy weeks easier. Beat your longest run, hit a total, or chase a time.</p>'}
+      <div class="field-row goal-form">
+        <div class="field"><label for="g-type">Goal</label><select id="g-type">${Object.entries(GOAL_TYPES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join('')}</select></div>
+        <div class="field"><label for="g-val">Target <span id="g-unit">(mi)</span></label><input id="g-val" inputmode="decimal" placeholder="2"></div>
+        <div class="field"><label for="g-by">By (optional)</label><input id="g-by" type="date"></div>
+      </div>
+      <div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="add-goal">Add goal</button></div>
+    </div>
+    <div class="card"><div class="card-head"><h2>Milestones</h2><span class="card-sub">${earned.length} earned</span></div>
+      ${earned.length ? `<div class="badges">${earned.slice(0, 6).map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div>` : ''}
+      <div class="eyebrow" style="margin:14px 0 8px">Up next</div>
+      <ul class="goal-list">${nextMilestones(m).map(([l, pct, txt]) => `<li><div class="goal-top"><b>${esc(l)}</b></div>${bar(pct)}<div class="card-sub">${esc(txt)}</div></li>`).join('')}</ul>
+      ${earned.length > 6 ? `<details style="margin-top:12px"><summary class="card-sub" style="cursor:pointer">All ${earned.length}</summary><div class="badges" style="margin-top:10px">${earned.slice(6).map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div></details>` : ''}
+    </div>
+  </div>`;
+}
+// A milestone from the last couple of days gets a moment on Today, once per device.
+function milestoneCard(){
+  const seen = prefs.get('seenMilestones', []), fresh = milestones().filter(x => diffDays(x.date, todayYmd()) <= 2 && !seen.includes(x.id));
+  if (!fresh.length) return '';
+  return `<div class="card milestone-new" style="margin-bottom:16px"><div class="card-head"><h2>🎉 New milestone${fresh.length > 1 ? 's' : ''}</h2><button class="link-btn" data-seen-milestones="${fresh.map(x => x.id).join(',')}">Nice, hide this</button></div>
+    <div class="badges">${fresh.map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div></div>`;
 }
 
 /* ═══ RUNS ═══════════════════════════════════════════════════════════ */
@@ -3712,6 +3825,10 @@ document.addEventListener('click', async e => {
     if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
   }
+  const dg = e.target.closest('[data-del-goal]');
+  if (dg){ doc.goals = doc.goals.filter(g => g.id !== dg.dataset.delGoal); await save(); render(); return; }
+  const sm = e.target.closest('[data-seen-milestones]');
+  if (sm){ prefs.set('seenMilestones', [...prefs.get('seenMilestones', []), ...sm.dataset.seenMilestones.split(',')].slice(-200)); render(); return; }
   const rs = e.target.closest('[data-routine-start]');
   if (rs){ startRoutine(rs.dataset.routineStart); return; }
   const ex = e.target.closest('[data-explain]');
@@ -3771,6 +3888,14 @@ document.addEventListener('click', async e => {
       if (!(easy < mod && mod < lthr) || lthr > 230 || easy < 80){ toast('Zones must go easy < moderate < threshold'); break; }
       Object.assign(doc.profile, { lthr, guardHr:guard, zones:{ easy, mod }, zonesSet:true });
       await rescoreAll(); await save(); toast('Zones saved — every run re-scored'); render(); break;
+    }
+    case 'add-goal': {
+      const type = $('#g-type').value, raw = $('#g-val').value.trim(), by = $('#g-by').value || null;
+      const target = GOAL_TYPES[type].unit === 'mi' ? Math.round(+raw * 100) / 100 : parseDur(raw);
+      if (!(target > 0) || (GOAL_TYPES[type].unit === 'mi' && target > 1000)){ toast(GOAL_TYPES[type].unit === 'mi' ? 'Enter a number of miles' : 'Enter a time like 9:30'); break; }
+      if (by && by <= todayYmd()){ toast('Pick a date in the future'); break; }
+      doc.goals = [...(doc.goals ?? []), { id:'gl' + Date.now().toString(36), type, target, by, since:todayYmd() }];
+      await save(); toast('Goal added'); render(); break;
     }
     case 'save-about': {
       const sex = $('#s-sex').value || null, born = Math.round(+$('#s-born').value) || null;
@@ -3860,6 +3985,11 @@ document.addEventListener('keydown', e => {
   if (pages[e.key]) location.hash = pages[e.key];
 });
 
+document.addEventListener('change', e => {
+  if (e.target.id !== 'g-type') return;
+  const t = GOAL_TYPES[e.target.value];
+  $('#g-unit').textContent = `(${t.unit})`; $('#g-val').placeholder = t.ph; $('#g-val').inputMode = t.unit === 'mi' ? 'decimal' : 'text';
+});
 document.addEventListener('input', e => {
   if (!e.target.id?.startsWith('mr-') || !welcomeUi.race) return;
   const r = welcomeUi.race, v = e.target.value;
