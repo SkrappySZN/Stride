@@ -58,6 +58,12 @@ data runs through it, so treat changes to data handling with care.
   min). It pulls new runs' original FIT files, plus wellness data (weight in kg →
   stored in lbs) into `doc.body[date]`. Only the API key is synced (`doc.intervals.key`).
   What's been seen is per-device, in localStorage.
+- **Fill-ins**: `enrichRuns()` runs after sync and after imports. It adds fields that older
+  runs lack: `best` (fastest mile/5K, from samples) and `tempF` (Open-Meteo hourly
+  history at the start point rounded to ~1 km; no key). `undefined` means not tried yet.
+- **Standards**: `standardRows()` (Body tab) and `bestsCard()` (Progress) compare against
+  published norms: BMI, ACE body fat, Garmin/Cooper VO2 max, WHO activity minutes, and an
+  approximate age grade. They need `profile.sex`, `birthYear` and `heightIn` (Setup → About you).
 - **Charts**: hand-built SVG (`chartLine`, `chartColumns`, `chartDaily`, `chartTrace`)
   with hover via `_tip`. One measure per chart, never two y-axes.
 

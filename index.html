@@ -486,10 +486,15 @@ textarea.felt{
 .how b{display:block}
 .field-row{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px}
 .field label{display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px; letter-spacing:.04em}
-.field input{
+.field input, .field select{
   width:100%; font:inherit; font-size:15px; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
   background:var(--surface-2); color:var(--ink); font-variant-numeric:tabular-nums
 }
+
+.std-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr)); column-gap:32px}
+.std-list .status-row, .std-list .status-row:first-child{border-top:1px solid var(--line)}
+.std-v{display:flex; justify-content:space-between; gap:12px}
+.std-v b{font-variant-numeric:tabular-nums; white-space:nowrap}
 
 /* plan */
 .plan-list{display:grid; gap:10px}
@@ -690,6 +695,25 @@ function zoneStats(s, profile){
   return { aboveLtSec: above, zoneSec: z };
 }
 
+// Fastest stretch of each distance inside a run, from the cumulative distance.
+// Timer pauses stay in the window, so a paused effort reads slower, never faster.
+function bestEfforts(s){
+  const pts = [];
+  for (let i = 0; i < s.t.length; i++) if (s.dist?.[i] != null) pts.push([s.t[i], s.dist[i]]);
+  const out = {};
+  for (const [k, m] of [['mi', MI], ['k5', 5000]]){
+    let best = null, j = 0;
+    for (let i = 0; i < pts.length; i++){
+      // Distances are stored to the metre, so an exact mile can read 1609.
+      while (j + 1 < i && pts[i][1] - pts[j + 1][1] >= m - 2) j++;
+      const d = pts[i][1] - pts[j][1];
+      if (d >= m - 2){ const sec = (pts[i][0] - pts[j][0]) * m / d; if (best == null || sec < best) best = sec; }
+    }
+    if (best != null) out[k] = Math.round(best);
+  }
+  return out;
+}
+
 function analyzeFit(messages, profile){
   const session = messages.sessionMesgs?.[0] ?? {};
   const recs = (messages.recordMesgs ?? []).filter(r => r.timestamp);
@@ -864,6 +888,10 @@ function analyzeFit(messages, profile){
     startLL: firstLL >= 0 ? [LAT[firstLL], LON[firstLL]] : null,
     endLL: lastLL >= 0 ? [LAT[lastLL], LON[lastLL]] : null,
     garminMaxHr: zt?.maxHeartRate ?? null, garminLthr: zt?.thresholdHeartRate ?? null,
+    // The watch's post-run prompts: RPE is stored ×10, feel is 0–100 in steps of 25.
+    effort: session.workoutRpe ? Math.round(session.workoutRpe / 10) : null,
+    feel: session.workoutFeel ?? null,
+    best: bestEfforts(samples),
     filtered, unknown, hasSamples: true,
     felt: '', routeId: null, testOverride: null,
   };
@@ -933,7 +961,7 @@ function freshDoc(){
   return {
     v: 1,
     planStart: SEED.planStart ?? weekStart(todayYmd()),
-    profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false }),
+    profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, heightIn:null }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
     routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null,
@@ -942,7 +970,7 @@ function freshDoc(){
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
   return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, ...d,
-    profile: { weights:[], comps:[], ...(d.profile ?? freshDoc().profile) } };
+    profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
 // Sync bookkeeping writes through here so it never looks like an edit and
@@ -1267,6 +1295,11 @@ const testRoute = () => doc.routes.find(r => r.isTest);
 const isTest = r => r.testOverride ?? (!!r.routeId && !!doc.routes.find(x => x.id === r.routeId)?.isTest);
 const isClean = r => isTest(r) && (r.idleSec ?? 0) <= IDLE_TOLERANCE;
 const hrMetric = r => r.jogHr ?? r.avgHr;
+// Garmin's feel scale, 0–100 in steps of 25.
+const FEEL = { 0:'Very weak', 25:'Weak', 50:'Normal', 75:'Strong', 100:'Very strong' };
+const feelLabel = v => v == null ? null : FEEL[Math.round(v / 25) * 25];
+const HOT_F = 80;   // heat alone adds several beats above this
+const tempTxt = r => r.tempF != null ? `${r.tempF}°F` : '';
 // Weight per day: a manual weigh-in beats Garmin's number for the same day.
 function weightSeries(){
   const m = {};
@@ -1296,6 +1329,8 @@ function flagsFor(r){
   if (r.anaerobicTE != null && r.anaerobicTE > 1.0) f.push(['crit', `Anaerobic TE ${r.anaerobicTE.toFixed(1)}`, 'Too hard for an easy run — should be near 0.0']);
   if (r.maxHr != null && r.maxHr > p.guardHr) f.push(['warn', `Max HR ${r.maxHr}`, `Over the ~${p.guardHr} guardrail — take a walk break when HR passes ${p.zones.mod}`]);
   if (r.aboveLtSec != null && r.aboveLtSec > 30) f.push(['warn', `${fmtDur(r.aboveLtSec)} above ${p.lthr}`, 'Should be near zero on easy runs']);
+  if (r.effort >= 6 && r.feel != null && r.feel <= 25) f.push(['warn', `Effort ${r.effort}, felt ${feelLabel(r.feel).toLowerCase()}`, 'Hard work on a bad day is an early warning the HR numbers won’t show. Keep the next run short and easy']);
+  if (r.tempF >= HOT_F) f.push(['wait', `${r.tempF}°F`, 'Heat alone adds several beats. Compare this one against other warm runs']);
   const w = currentWeight();
   if (r.weightLbs != null && w != null && Math.abs(r.weightLbs - w) >= 3) f.push(['wait', `Computed at ${r.weightLbs} lbs`, 'Power and calories are a few percent off vs. your current weight']);
   if (r.source === 'manual') f.push(['wait', 'Entered from notes', 'Upload the FIT file for jogging-only HR, zones and time above threshold']);
@@ -1304,6 +1339,12 @@ function flagsFor(r){
 
 /* ── Check-ins and the red flag ──────────────────────────────────── */
 const SORE = { none:'Nothing', calves:'Calves', hip:'Hip', knee:'Knee', red:'Shin / Achilles / one calf much worse' };
+// One side only is what separates a warning from ordinary soreness.
+const SIDE_NOTE = {
+  calves: { one:'<b>One calf only is the early warning.</b> If it’s clearly worse than the other or pulls during a run, stop and treat it as a hard stop.', both:'Both legs is the normal pattern.' },
+  knee:   { one:'A knee ache on the same side as a tight hip is a common pattern: the hip changes how that leg lands. Don’t run through knee pain the way you would muscle tightness.', both:'' },
+  hip:    { one:'One-sided hip tightness is usually from sitting. Stretch through the day and move for 10 minutes before you head out.', both:'' },
+};
 function redFlagActive(){
   const reds = doc.checkins.filter(c => c.value === 'red').map(c => c.at).sort();
   return reds.length > 0 && (!doc.redClearedAt || reds.at(-1) > doc.redClearedAt);
@@ -1317,6 +1358,92 @@ function pendingCheckin(){
   if (h >= 36 && h < 72 && !has('48')) return { run:r, stage:'48', hours:h };
   if (h >= 10 && h < 36 && !has('24')) return { run:r, stage:'24', hours:h };
   return null;
+}
+
+/* ── Standards: where you sit for your age, sex and size ─────────────
+   Published reference ranges, not diagnosis. Each row names its source so
+   nobody mistakes a population table for a verdict. */
+const ageNow = () => doc.profile.birthYear ? new Date().getFullYear() - doc.profile.birthYear : null;
+const fmtHeight = h => `${Math.floor(h / 12)}′${h % 12}″`;
+// Garmin's VO2 max categories (Cooper Institute norms): age ceiling, then the
+// lower bounds of Fair, Good, Excellent and Superior.
+const VO2_NORMS = {
+  m:[[29, 41.7, 45.4, 51.1, 55.5], [39, 40.5, 44.0, 48.3, 54.1], [49, 38.5, 42.4, 46.4, 52.5], [59, 35.6, 39.2, 43.4, 48.9], [69, 32.3, 35.5, 39.5, 45.7], [999, 29.4, 32.3, 36.7, 42.1]],
+  f:[[29, 36.1, 39.5, 43.9, 49.6], [39, 34.4, 37.8, 42.4, 47.4], [49, 33.0, 36.3, 39.7, 45.3], [59, 30.1, 33.0, 36.7, 41.1], [69, 27.5, 30.0, 33.0, 37.8], [999, 25.9, 28.1, 30.9, 36.7]],
+};
+const VO2_CATS = ['Poor', 'Fair', 'Good', 'Excellent', 'Superior'];
+// American Council on Exercise body-fat ranges: top of athletic, fit and average.
+const FAT_TOPS = { m:[13, 17, 24], f:[20, 24, 31] };
+const FAT_CATS = ['Athletic', 'Fit', 'Average', 'Above average'];
+// Age grading against open road standards (the world records), scaled by a
+// smoothed version of the WMA age factors. Good to a point or two: fine for
+// targets, not for rankings.
+const AG_STD = { m:{ mi:223, k5:769 }, f:{ mi:248, k5:834 } };
+const ageFactor = a => a <= 30 ? 1 : a <= 60 ? 1 - 0.0068 * (a - 30) : 0.796 - 0.0095 * (a - 60);
+const ageGrade = (sec, k, age, sex) => AG_STD[sex][k] / ageFactor(age) / sec * 100;
+const agTime = (pct, k, age, sex) => AG_STD[sex][k] / ageFactor(age) / (pct / 100);
+const AG_LEVELS = [[90, 'World class'], [80, 'National class'], [70, 'Regional class'], [60, 'Local class'], [0, 'Recreational']];
+const agLevel = pct => AG_LEVELS.find(([lo]) => pct >= lo)[1];
+
+// Newest of a manual measurement or Garmin's daily reading.
+function latestMeasure(k){
+  const manual = (doc.profile.comps ?? []).filter(c => c[k] != null).map(c => ({ date:c.date, v:c[k] }));
+  return [...manual, ...bodySeries(k)].sort((a, b) => a.date < b.date ? -1 : 1).at(-1) ?? null;
+}
+// Weight on or near a date, for reading a body-fat % against the weight it was measured at.
+function weightNear(date){
+  const near = weightSeries().filter(p => Math.abs(diffDays(p.date, date)) <= 14)
+    .sort((a, b) => Math.abs(diffDays(a.date, date)) - Math.abs(diffDays(b.date, date)))[0];
+  return near?.v ?? null;
+}
+// Runs plus logged sport minutes over the last 4 weeks, per week.
+function activeMinPerWeek(){
+  const today = todayYmd(), inWin = d => d <= today && diffDays(d, today) < 28;
+  const run = doc.runs.filter(r => inWin(r.date)).reduce((a, r) => a + (r.timerSec ?? 0) / 60, 0);
+  const sport = doc.refDays.filter(inWin).reduce((a, d) => a + (doc.refInfo[d]?.min ?? 0), 0);
+  return (run + sport) / 4;
+}
+
+function standardRows(){
+  const p = doc.profile, age = ageNow(), sex = p.sex, h = p.heightIn, w = currentWeight();
+  const rows = [];   // [status, label, value, note]
+  if (h && w){
+    const bmi = w * 703 / h ** 2, lb = x => Math.round(x * h ** 2 / 703);
+    rows.push([bmi < 25 ? 'good' : 'warn', 'BMI', bmi.toFixed(1),
+      `18.5–24.9 is the standard healthy range: ${lb(18.5)}–${lb(24.9)} lbs at ${fmtHeight(h)}. It can’t tell muscle from fat, so for a solidly built runner body fat is the better guide.`]);
+  }
+  const fat = latestMeasure('bodyFat');
+  if (fat && sex){
+    const tops = FAT_TOPS[sex], i = tops.filter(t => fat.v > t).length;
+    let note = `${FAT_CATS[i]} for ${sex === 'm' ? 'men' : 'women'} (ACE ranges): fit is ${tops[0] + 1}–${tops[1]}%, average ${tops[1] + 1}–${tops[2]}%. Measured ${fmtDate(fat.date)}.`;
+    const atW = weightNear(fat.date) ?? w;
+    if (atW && i >= 2){
+      const ffm = atW * (1 - fat.v / 100), at = pct => Math.round(ffm / (1 - pct / 100));
+      note += ` Keeping your current muscle, the top of average is ~${at(tops[2])} lbs and the top of fit is ~${at(tops[1])} lbs.`;
+    }
+    rows.push([i <= 2 ? 'good' : 'warn', 'Body fat', `${fat.v}%`, note]);
+  }
+  const vo2 = latestMeasure('vo2') ?? (p.vo2 ? { v:p.vo2 } : null);
+  if (vo2 && age && sex){
+    const bounds = VO2_NORMS[sex].find(r => age <= r[0]).slice(1), i = bounds.filter(b => vo2.v >= b).length;
+    rows.push([i >= 2 ? 'good' : 'warn', 'VO2 max', vo2.v,
+      `${VO2_CATS[i]} for ${sex === 'm' ? 'men' : 'women'} your age (Garmin / Cooper Institute).${i < 4 ? ` ${VO2_CATS[i + 1]} starts at ${bounds[i]}.` : ''} Garmin’s estimate is noisy for the first couple of months and climbs with steady easy running, so read the category, not the decimal.`]);
+  }
+  const mins = activeMinPerWeek();
+  rows.push([mins >= 150 ? 'good' : 'warn', 'Active minutes a week', Math.round(mins),
+    'WHO: 150–300 minutes of moderate activity a week, or 75–150 vigorous. Runs plus logged sport minutes, averaged over 4 weeks.']);
+  const rhr = windowAvg(bodySeries('rhr'), 14);
+  if (rhr != null) rows.push([rhr < 60 ? 'good' : 'wait', 'Resting HR', Math.round(rhr),
+    'Adults usually sit at 60–100 bpm; regular runners often drop into the 50s. Two-week average.']);
+  if (age){
+    const pred = Math.round(208 - 0.7 * age), seen = Math.max(0, ...doc.runs.map(r => r.maxHr ?? 0));
+    rows.push(['wait', 'Max HR for your age', `~${pred}`,
+      `The Tanaka formula (208 − 0.7 × age).${seen ? ` The highest you’ve hit is ${seen}.` : ''} Formulas miss by 10+ beats for plenty of people, which is why every zone here hangs off your threshold instead.`]);
+  }
+  const cad = sortedRuns().reverse().find(r => r.cadence)?.cadence;
+  if (cad) rows.push(['wait', 'Jogging cadence', `${cad} spm`,
+    `Taller runners naturally sit lower, so compare with yourself, not the 180 rule. Raising it 5–10% (${Math.round(cad * 1.05)}–${Math.round(cad * 1.1)} spm) at the same pace shortens the stride and takes load off the knee and hip.`]);
+  return rows;
 }
 
 /* ── Marathon: generated backward from race day ─────────────────────
@@ -1621,12 +1748,13 @@ function chartHrTrend(host, runs){
     const cx = x(diffDays(origin, r.date)), cy = y(v), ok = isClean(r);
     if (ok) el('circle', { cx, cy, r:6, fill:css('--series-1'), stroke:css('--surface'), 'stroke-width':2 }, svg);
     else el('circle', { cx, cy, r:5, fill:css('--surface'), stroke:css('--muted'), 'stroke-width':2 }, svg);
+    if (r.tempF >= HOT_F) el('circle', { cx, cy, r:10, fill:'none', stroke:css('--warn'), 'stroke-width':2 }, svg);
     if (ok && (r === clean.at(-1) || r === clean[0])) el('text', { x:cx + 10, y:cy - 8, class:'lbl num' }, svg).textContent = Math.round(v);
     const pace = fmtDur(r.jogPaceSec ?? r.avgPaceSec);
     const kind = r.jogHr != null ? 'jogging HR' : 'avg HR (whole run)';
     const hit = el('circle', { cx, cy, r:14, fill:'transparent', style:'cursor:pointer' }, svg);
     hit.addEventListener('click', () => { location.hash = 'runs/' + r.id; });
-    tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${Math.round(v)} bpm ${kind} · ${pace} /mi<br>${ok ? '✓ Clean test-route run' : '✕ Excluded: ' + exclusionReasons(r).join(' · ')}`);
+    tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${Math.round(v)} bpm ${kind} · ${pace} /mi${r.tempF != null ? ` · ${r.tempF}°F` : ''}<br>${ok ? '✓ Clean test-route run' : '✕ Excluded: ' + exclusionReasons(r).join(' · ')}`);
   });
 }
 
@@ -1819,8 +1947,11 @@ function checkinCards(){
     </div>`;
   }
   if (lastResponse){
+    const c = lastResponse.c, sided = ['calves', 'hip', 'knee'].includes(c.value);
     html += `<div class="card"><div class="card-head"><h2>Logged</h2><button class="link-btn" data-action="undo-checkin">Undo</button></div>
-      <div class="response show${lastResponse.alarm ? ' alarm' : ''}" style="margin-top:0">${lastResponse.html}</div></div>`;
+      <div class="response show${lastResponse.alarm || (c.value === 'calves' && c.side && c.side !== 'both') ? ' alarm' : ''}" style="margin-top:0">${lastResponse.html}${c.side ? ' ' + (SIDE_NOTE[c.value]?.[c.side === 'both' ? 'both' : 'one'] ?? '') : ''}</div>
+      ${sided ? `<div class="eyebrow" style="margin:14px 0 8px">Which side?</div>
+        <div class="pill-row">${[['left', 'Left'], ['right', 'Right'], ['both', 'Both']].map(([k, l]) => `<button class="pill" data-side="${k}" aria-pressed="${c.side === k}">${l}</button>`).join('')}</div>` : ''}</div>`;
   }
   return html ? `<div class="grid" style="margin-bottom:16px">${html}</div>` : '';
 }
@@ -2029,6 +2160,16 @@ function renderProgress(){
   const recent = runs.slice(-12);
   const latest = k => [...runs].reverse().find(r => r[k] != null)?.[k];
 
+  const since = diffDays(lastRun.date, todayYmd());
+  const sinceTxt = since <= 0 ? 'ran today' : since === 1 ? 'last run yesterday' : `${since} days since the last run`;
+  const effRuns = runs.filter(r => r.effort != null).slice(-12);
+  const thisWk = weekStart(todayYmd());
+  const wk0 = [weekStart(runs[0].date), addDays(thisWk, -77)].sort().at(-1);
+  const weeks = [];
+  for (let d = wk0; d <= thisWk; d = addDays(d, 7)){
+    const rr = runs.filter(r => r.date >= d && r.date < addDays(d, 7));
+    weeks.push({ date:d, n:rr.length, mi:rr.reduce((a, r) => a + (r.distMi ?? 0), 0) });
+  }
   const totMi = runs.reduce((a, r) => a + (r.distMi ?? 0), 0), totJog = runs.reduce((a, r) => a + (r.runSec ?? 0), 0);
   page.innerHTML = band({
     eyebrow: `Since ${fmtDate(runs[0].date).slice(4)}${firstClean ? ` · baseline ${fmtDate(firstClean.date).slice(4)}` : ''}`,
@@ -2048,9 +2189,18 @@ function renderProgress(){
         <span><i class="dotf" style="background:var(--series-1)"></i>Clean test-route run</span>
         <span><i class="ring"></i>Excluded — hover for why</span>
         <span><i style="background:var(--series-1-wash);border:1px solid var(--series-1)"></i>Easy zone (&lt; ${p.zones.easy})</span>
+        ${runs.some(r => r.tempF >= HOT_F) ? `<span><i class="ring" style="border-color:var(--warn)"></i>${HOT_F}°F or hotter — heat adds beats</span>` : ''}
       </div>
       <div class="chart" id="c-hr"></div>
     </div>
+    <div class="grid two" style="margin-top:16px">
+      <div class="card"><div class="card-head"><h2>Consistency</h2><span class="card-sub">runs per week · ${sinceTxt}</span></div>
+        <div class="chart" id="c-weeks"></div>
+        <p class="card-sub" style="margin:8px 0 0">Gaps set you back more than slow runs do.</p></div>
+      <div class="card"><div class="card-head"><h2>Perceived effort</h2><span class="card-sub">1–10 · down on the same route is progress</span></div>
+        ${effRuns.length ? '<div class="chart" id="c-eff"></div>' : '<div class="pending-box">Answer the watch’s effort and feel prompts when you save a run,<br>or set them on the run’s page.</div>'}</div>
+    </div>
+    ${bestsCard(runs)}
     <div class="eyebrow" style="margin:28px 0 12px">Secondary</div>
     <div class="grid two">
       <div class="card"><div class="card-head"><h2>Jogging vs walking</h2><span class="card-sub">minutes per run</span></div>
@@ -2083,6 +2233,17 @@ function renderProgress(){
 
   const openRun = c => { location.hash = 'runs/' + c.id; };
   chartHrTrend($('#c-hr'), runs);
+  const wMax = Math.max(4, ...weeks.map(w => w.n));
+  chartColumns($('#c-weeks'), {
+    cats: weeks, series: [{ key:'n', color:css('--series-1') }], max: wMax, ticks: niceTicks(0, wMax, 1),
+    labelFmt: c => c.n || '',
+    tipFmt: c => `<b>Week of ${fmtDate(c.date)}</b><br>${c.n} run${c.n === 1 ? '' : 's'} · ${c.mi.toFixed(1)} mi${c.date === thisWk ? ' · so far' : ''}`,
+  });
+  if (effRuns.length) chartColumns($('#c-eff'), {
+    cats: effRuns, series: [{ key:'effort', color:css('--series-1') }], max: 10, ticks: [0, 2, 4, 6, 8, 10],
+    labelFmt: c => c.effort, onClick: openRun,
+    tipFmt: c => `<b>${fmtDate(c.date)}</b><br>Effort ${c.effort}/10${c.feel != null ? ` · felt ${feelLabel(c.feel).toLowerCase()}` : ''}${c.tempF != null ? ` · ${c.tempF}°F` : ''}${isTest(c) ? ' · test route' : ''}`,
+  });
   chartColumns($('#c-jog'), {
     cats: recent.map(r => ({ ...r, jogM:(r.runSec ?? 0) / 60, walkM:(r.walkSec ?? 0) / 60 })),
     series: [{ key:'jogM', color:css('--series-1') }, { key:'walkM', color:css('--walk') }],
@@ -2117,6 +2278,34 @@ function renderProgress(){
     tipFmt: pt => `<b>${fmtDate(pt.r.date)}</b><br>HR ${pt.v >= 0 ? 'rose' : 'fell'} ${Math.abs(pt.v)} bpm from the first half of the jogging to the second` });
 }
 
+// Longest and fastest so far, and what the age-grade levels mean at your age.
+function bestsCard(runs){
+  const p = doc.profile, age = ageNow(), sex = p.sex, graded = !!(age && sex);
+  const longest = runs.reduce((a, r) => !a || (r.distMi ?? 0) > a.distMi ? r : a, null);
+  const fastest = k => runs.filter(r => r.best?.[k]).reduce((a, r) => !a || r.best[k] < a.best[k] ? r : a, null);
+  const pb = (label, k, need) => {
+    const r = fastest(k);
+    if (!r) return `<tr><td>${label}</td><td>—</td><td>${need}</td></tr>`;
+    const pct = graded ? ageGrade(r.best[k], k, age, sex) : null;
+    return `<tr><td>${label}</td><td><a href="#runs/${r.id}">${fmtDur(r.best[k])}</a></td><td>${fmtDate(r.date)}${pct ? ` · ${Math.round(pct)}% age grade` : ''}</td></tr>`;
+  };
+  const ladder = [[50, 'Solid recreational'], [60, 'Local class'], [70, 'Regional class']];
+  return `<div class="card" style="margin-top:16px"><div class="card-head"><h2>Personal bests</h2><span class="card-sub">fastest stretch inside any run, not just races</span></div>
+    <div class="grid two" style="gap:8px 32px">
+      <table class="quiet">
+        <tr><td>Longest run</td><td><a href="#runs/${longest.id}">${fmtMi(longest.distMi)} mi</a></td><td>${fmtDate(longest.date)}</td></tr>
+        ${pb('Fastest mile', 'mi', 'Needs a FIT file')}
+        ${pb('Fastest 5K', 'k5', 'Run 3.1 mi to set one')}
+      </table>
+      ${graded ? `<table class="quiet">
+        <tr><td><b>Age grade at ${age}</b></td><td>Mile</td><td style="text-align:right;font-weight:650;color:var(--ink)">5K</td></tr>
+        ${ladder.map(([pct, l]) => `<tr><td>${pct}% · ${l}</td><td>${fmtDur(agTime(pct, 'mi', age, sex))}</td><td style="text-align:right;font-weight:650;color:var(--ink)" class="num">${fmtDur(agTime(pct, 'k5', age, sex))}</td></tr>`).join('')}
+      </table>` : `<div class="pending-box">Add your sex and birth year in <a href="#setup">Setup</a><br>to see your age grade and what to aim for.</div>`}
+    </div>
+    <p class="card-sub" style="margin:12px 0 0">Age grade compares a time with the best possible for your age and sex (approximate). These are for later in a build: speed arrives on its own as the easy base grows, and chasing it early is how calves get hurt.</p>
+  </div>`;
+}
+
 /* ═══ RUNS ═══════════════════════════════════════════════════════════ */
 function renderRunsList(){
   const runs = sortedRuns().reverse();
@@ -2137,12 +2326,12 @@ function renderRunsList(){
     stats: [['Last 30 days', last30.length, 'runs'], ['Miles · 30 days', last30.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)], ['All-time miles', runs.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)]],
   }) + `<div class="wrap">
     <div class="card"><div class="table-wrap"><table class="runs">
-      <thead><tr><th>Date</th><th>Route</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
+      <thead><tr><th>Date</th><th>Route</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>Effort</th><th>Temp</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
       <tbody>${rows.map(r => {
         if (r.sport) return `<tr class="sport-row">
           <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">sport day</div></td>
           <td style="text-align:right"><span class="badge sport">Sport</span></td>
-          <td colspan="9" class="r-sub">${refLabel(r.date) || 'Games or a big day on your feet'}. Not counted as a run.</td>
+          <td colspan="11" class="r-sub">${refLabel(r.date) || 'Games or a big day on your feet'}. Not counted as a run.</td>
         </tr>`;
         const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
         return `<tr data-run="${r.id}" tabindex="0">
@@ -2154,6 +2343,8 @@ function renderRunsList(){
           <td>${num(r.avgHr)}</td>
           <td>${r.jogHr != null ? Math.round(r.jogHr) : '—'}</td>
           <td>${num(r.maxHr)}</td>
+          <td${r.feel != null ? ` data-tip="Felt ${feelLabel(r.feel).toLowerCase()}"` : ''}>${num(r.effort)}</td>
+          <td${r.tempF >= HOT_F ? ' style="color:var(--warn-text);font-weight:700"' : ''}>${r.tempF != null ? r.tempF + '°' : '—'}</td>
           <td>${num(r.anaerobicTE, 1)}</td>
           <td>${num(r.load)}</td>
           <td><span class="flags" data-tip="${esc(fl.map(f => f[1]).join(' · ') || 'Clean')}">${fl.length ? fl.map(f => `<i class="flag-dot" style="background:${dotColor[f[0]]}"></i>`).join('') : `<span style="color:var(--good-text);font-weight:700">✓</span>`}</span></td>
@@ -2195,6 +2386,7 @@ async function renderRunDetail(id){
       ${stat('Jog HR', r.jogHr != null ? Math.round(r.jogHr) : '—', 'bpm', 'the fitness signal')}
       ${stat('Max HR', num(r.maxHr), 'bpm')}
       <div class="stat"><div class="s-l">Recovery HR</div><input type="number" inputmode="numeric" min="0" max="120" id="rec-in" value="${r.recoveryHr ?? ''}" placeholder="—" aria-label="Recovery HR, bpm dropped in 2 minutes"><div class="s-n">${r.recoveryHr == null ? 'Type it in from Garmin Connect' : 'bpm dropped in 2 min'}</div></div>
+      <div class="stat"><div class="s-l">Temperature</div><input type="number" inputmode="numeric" min="-20" max="125" id="temp-in" value="${r.tempF ?? ''}" placeholder="—" aria-label="Temperature, °F"><div class="s-n">${r.tempF == null ? 'Type it in, °F' : r.tempSrc === 'manual' ? '°F · typed in' : '°F · local weather'}</div></div>
       ${stat(`Above ${p.lthr}`, fmtDur(r.aboveLtSec))}
       ${stat('Anaerobic TE', num(r.anaerobicTE, 1), '', r.anaerobicTE > 1 ? 'too hard' : r.anaerobicTE != null ? 'easy' : '')}
       ${stat('Aerobic TE', num(r.aerobicTE, 1))}
@@ -2217,8 +2409,12 @@ async function renderRunDetail(id){
             </div>` : ''}
         </div>
         <div class="card"><div class="card-head"><h2>How it felt</h2><span class="card-sub">saved as you type</span></div>
+          <div class="eyebrow" style="margin-bottom:8px">Effort · 1 easy, 10 all-out</div>
+          <div class="pill-row">${Array.from({ length:10 }, (_, i) => `<button class="pill num" data-effort="${i + 1}" aria-pressed="${r.effort === i + 1}">${i + 1}</button>`).join('')}</div>
+          <div class="eyebrow" style="margin:14px 0 8px">Feel</div>
+          <div class="pill-row" style="margin-bottom:14px">${Object.entries(FEEL).map(([v, l]) => `<button class="pill" data-feel="${v}" aria-pressed="${r.feel != null && feelLabel(r.feel) === l}">${l}</button>`).join('')}</div>
           <textarea class="felt" id="felt" placeholder="Legs, breathing, anything odd…">${esc(r.felt)}</textarea>
-          ${checks.length ? `<div class="pill-row" style="margin-top:12px">${checks.map(c => `<span class="badge${c.value === 'none' ? '' : c.value === 'red' ? ' crit' : ' warn'}">${c.stage} hr · ${esc(SORE[c.value])}</span>`).join('')}</div>` : ''}
+          ${checks.length ? `<div class="pill-row" style="margin-top:12px">${checks.map(c => `<span class="badge${c.value === 'none' ? '' : c.value === 'red' ? ' crit' : ' warn'}">${c.stage} hr · ${esc(SORE[c.value])}${c.side ? ` · ${c.side}` : ''}</span>`).join('')}</div>` : ''}
         </div>
       </div>
       <div class="col">
@@ -2251,6 +2447,12 @@ async function renderRunDetail(id){
     const v = e.target.value.trim();
     r.recoveryHr = v === '' ? null : Math.max(0, Math.min(120, Math.round(+v)));
     await save(); toast('Recovery HR saved'); renderRunDetail(r.id);
+  });
+  $('#temp-in').addEventListener('change', async e => {
+    const v = e.target.value.trim();
+    r.tempF = v === '' ? null : Math.max(-20, Math.min(125, Math.round(+v)));
+    r.tempSrc = 'manual';
+    await save(); toast('Temperature saved'); renderRunDetail(r.id);
   });
   let ft;
   $('#felt').addEventListener('input', e => { clearTimeout(ft); ft = setTimeout(() => { r.felt = e.target.value; save(); }, 500); });
@@ -2338,6 +2540,17 @@ function bodyTodayCard(){
   </a>`;
 }
 
+function standardsCard(){
+  const p = doc.profile, missing = [!p.sex && 'sex', !p.birthYear && 'birth year', !p.heightIn && 'height'].filter(Boolean);
+  return `<div class="card"><div class="card-head"><h2>How you compare</h2>
+      <span class="card-sub">${missing.length ? '' : `${p.sex === 'm' ? 'Man' : 'Woman'}, ${ageNow()}, ${fmtHeight(p.heightIn)} · `}<a href="#setup">edit</a></span></div>
+    ${missing.length ? `<div class="note" style="margin-bottom:8px">${WARN_SVG}<div><b>Add your ${missing.join(', ')} in <a href="#setup">Setup</a></b> to see the standards for your age and size.</div></div>` : ''}
+    <ul class="status-list std-list">${standardRows().map(([st, l, v, n]) => `<li class="status-row">${statusIcon(st)}<span style="flex:1">
+      <div class="s-main std-v"><span>${l}</span><b>${v}</b></div><div class="s-sub">${n}</div></span></li>`).join('')}</ul>
+    <p class="card-sub" style="margin:12px 0 0">Population ranges for reference, not a diagnosis. Your own trend over months matters more than where you start.</p>
+  </div>`;
+}
+
 const BODY_RANGES = [[30, '30 days'], [90, '90 days'], [365, '1 year']];
 function renderBody(){
   const days = prefs.get('bodyRange', 90);
@@ -2387,6 +2600,8 @@ function renderBody(){
         ${fatG ? `<p class="card-sub" style="margin:12px 0 0">Garmin last reported ${fatG.v}% body fat on ${fmtDate(fatG.date)}.</p>` : ''}
       </div>
     </div>
+    <div class="section-label">Standards</div>
+    ${standardsCard()}
   </div>`;
 
   if (ws.length) chartDaily($('#c-weight'), ws, { days, unit:'lbs', step: days > 90 ? 5 : 2, dec:1, smooth:true });
@@ -2576,6 +2791,16 @@ function renderSetup(){
           <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="save-zones">Save zones</button></div>
           <p class="card-sub" style="margin:12px 0 0">Not sure? Garmin estimates your lactate threshold after a few runs (Performance Stats → Lactate Threshold). Easy and moderate are roughly 85% and 93% of it.</p>
         </div>
+        <div class="card"><div class="card-head"><h2>About you</h2><span class="card-sub">for the standards on Body and Progress</span></div>
+          <div class="field-row">
+            <div class="field"><label for="s-sex">Sex</label><select id="s-sex"><option value="">—</option><option value="m"${p.sex === 'm' ? ' selected' : ''}>Male</option><option value="f"${p.sex === 'f' ? ' selected' : ''}>Female</option></select></div>
+            <div class="field"><label for="s-born">Birth year</label><input id="s-born" type="number" inputmode="numeric" placeholder="e.g. 2000" value="${p.birthYear ?? ''}"></div>
+            <div class="field"><label for="s-ft">Height (ft)</label><input id="s-ft" type="number" inputmode="numeric" value="${p.heightIn ? Math.floor(p.heightIn / 12) : ''}"></div>
+            <div class="field"><label for="s-in">Height (in)</label><input id="s-in" type="number" inputmode="numeric" value="${p.heightIn ? p.heightIn % 12 : ''}"></div>
+          </div>
+          <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="save-about">Save</button></div>
+          <p class="card-sub" style="margin:12px 0 0">Population norms (VO2 max, body fat, age grading) differ by age and sex. Weight comes from your weigh-ins.</p>
+        </div>
       </div>
       <div class="col">
         <label class="drop" id="drop">
@@ -2671,6 +2896,7 @@ async function handleFiles(files){
   }
   await save();
   if (location.hash === '#setup') $('#log').innerHTML = importLog.map(logItem).join('');
+  enrichRuns();
 }
 
 function matchRoute(r){
@@ -2819,7 +3045,7 @@ async function checkIntervals({ manual = false } = {}){
     setIcuLocal({ ...loc, seen:[...seen].slice(-500), lastChecked:new Date().toISOString() });
     icuUi.status = 'idle';
     icuUi.msg = added ? `${added} new run${added > 1 ? 's' : ''} just now` : problems ? `${problems} couldn’t be imported — see the log` : '';
-    if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); }
+    if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); enrichRuns(); }
     else if (bodyChanged){ await save(); if (['', '#today', '#body'].includes(location.hash)) render(); }
     else if (manual) toast(problems ? 'Some runs couldn’t be imported' : 'No new runs');
   } catch (err){
@@ -2861,6 +3087,47 @@ async function rescoreAll(){
     const s = await getSamples(r.id); if (!s) continue;
     Object.assign(r, zoneStats(s, doc.profile));
   }
+}
+
+/* ── Fill-ins for fields added after a run was imported ───────────────
+   Best efforts come from the stored samples; temperature from Open-Meteo's
+   hourly history (free, no key) at the start point rounded to ~1 km, so the
+   exact route never leaves the browser. Runs after sync, so a second device
+   picks up the first one's results instead of redoing them. */
+async function fetchTemp(r){
+  const [lat, lon] = r.startLL.map(v => v.toFixed(2));
+  const mid = new Date(Date.parse(r.start) + (r.timerSec ?? 0) * 500);
+  const d0 = mid.toISOString().slice(0, 10);
+  // The archive lags a few days; the forecast API covers the recent past.
+  const api = diffDays(d0, todayYmd()) > 60 ? 'https://archive-api.open-meteo.com/v1/archive' : 'https://api.open-meteo.com/v1/forecast';
+  const res = await fetch(`${api}?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&temperature_unit=fahrenheit&timezone=GMT&start_date=${d0}&end_date=${addDays(d0, 1)}`);
+  if (!res.ok) throw new Error('weather ' + res.status);
+  const t = (await res.json()).hourly?.temperature_2m ?? [];
+  const h = mid.getUTCHours() + mid.getUTCMinutes() / 60, a = t[Math.floor(h)], b = t[Math.floor(h) + 1];
+  if (a == null) return null;
+  return Math.round(b == null ? a : a + (b - a) * (h % 1));
+}
+let enriching = false;
+async function enrichRuns(){
+  if (enriching) return;
+  enriching = true;
+  let changed = false, weatherOk = true;
+  try {
+    for (const r of doc.runs){
+      if (r.best === undefined && r.hasSamples){
+        const s = await getSamples(r.id);
+        if (s){ r.best = bestEfforts(s); changed = true; }
+      }
+      // undefined = never tried; null = the weather service had nothing for it.
+      if (weatherOk && r.tempF === undefined && r.startLL){
+        try { r.tempF = await fetchTemp(r); r.tempSrc = 'weather'; changed = true; }
+        catch { weatherOk = false; }   // offline or blocked: try again next open
+      }
+    }
+  } finally { enriching = false; }
+  if (!changed) return;
+  await save();
+  if (!document.activeElement?.matches('input, textarea, select') && !location.hash.startsWith('#setup')) render();
 }
 
 async function exportBackup(){
@@ -2914,6 +3181,13 @@ document.addEventListener('click', async e => {
     task.setAttribute('aria-pressed', !!doc.done[k]);
     save(); return;
   }
+  const sd = e.target.closest('[data-side]');
+  if (sd && lastResponse){
+    // Look it up again: a sync since the check-in may have replaced the doc.
+    const c = doc.checkins.find(x => x.at === lastResponse.c.at && x.runId === lastResponse.c.runId);
+    lastResponse.c.side = sd.dataset.side; if (c) c.side = sd.dataset.side;
+    await save(); render(); return;
+  }
   const ck = e.target.closest('[data-checkin]');
   if (ck){
     const c = { runId:ck.dataset.run, stage:ck.dataset.stage, value:ck.dataset.checkin, at:new Date().toISOString() };
@@ -2926,6 +3200,13 @@ document.addEventListener('click', async e => {
     const d = rd.dataset.refday;
     if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
+  }
+  const ef = e.target.closest('[data-effort], [data-feel]');
+  if (ef){
+    const r = runById($('#page-runs').dataset.run); if (!r) return;
+    const [k, v] = ef.dataset.effort ? ['effort', +ef.dataset.effort] : ['feel', +ef.dataset.feel];
+    r[k] = ef.getAttribute('aria-pressed') === 'true' ? null : v;
+    await save(); renderRunDetail(r.id); return;
   }
   const row = e.target.closest('tr[data-run]');
   if (row){ location.hash = 'runs/' + row.dataset.run; return; }
@@ -2965,6 +3246,15 @@ document.addEventListener('click', async e => {
       if (!(easy < mod && mod < lthr) || lthr > 230 || easy < 80){ toast('Zones must go easy < moderate < threshold'); break; }
       Object.assign(doc.profile, { lthr, guardHr:guard, zones:{ easy, mod }, zonesSet:true });
       await rescoreAll(); await save(); toast('Zones saved — every run re-scored'); render(); break;
+    }
+    case 'save-about': {
+      const sex = $('#s-sex').value || null, born = Math.round(+$('#s-born').value) || null;
+      const ft = +$('#s-ft').value || 0, inch = +$('#s-in').value || 0, h = Math.round(ft * 12 + inch) || null;
+      const yr = new Date().getFullYear();
+      if (born && !(born > yr - 100 && born < yr - 8)){ toast('That birth year looks off'); break; }
+      if (h && !(h >= 48 && h <= 90)){ toast('That height looks off'); break; }
+      Object.assign(doc.profile, { sex, birthYear:born, heightIn:h });
+      await save(); toast('Saved'); render(); break;
     }
     case 'add-weight': {
       const lbs = +$('#s-w').value, date = $('#s-wd').value;
@@ -3091,7 +3381,7 @@ if (!storageOk) toast('Storage is blocked here — changes won’t survive a rel
 lastRoute = location.hash;
 render();
 paintSync();
-syncInit(fromLink).finally(() => checkIntervals());
+syncInit(fromLink).finally(() => checkIntervals().finally(enrichRuns));
 </script>
 </body>
 </html>
