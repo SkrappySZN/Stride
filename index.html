@@ -604,6 +604,9 @@ a.btn.primary{color:var(--accent-ink)}
 .mbadge small{font-size:11.5px; opacity:.75}
 .goal-form{margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
 
+.shoe-pick{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:650}
+.shoe-pick select{font:inherit; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
+
 /* plain-language help */
 .info-btn{
   width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
@@ -1074,12 +1077,12 @@ function freshDoc(){
     profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, heightIn:null }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [],
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null,
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], ...d,
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
@@ -2196,6 +2199,7 @@ function todayNotes(today){
     const glt = sortedRuns().reverse().find(r => r.garminLthr)?.garminLthr;
     notes.push(`<b>These are placeholder heart-rate zones.</b> ${glt ? `Your watch puts your threshold at ${glt} bpm. ` : ''}<a href="#setup">Set your own in Setup</a> — every number here is anchored to them.`);
   }
+  for (const sh of activeShoes()){ const mi = shoeMiles(sh); if (mi >= sh.limit * .9) notes.push(`<b>Your ${esc(sh.name)} have ${Math.round(mi)} miles on them.</b> ${mi >= sh.limit ? 'Time for a new pair' : 'Start looking for the next pair'} — worn cushioning passes more of each landing to your calves and knees. <a href="#runs">Shoes</a>`); }
   if (!testRoute() && doc.runs.some(r => r.source === 'fit')) notes.push('<b>No test route set yet.</b> Open a run on a flat route you’ll repeat and tap “Make this the test route” — it’s what makes the heart-rate trend fair.');
   return notes.map(n => `<div class="note">${WARN_SVG}<div>${n}</div></div>`).join('');
 }
@@ -2638,6 +2642,34 @@ function milestoneCard(){
     <div class="badges">${fresh.map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div></div>`;
 }
 
+/* ── Shoes: mileage per pair ────────────────────────────────────────
+   New runs go on the default pair. Most trainers last 300–500 miles, and
+   worn-out cushioning matters more the heavier the runner. */
+const SHOE_LIMIT = 400;
+const shoeMiles = sh => (sh.startMi ?? 0) + doc.runs.filter(r => r.shoeId === sh.id).reduce((a, r) => a + (r.distMi ?? 0), 0);
+const activeShoes = () => (doc.shoes ?? []).filter(sh => !sh.retired);
+function shoesCard(){
+  const shoes = doc.shoes ?? [];
+  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Shoes</h2><span class="card-sub">most pairs last 300–500 mi</span></div>
+    ${shoes.length ? `<ul class="goal-list">${[...shoes].sort((a, b) => a.retired - b.retired).map(sh => { const mi = shoeMiles(sh), pct = mi / sh.limit;
+      return `<li${sh.retired ? ' style="opacity:.55"' : ''}><div class="goal-top"><b>${esc(sh.name)}${sh.id === doc.defaultShoe ? ' <span class="badge test">Default</span>' : ''}${sh.retired ? ' <span class="badge">Retired</span>' : ''}</b>
+          <span class="btn-row">${!sh.retired && sh.id !== doc.defaultShoe ? `<button class="link-btn" data-shoe-default="${sh.id}">make default</button>` : ''}<button class="link-btn" data-shoe-retire="${sh.id}">${sh.retired ? 'bring back' : 'retire'}</button></span></div>
+        <div class="pbar"><i style="width:${Math.min(100, Math.round(pct * 100))}%;${pct >= .9 ? 'background:var(--warn)' : ''}"></i></div>
+        <div class="card-sub">${mi.toFixed(1)} of ~${sh.limit} mi${pct >= 1 ? ' · past its life — your legs will thank you for a new pair' : pct >= .9 ? ' · nearly worn out' : ''}</div></li>`; }).join('')}</ul>`
+      : '<p class="card-sub" style="margin:0 0 4px">Add your running shoes and Stride counts the miles on each pair, then tells you when they’re worn out.</p>'}
+    <details class="shoe-add"${shoes.length ? '' : ' open'}><summary class="link-btn" style="display:inline-block;margin-top:12px">Add a pair</summary>
+      <div class="field-row" style="margin-top:12px">
+        <div class="field"><label for="sh-name">Name</label><input id="sh-name" placeholder="e.g. Brooks Ghost 16"></div>
+        <div class="field"><label for="sh-since">First run in them</label><input id="sh-since" type="date" value="${todayYmd()}"></div>
+        <div class="field"><label for="sh-start">Miles before Stride</label><input id="sh-start" type="number" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label for="sh-limit">Replace at (mi)</label><input id="sh-limit" type="number" inputmode="numeric" value="${SHOE_LIMIT}"></div>
+      </div>
+      <div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="add-shoe">Add shoes</button></div>
+      <p class="card-sub" style="margin:8px 0 0">Runs since that date that aren’t on another pair get counted, and new runs go on this pair from now on.</p>
+    </details>
+  </div>`;
+}
+
 /* ═══ RUNS ═══════════════════════════════════════════════════════════ */
 function renderRunsList(){
   const runs = sortedRuns().reverse();
@@ -2657,6 +2689,7 @@ function renderRunsList(){
     title: 'Runs',
     stats: [['Last 30 days', last30.length, 'runs'], ['Miles · 30 days', last30.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)], ['All-time miles', runs.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)]],
   }) + `<div class="wrap">
+    ${shoesCard()}
     <div class="card runs-table-card">
     <ul class="run-cards">${rows.map(r => r.sport
       ? `<li><div class="rc-sport"><div class="rc-main">${fmtDate(r.date)}</div><div class="rc-right"><span class="badge sport">Sport</span></div><div class="rc-nums">${refLabel(r.date) || 'Sport day'} · not counted as a run</div></div></li>`
@@ -2715,7 +2748,7 @@ async function renderRunDetail(id){
     eyebrow: `<button class="link-btn" data-action="back" style="color:inherit;opacity:.8">← All runs</button> &nbsp;·&nbsp; ${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''}`,
     title: `${fmtMi(r.distMi)}<em> mi</em>`,
     stats: [['Time', fmtDur(r.timerSec)], [r.jogHr != null ? 'Jog HR' : 'Avg HR', r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr), 'bpm'], ['Pace', fmtDur(r.avgPaceSec), '/mi']],
-    extra: `<div class="btn-row">${routeCtl}</div>`,
+    extra: `<div class="btn-row">${routeCtl}${(doc.shoes ?? []).length ? `<label class="shoe-pick">Shoes <select id="shoe-in"><option value="">None</option>${doc.shoes.filter(sh => !sh.retired || sh.id === r.shoeId).map(sh => `<option value="${sh.id}"${sh.id === r.shoeId ? ' selected' : ''}>${esc(sh.name)}</option>`).join('')}</select></label>` : ''}</div>`,
   }) + `<div class="wrap">
     <div class="stat-grid">
       ${stat('Timer', fmtDur(r.timerSec))}
@@ -2791,6 +2824,7 @@ async function renderRunDetail(id){
     r.recoveryHr = v === '' ? null : Math.max(0, Math.min(120, Math.round(+v)));
     await save(); toast('Recovery HR saved'); renderRunDetail(r.id);
   });
+  $('#shoe-in')?.addEventListener('change', async e => { r.shoeId = e.target.value || null; await save(); toast('Shoes updated'); });
   $('#temp-in').addEventListener('change', async e => {
     const v = e.target.value.trim();
     r.tempF = v === '' ? null : Math.max(-20, Math.min(125, Math.round(+v)));
@@ -3561,6 +3595,7 @@ async function importFit(name, buf){
     sub += ' · replaced the entry from your notes';
   }
   run.routeId = matchRoute(run);
+  run.shoeId = activeShoes().some(sh => sh.id === doc.defaultShoe) ? doc.defaultShoe : null;
   doc.runs.push(run);
   await putSamples(run.id, samples);
 
@@ -3825,6 +3860,14 @@ document.addEventListener('click', async e => {
     if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
   }
+  const sd2 = e.target.closest('[data-shoe-default]');
+  if (sd2){ doc.defaultShoe = sd2.dataset.shoeDefault; await save(); toast('New runs will go on this pair'); render(); return; }
+  const sr = e.target.closest('[data-shoe-retire]');
+  if (sr){
+    const sh = doc.shoes.find(x => x.id === sr.dataset.shoeRetire); sh.retired = !sh.retired;
+    if (sh.retired && doc.defaultShoe === sh.id) doc.defaultShoe = activeShoes()[0]?.id ?? null;
+    await save(); render(); return;
+  }
   const dg = e.target.closest('[data-del-goal]');
   if (dg){ doc.goals = doc.goals.filter(g => g.id !== dg.dataset.delGoal); await save(); render(); return; }
   const sm = e.target.closest('[data-seen-milestones]');
@@ -3888,6 +3931,16 @@ document.addEventListener('click', async e => {
       if (!(easy < mod && mod < lthr) || lthr > 230 || easy < 80){ toast('Zones must go easy < moderate < threshold'); break; }
       Object.assign(doc.profile, { lthr, guardHr:guard, zones:{ easy, mod }, zonesSet:true });
       await rescoreAll(); await save(); toast('Zones saved — every run re-scored'); render(); break;
+    }
+    case 'add-shoe': {
+      const name = $('#sh-name').value.trim(), since = $('#sh-since').value, startMi = +$('#sh-start').value || 0, limit = Math.round(+$('#sh-limit').value) || SHOE_LIMIT;
+      if (!name){ toast('Give the pair a name'); break; }
+      if (!since){ toast('Pick when you started running in them'); break; }
+      const sh = { id:'sh' + Date.now().toString(36), name, since, startMi, limit, retired:false };
+      doc.shoes = [...(doc.shoes ?? []), sh];
+      let n = 0; for (const r of doc.runs) if (r.date >= since && !r.shoeId){ r.shoeId = sh.id; n++; }
+      doc.defaultShoe = sh.id;
+      await save(); toast(`Added${n ? ` · ${n} run${n > 1 ? 's' : ''} counted` : ''}`); render(); break;
     }
     case 'add-goal': {
       const type = $('#g-type').value, raw = $('#g-val').value.trim(), by = $('#g-by').value || null;
