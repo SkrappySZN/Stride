@@ -656,6 +656,31 @@ table.runs td.r-shoe{max-width:150px; overflow:hidden; text-overflow:ellipsis; t
 table.crew tr.me td{font-weight:750}
 table.crew td:nth-child(2){white-space:nowrap}
 
+/* intake */
+.intake-bar{display:flex; gap:4px; max-width:420px}
+.intake-bar i{flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,.14)}
+.intake-bar i.done{background:color-mix(in srgb, var(--accent) 60%, transparent)}
+.intake-bar i.now{background:var(--accent); box-shadow:0 0 10px rgba(212,255,58,.6)}
+.intake-opts{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap:10px}
+.intake-opts.many{grid-template-columns:repeat(auto-fill, minmax(min(100%, 170px), 1fr))}
+.intake-opt{display:flex; flex-direction:column; gap:4px; text-align:left; padding:18px 18px; border-radius:12px; cursor:pointer;
+  background:var(--surface); border:1px solid var(--line); color:var(--ink); font:inherit; transition:border-color .15s, box-shadow .15s, transform .1s}
+.intake-opt:hover{border-color:var(--ink-2)}
+.intake-opt:active{transform:scale(.98)}
+.intake-opt b{font-size:17px; font-weight:750}
+.intake-opt span{font-size:13.5px; color:var(--muted)}
+.intake-opt[aria-pressed="true"]{border-color:var(--accent); box-shadow:var(--glow), inset 0 0 0 1px var(--accent)}
+.intake-opt[aria-pressed="true"] b{color:var(--accent-text)}
+.intake .field select{width:100%; font:inherit; font-size:16px; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
+.intake .field input{font-size:16px}
+.intake-why{list-style:none; margin:0; padding:0; display:grid; gap:10px; font-size:14.5px; color:var(--ink-2)}
+.intake-why li{padding-left:16px; position:relative}
+.intake-why li::before{content:""; position:absolute; left:0; top:.55em; width:6px; height:6px; border-radius:1px; background:var(--accent); box-shadow:var(--glow)}
+.intake-why b{color:var(--ink)}
+
+.coach .coach-line{font-size:14px; color:var(--ink-2); line-height:1.45}
+.coach .coach-line b{color:var(--ink)}
+
 /* plain-language help */
 .info-btn{
   width:20px; height:20px; border-radius:50%; border:1.5px solid var(--axis); background:none; color:var(--muted);
@@ -895,6 +920,7 @@ table.runs td, .kv b, .stat .s-v, .rc-nums, .te-cell b, .wx-h span, .num:not(.di
   <section class="page" id="page-setup"></section>
   <section class="page" id="page-welcome"></section>
   <section class="page" id="page-routine"></section>
+  <section class="page" id="page-intake"></section>
 </main>
 
 <script type="module">
@@ -972,7 +998,23 @@ const TASKS = {
   calf:   ['Calf stretch — straight leg, then bent','30 sec each, against the wall','2× / side'],
   roll:   ['Foam roll or tennis ball the calves','','~5 min'],
   bridge: ['Glute bridges','Takes load off the hip flexors and knees','2–3 × 12–15'],
+  shin:   ['Toe raises against a wall','Heels down, lift the toes · builds the front of the shin','2 × 15'],
+  back:   ['Cat-cow, then child’s pose','Slow, through a comfortable range','~1 min'],
 };
+// Today's extras for a kind of day, tailored by focus(): calves for everyone,
+// the rest only for the people who need them.
+function dayTasks(kind, ranYesterday){
+  const f = focus(), t = [];
+  if (kind === 'red') return f.hips ? ['hip'] : ['calf'];
+  if (kind === 'run'){ if (f.hips) t.push('hip'); t.push('calf'); return t; }
+  if (kind === 'done'){ t.push('calf', 'roll'); if (f.hips) t.push('hip'); if (f.shins) t.push('shin'); return t; }
+  if (ranYesterday) t.push('calf', 'roll');
+  if (f.hips) t.push('hip');
+  if (f.knees || f.hips || f.back || f.legacy) t.push('bridge');
+  if (f.shins) t.push('shin');
+  if (f.back) t.push('back');
+  return t.length ? t : ['bridge'];
+}
 
 // New browsers start empty; everyone's data lives in their own account (sync below).
 // Personal data never goes in this file — the repo is public.
@@ -1296,13 +1338,13 @@ function freshDoc(){
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
     // refDays/refInfo held sport days, a retired feature; kept so older docs stay valid.
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null,
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1,
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, ...d,
-    profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, ...(d.profile ?? freshDoc().profile) } };
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, ...d,
+    profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, zonesAuto:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
 // Sync bookkeeping writes through here so it never looks like an edit and
@@ -1729,7 +1771,12 @@ function flagsFor(r){
 }
 
 /* ── Check-ins and the red flag ──────────────────────────────────── */
-const SORE = { none:'Nothing', calves:'Calves', hip:'Hip', knee:'Knee', red:'Shin / Achilles / one calf much worse' };
+const SORE = { none:'Nothing', calves:'Calves', hip:'Hip', knee:'Knee', back:'Lower back', red:'Shin / Achilles / one calf much worse' };
+// The check-in offers what this person is prone to; calves and the hard stops are for everyone.
+function soreOptions(){
+  const f = focus();
+  return Object.entries(SORE).filter(([k]) => k === 'none' || k === 'calves' || k === 'red' || (k === 'hip' && f.hips) || (k === 'knee' && (f.knees || f.legacy)) || (k === 'back' && f.back));
+}
 // One side only is what separates a warning from ordinary soreness.
 const SIDE_NOTE = {
   calves: { one:'<b>One calf only is the early warning.</b> If it’s clearly worse than the other or pulls during a run, stop and treat it as a hard stop.', both:'Both legs is the normal pattern.' },
@@ -2004,7 +2051,8 @@ function gateFor(w){
 function planState(){
   const cur = weekStart(todayYmd());
   const weeks = [];
-  let ws = weekStart(doc.planStart), pw = 1;
+  // The intake can start someone part-way in (no point re-running weeks they can already do).
+  let ws = weekStart(doc.planStart), pw = isMarathon() ? 1 : Math.min(planLen(), Math.max(1, doc.startWeek || 1));
   while (ws <= cur){
     const we = addDays(ws, 6);
     const w = { start:ws, end:we, planWeek:pw, current: ws === cur,
@@ -2297,12 +2345,14 @@ const RESPONSES = {
     calves: 'Expected when the stride shortens. Normal is dull, achy, both legs, worst at 24–48 hrs and easing as you move. <b>You’ll get a 48-hour check</b> — still sore then means the week repeats.',
     hip:    'Usually a tight hip flexor rather than a strength gap. The half-kneeling stretch is the fix; shorter steps help too.',
     knee:   'Mild, intermittent ache is common coming back from a break and usually settles. <b>Escalate</b> if it turns sharp, swells, causes a limp, or is still there in a couple of days.',
+    back:   'Often tight hips or a stiff back from sitting. Gentle cat-cow and glute bridges help; keep the next run easy and short.',
   },
   '48': {
     none:   'Clear at 48 hours. That’s the green light for the week.',
     calves: '<b>Still sore at 48 hours — this week repeats.</b> Same jog time next week, no increase. Consider swapping one run for intervals (jog 2 min / walk 90 sec × 5).',
     hip:    '<b>Hip still tight at 48 hours — repeat the week.</b> Daily half-kneeling stretch and glute bridges; shorter steps on the next run.',
     knee:   '<b>Knee still aching at 48 hours — repeat the week.</b> If it’s sharp, swollen or causing a limp, see a doctor or physical therapist.',
+    back:   '<b>Back still sore at 48 hours — repeat the week.</b> If pain runs down a leg, or there’s numbness, see a doctor.',
   },
   red: '<b>Stop running and get it looked at.</b> One calf much worse than the other, shin-bone pain, or Achilles tightness getting out of bed are the plan’s hard stops.',
 };
@@ -2334,6 +2384,7 @@ const EXPLAIN = {
   gate: () => 'Each Sunday night the plan looks back at the week: did you get your runs in, were your legs fine at 48 hours, and did you stay under your heart-rate limits? All green moves you up a week; otherwise you repeat it. Repeating a week is normal and keeps you healthy.',
   zones: () => 'Your threshold is the heart rate where running stops feeling sustainable. Garmin estimates it after a few runs. Every zone, limit and chart in Stride is set from it, so it’s worth getting right.',
   treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the test-route trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
+  coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
   standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
 };
@@ -2371,6 +2422,12 @@ function guideSteps(){
     <li><span><b>Repeat one flat route.</b>Stride compares runs on your “test route” so the heart-rate trend is fair. Stop the timer at the finish and stand still for 2 minutes before saving, so the watch records your recovery.</span></li>
     <li><span><b>Tell it how your legs feel.</b>The day after a run, tap how your legs are. Ordinary soreness is fine. Sharp pain, shin pain or one calf much worse than the other pauses the plan until it’s checked. Keep runs easy: walk if your heart rate passes ${p.zones.mod}.</span></li>
   </ol>`;
+}
+function intakeNudge(){
+  if (doc.intake || !doc.planId || prefs.get('intakeNudgeHidden', false)) return '';
+  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Tailor Stride to you</h2><button class="link-btn" data-action="hide-intake-nudge">Not now</button></div>
+    <p class="card-sub" style="margin:0 0 12px">Six quick questions: your goal, what you can run now, and anything that niggles. Stride picks the right starting week and the stretches that matter for you.</p>
+    <a class="btn primary" href="#intake">Answer them · 1 min</a></div>`;
 }
 function guideCard(){
   if (prefs.get('guideHidden', false)) return '';
@@ -2437,7 +2494,7 @@ function checkinCards(){
     const dn = DOW_LONG[parseYmd(pc.run.date).getDay()];
     html = `<div class="card">
       <div class="card-head"><h2>How are the legs after ${dn}’s run?</h2><span class="card-sub">${pc.stage === '48' ? '48-hour check' : '~' + Math.round(pc.hours) + ' hrs after'}</span></div>
-      <div class="pill-row">${Object.entries(SORE).map(([k, l]) => `<button class="pill${k === 'red' ? ' flag' : ''}" data-checkin="${k}" data-run="${pc.run.id}" data-stage="${pc.stage}">${l}</button>`).join('')}</div>
+      <div class="pill-row">${soreOptions().map(([k, l]) => `<button class="pill${k === 'red' ? ' flag' : ''}" data-checkin="${k}" data-run="${pc.run.id}" data-stage="${pc.stage}">${l}</button>`).join('')}</div>
       <p class="card-sub" style="margin:12px 0 0">Somewhere else? <a href="#body/pain">Mark it on the body map</a>.</p>
     </div>`;
   }
@@ -2463,7 +2520,7 @@ function todayNotes(today){
   const manual = doc.runs.filter(r => r.source === 'manual').length;
   if (manual) notes.push(`<b>${manual} run${manual > 1 ? 's are' : ' is'} from your notes, not FIT files.</b> <a href="#setup">Upload ${manual > 1 ? 'them' : 'it'}</a> for jogging-only HR, zones and time above ${doc.profile.lthr}.`);
   if (!doc.runs.length) notes.push(`<b>No runs yet.</b> ${doc.intervals?.key ? 'Your next run will appear here once your watch syncs.' : `<a href="#setup">Connect intervals.icu</a> so runs arrive on their own, or upload a FIT file.`}${syncOn() && !SESSION ? ' Sign in under Setup to keep your runs on every device.' : ''}`);
-  if (doc.profile.zonesSet === false){
+  if (!doc.profile.zonesSet && !doc.profile.zonesAuto){
     const glt = sortedRuns().reverse().find(r => r.garminLthr)?.garminLthr;
     notes.push(`<b>These are placeholder heart-rate zones.</b> ${glt ? `Your watch puts your threshold at ${glt} bpm. ` : ''}<a href="#setup">Set your own in Setup</a> — every number here is anchored to them.`);
   }
@@ -2499,8 +2556,8 @@ function renderToday(){
       eyebrow: `${dateLine} · just tracking`, title, sub,
       stats: [['Runs this week', weekRuns.length], ['Miles', weekMi.toFixed(1)], ['Jogging', Math.round(weekRuns.reduce((a, r) => a + (r.runSec ?? 0), 0) / 60), 'min']],
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
-    }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${guideCard()}
-      ${doc.runs.length ? journeyCard('j-today') : ''}
+    }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
+      ${doc.runs.length ? journeyCard('j-today') : ''}${coachCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid two" style="margin-top:16px">${routineCard()}${weatherCard()}</div>
       <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
@@ -2516,24 +2573,24 @@ function renderToday(){
     eyebrow = `${dateLine} · plan paused`;
     title = 'Get it <em>checked</em>';
     copy = 'A hard-stop symptom is logged. No running until a doctor or physical therapist checks it. Walking is fine if it doesn’t hurt.';
-    tasks = tasksFor(today, ['hip']) + `<li><button class="btn small" data-action="clear-red">I’ve been cleared to run</button></li>`;
+    tasks = tasksFor(today, dayTasks('red')) + `<li><button class="btn small" data-action="clear-red">I’ve been cleared to run</button></li>`;
   } else if (t.kind === 'done'){
     const r = todayRuns.at(-1);
     title = 'Run <em>done</em>';
     copy = `${fmtMi(r.distMi)} mi · ${fmtDur(r.runSec)} jogging · ${r.jogHr != null ? `jogging HR ${Math.round(r.jogHr)}` : `avg HR ${r.avgHr}`}${r.recoveryHr != null ? ` · recovery ${r.recoveryHr}` : ''}. Stretch tonight. Soreness check tomorrow.`;
-    tasks = tasksFor(today, ['calf', 'roll', 'hip']);
+    tasks = tasksFor(today, dayTasks('done'));
   } else if (t.kind === 'run'){
     const s = sessionFor(pw, t.slot, today);
     eyebrow = `${dateLine} · week ${Math.min(pw, len)}, run ${t.slot}`;
     title = esc(s.title).replace(/^(\S+)/, '$1 <em>') + '</em>';
     copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''}`;
-    tasks = tasksFor(today, ['hip', 'calf']);
+    tasks = tasksFor(today, dayTasks('run'));
   } else {
     title = 'Rest <em>day</em>';
     copy = (ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
       : t.note === 'Week’s runs are in' ? 'This week’s runs are in. Walk, stretch, recover.'
       : 'Mobility only today.');
-    tasks = tasksFor(today, ranYesterday ? ['hip', 'calf', 'roll', 'bridge'] : ['hip', 'bridge']);
+    tasks = tasksFor(today, dayTasks('rest', ranYesterday));
   }
 
   // Next run
@@ -2594,8 +2651,8 @@ function renderToday(){
     stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), `/${pwo.runs?.length ?? 3}`],
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>${cta}`,
-  }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${guideCard()}
-    ${journeyCard('j-today')}
+  }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
+    ${journeyCard('j-today')}${coachCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
     <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
@@ -2849,6 +2906,67 @@ function maybeMoment(){
   }
 }
 
+/* ═══ COACH NOTES: what a coach would notice, from the data ═════════════
+   Each rule looks for one pattern and says what it means in plain words.
+   The card shows the most important few. */
+function coachNotes(){
+  const runs = sortedRuns(), today = todayYmd(), p = doc.profile, out = [];
+  const add = (pri, tone, html) => out.push({ pri, tone, html });
+  if (runs.length < 3){ add(1, 'wait', 'A few more runs and these notes get specific to you: heart-rate trends, heat, consistency and form.'); return out; }
+  const last = runs.at(-1), since = diffDays(last.date, today);
+  // Consistency beats everything early on.
+  if (since >= 5) add(9, 'warn', `<b>${since} days since your last run.</b> A short, easy one beats waiting for the perfect day.`);
+  const recent = runs.filter(r => diffDays(r.date, today) <= 30);
+  const gaps = recent.slice(1).filter((r, i) => diffDays(recent[i].date, r.date) >= 5).length;
+  if (gaps >= 2) add(7, 'warn', `<b>${gaps} breaks of 5+ days this month.</b> Consistency is the lever right now, more than distance or pace.`);
+  const ws = weekStart(today), wkRuns = k => runs.filter(r => r.date >= addDays(ws, -7 * k) && r.date < addDays(ws, -7 * (k - 1))).length;
+  if (wkRuns(1) >= 3 && wkRuns(2) >= 3 && wkRuns(3) >= 3) add(4, 'good', '<b>Three straight weeks of three runs.</b> That’s the habit doing its work.');
+  // Heat explains a lot of heart rate.
+  const warm = runs.slice(-3).filter(r => r.tempF >= HOT_F);
+  if (warm.length >= 2) add(6, 'wait', `<b>${warm.length} of your last 3 runs were ${HOT_F}°F or hotter.</b> Heat adds several beats, so that’s the weather, not your fitness. Cooler days will show the real trend.`);
+  // The trend that matters: same route, fewer beats.
+  const clean = runs.filter(isClean);
+  if (clean.length >= 4){
+    const a = avgOf(clean.slice(0, 2).map(hrMetric)), b = avgOf(clean.slice(-2).map(hrMetric)), d = Math.round(b - a);
+    if (d <= -3) add(8, 'good', `<b>Jogging heart rate is down ${-d} bpm on your test route</b> since ${fmtDate(clean[0].date).slice(4)}. The aerobic base is building.`);
+    else if (d >= 4 && warm.length < 2) add(6, 'warn', `<b>Test-route heart rate is up ${d} bpm.</b> Tired, under-slept, or ramping too fast? Keep the next week easy.`);
+  }
+  // Drift says whether you're ready to go longer.
+  if (last.drift != null && last.drift >= 8) add(6, 'warn', `<b>Heart rate climbed ${last.drift} bpm</b> from the first half of your last run to the second. Hold distance steady until that drops under about 5.`);
+  else if (last.drift != null && last.drift <= 3 && (last.runSec ?? 0) >= 1200) add(4, 'good', `<b>Heart rate held steady through your last run</b> (+${last.drift} bpm). You’re ready to go a little longer.`);
+  // Too hard, too often.
+  const hard = runs.slice(-3).filter(r => (r.aboveLtSec ?? 0) > 120 || (r.anaerobicTE ?? 0) > 1).length;
+  if (hard >= 2) add(8, 'warn', `<b>${hard} of your last 3 runs went past your threshold.</b> Easy runs build the base: slow down, or take walk breaks when heart rate passes ${p.zones.mod}.`);
+  // How it felt versus what the heart said.
+  if (last.effort >= 7 && hrMetric(last) != null && hrMetric(last) < p.zones.mod) add(7, 'warn', `<b>Your last run felt like a ${last.effort}, but heart rate stayed easy.</b> Legs, sleep or stress? Keep the next one gentle.`);
+  // Ramping time on feet too fast.
+  const mins = k => runs.filter(r => r.date >= addDays(ws, -7 * k) && r.date < addDays(ws, -7 * (k - 1))).reduce((s, r) => s + (r.timerSec ?? 0) / 60, 0);
+  const m1 = mins(1), m2 = mins(2);
+  if (m2 >= 30 && m1 > m2 * 1.3) add(6, 'warn', `<b>Time on your feet jumped ${Math.round((m1 / m2 - 1) * 100)}% last week.</b> Keep this week about the same so calves and shins catch up.`);
+  // Recovery improving shows before pace does.
+  const rec = runs.filter(r => r.recoveryHr != null);
+  if (rec.length >= 3 && rec.at(-1).recoveryHr - rec[0].recoveryHr >= 5) add(5, 'good', `<b>Recovery heart rate is up ${rec.at(-1).recoveryHr - rec[0].recoveryHr} bpm</b> since your first runs. Your heart settles faster after effort.`);
+  // Faster, but only by reaching further.
+  const form = runs.filter(r => r.stride && r.cadence && r.avgPaceSec);
+  if (form.length >= 6){
+    const A = form.slice(0, 3), B = form.slice(-3), m = (xs, k) => avgOf(xs.map(r => r[k]));
+    if (m(B, 'stride') - m(A, 'stride') >= .05 && Math.abs(m(B, 'cadence') - m(A, 'cadence')) < 3 && m(A, 'avgPaceSec') - m(B, 'avgPaceSec') >= 30)
+      add(5, 'warn', '<b>You’re faster, but your cadence hasn’t moved,</b> so the speed is coming from longer strides, which is more load on the calves. Try quicker, shorter steps.');
+  }
+  // Lighter legs help the heart-rate trend.
+  const wt = weightSeries(), now = windowAvg(wt, 7), then = windowAvg(wt, 7, addDays(today, -28));
+  if (now != null && then != null && then - now >= 2) add(3, 'good', `<b>Weight down ${(then - now).toFixed(1)} lbs in four weeks.</b> Some of the heart-rate drop is lighter legs.`);
+  if (!out.length) add(1, 'good', 'Nothing to flag. Keep stacking easy runs.');
+  return out.sort((a, b) => b.pri - a.pri);
+}
+function coachCard(){
+  if (!doc.runs.length) return '';
+  const notes = coachNotes().slice(0, 3);
+  return `<div class="card coach" style="margin-bottom:16px"><div class="card-head"><h2>Coach notes${infoBtn}</h2><span class="card-sub">from your last few weeks</span></div>
+    ${explain('coach')}
+    <ul class="status-list">${notes.map(n => `<li class="status-row">${statusIcon(n.tone)}<span class="s-sub coach-line">${n.html}</span></li>`).join('')}</ul></div>`;
+}
+
 /* ═══ PROGRESS ═══════════════════════════════════════════════════════ */
 function renderProgress(){
   const runs = sortedRuns(), p = doc.profile;
@@ -2906,7 +3024,7 @@ function renderProgress(){
     sub: 'Same effort, fewer heartbeats. That’s the whole game.',
     stats: [['Runs', runs.length], ['Clean on test route', clean.length], ['Miles', totMi.toFixed(1)], ['Hours jogging', (totJog / 3600).toFixed(1)]],
   }) + `<div class="wrap">
-    ${journeyCard('j-progress')}
+    ${journeyCard('j-progress')}${coachCard()}
     <div class="section-label">Getting fitter?</div>
     <div class="grid kpis">
       <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · test route${infoBtn}</div>${explain('jogHr')}${kpiHr}</div>
@@ -3121,6 +3239,17 @@ function goalState(g){
     txt:best ? `best ${fmtDur(best)}, ${best <= g.target ? 'done' : `${fmtDur(best - g.target)} to go`}` : 'no time yet' };
 }
 
+// Goals worth suggesting from what someone has actually run: a bit further, a bit faster.
+function goalIdeas(){
+  const runs = sortedRuns(); if (!runs.length) return [];
+  const longest = Math.max(...runs.map(r => r.distMi ?? 0)), ideas = [];
+  const next = Math.max(1, Math.ceil((longest + .3) * 2) / 2);
+  ideas.push(['long', next, `${next} mi in one go`]);
+  const bests = runs.map(r => r.best?.mi).filter(Boolean);
+  if (bests.length){ const t = Math.floor((Math.min(...bests) - 20) / 15) * 15; if (t > 240) ideas.push(['mi', t, `Mile under ${fmtDur(t)}`]); }
+  if (longest < 3.1 && next !== 3.1) ideas.push(['long', 3.1, '5K distance (3.1 mi)']);
+  return ideas;
+}
 function goalsCard(){
   const goals = doc.goals ?? [], today = todayYmd(), m = milestones();
   const earned = [...m].sort((a, b) => a.date < b.date ? 1 : -1);
@@ -3131,7 +3260,8 @@ function goalsCard(){
         return `<li><div class="goal-top"><b>${GOAL_TYPES[g.type].fmt(g.target)}</b><button class="link-btn" data-del-goal="${g.id}" aria-label="Remove goal">remove</button></div>
           ${bar(st.hit ? 1 : st.pct)}
           <div class="card-sub">${st.hit ? `<b style="color:var(--good-text)">✓ Done ${fmtDate(st.hit)}</b>` : esc(st.txt)}${g.by && !st.hit ? ` · ${late ? 'deadline passed' : `by ${fmtDate(g.by)} (${diffDays(today, g.by)} days)`}` : ''}</div></li>`; }).join('')}</ul>`
-        : '<p class="card-sub" style="margin:0 0 12px">Something to aim at makes the easy weeks easier. Beat your longest run, hit a total, or chase a time.</p>'}
+        : `<p class="card-sub" style="margin:0 0 12px">Something to aim at makes the easy weeks easier.${goalIdeas().length ? ' A few, from your runs:' : ' Beat your longest run, hit a total, or chase a time.'}</p>
+          ${goalIdeas().length ? `<div class="pill-row" style="margin-bottom:6px">${goalIdeas().map(([t, v, l]) => `<button class="pill" data-goal-idea="${t}|${v}">+ ${esc(l)}</button>`).join('')}</div>` : ''}`}
       <div class="field-row goal-form">
         <div class="field"><label for="g-type">Goal</label><select id="g-type">${Object.entries(GOAL_TYPES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join('')}</select></div>
         <div class="field"><label for="g-val">Target <span id="g-unit">(mi)</span></label><input id="g-val" inputmode="decimal" placeholder="2"></div>
@@ -3980,7 +4110,7 @@ function routineCard(){
   const today = todayYmd(), ran = runsOn(today).length > 0;
   const nextRun = coached() ? schedule(today, 1)[0]?.kind === 'run' : false;
   const str = routinesThisWeek('strength');
-  const pick = ran ? 'post' : nextRun ? 'pre' : str < 2 ? 'strength' : 'desk';
+  const pick = ran ? 'post' : nextRun ? 'pre' : str < 2 || !focus().hips ? 'strength' : 'desk';
   const why = { pre:'Run day: do this right before you head out.', post:'You ran today: cool down while you’re still warm.', strength:`Rest day: a good day for strength (${str}/2 this week).`, desk:'Rest day: keep the hips loose between sitting.' }[pick];
   return `<div class="card"><div class="card-head"><h2>Stretch & strength</h2><span class="card-sub">follow along, with a timer</span></div>
     <p class="card-sub" style="margin:0 0 12px">${why}</p>
@@ -4059,7 +4189,7 @@ function renderPlan(){
   const plan = activePlan(), len = planLen();
   if (!coached()){
     $('#page-plan').innerHTML = band({ eyebrow:'Plan', title:'Just <em>tracking</em>', sub:'No plan, no gate. Every run logged and charted. Pick a plan any time; your runs stay.',
-      extra:`<a class="btn small" href="#welcome" style="text-decoration:none">Choose a plan</a>` }) + `<div class="wrap">${planChoices(doc.planId)}</div>`;
+      extra:`<div class="btn-row"><a class="btn small" href="#welcome" style="text-decoration:none">Choose a plan</a><a class="btn small" href="#intake" style="text-decoration:none">${doc.intake ? 'Retake the intake' : 'Tailor Stride to you'}</a></div>` }) + `<div class="wrap">${planChoices(doc.planId)}</div>`;
     return;
   }
   const weeks = planState(), cur = weeks.at(-1), pw = cur.planWeek;
@@ -4071,13 +4201,13 @@ function renderPlan(){
     title: toRace > 0 ? `Race in <em>${toRace}</em> days` : toRace === 0 ? 'Race <em>day</em>' : 'Race <em>done</em>',
     sub: `Built backward from race day. Long runs climb from ${doc.race.longest} mi to ${Math.max(...plan.weeks.filter(w => !w.race).map(w => w.longMi))} mi, then taper. Miss a long run and the next one holds near what you’ve actually run — it never jumps more than 2 mi.`,
     stats: [['Week', Math.min(pw, len), `/${len}`], ['Phase', esc(planWeekObj(pw).phase)], ['This week', planWeekObj(pw).miles, 'mi']],
-    extra: `<div class="btn-row"><a class="btn small" href="#welcome" data-pick-plan="marathon" style="text-decoration:none">Edit race</a><a class="btn small" href="#welcome" style="text-decoration:none">Change plan</a></div>`,
+    extra: `<div class="btn-row"><a class="btn small" href="#welcome" data-pick-plan="marathon" style="text-decoration:none">Edit race</a><a class="btn small" href="#welcome" style="text-decoration:none">Change plan</a><a class="btn small" href="#intake" style="text-decoration:none">${doc.intake ? 'Retake the intake' : 'Tailor Stride to you'}</a></div>`,
   } : {
     eyebrow: `${esc(plan.name)} · three runs a week, rest day between`,
     title: pw > len ? 'Plan <em>done</em>' : `Week <em>${pw}</em>`,
     sub: `Goal: ${esc(plan.goal)}. Each week unlocks the next.`,
     stats: [['Plan length', len, 'wks'], ['Started', fmtDate(doc.planStart).slice(4)], ['Phase', esc(planWeekObj(pw).phase)]],
-    extra: `<a class="btn small" href="#welcome" style="text-decoration:none">Change plan</a>`,
+    extra: `<div class="btn-row"><a class="btn small" href="#welcome" style="text-decoration:none">Change plan</a><a class="btn small" href="#intake" style="text-decoration:none">${doc.intake ? 'Retake the intake' : 'Tailor Stride to you'}</a></div>`,
   }) + `<div class="wrap"><div class="grid today-grid">
       <div class="col"><div class="plan-list">
         ${plan.weeks.map((p, i) => { const w = i + 1; return `<div class="plan-row${w === Math.min(pw, len) ? ' now' : ''}" style="${w < pw ? 'opacity:.55' : ''}">
@@ -4120,6 +4250,144 @@ function renderPlan(){
         </div>`}
       </div>
     </div></div>`;
+}
+
+/* ═══ INTAKE: the questions a coach would ask before writing a plan ═════
+   The answers pick the plan and the week to start it at, and decide which
+   stretches, check-in options and routines Stride leans on (focus()). */
+const INTAKE_Q = [
+  { id:'goal', q:'What are you here <em>for</em>?', sub:'You can change plans any time.', opts:[
+    ['start', 'New to running', 'Build up from walking to running'], ['comeback', 'Coming back after a break', 'You’ve run before and want to rebuild'],
+    ['5k', 'Run a 5K', 'Run 3.1 miles without stopping, then race it'], ['race', 'Train for a race', 'A half or full marathon with a date'],
+    ['track', 'Just track my runs', 'No plan: log, chart and compare'] ] },
+  { id:'canRun', q:'How long can you run <em>non-stop?</em>', sub:'Right now, at an easy pace. Be honest; starting too high is how injuries start.', opts:[
+    ['0', 'Under 5 minutes'], ['5', '5–15 minutes'], ['15', '15–30 minutes'], ['30', '30+ minutes'] ] },
+  { id:'days', q:'How many days a week <em>can you run?</em>', sub:'Realistically, most weeks.', opts:[['2', '2 days'], ['3', '3 days'], ['4', '4 days'], ['5', '5 days']] },
+  { id:'niggles', many:true, q:'Anything that <em>niggles?</em>', sub:'Past injuries or spots that get tight or sore. Pick all that apply.', opts:[
+    ['calves', 'Calves'], ['achilles', 'Achilles'], ['shins', 'Shins'], ['knees', 'Knees'], ['hips', 'Hips'], ['back', 'Lower back'], ['none', 'Nothing'] ] },
+  { id:'sits', q:'Do you sit <em>most of the day?</em>', sub:'Desk, car, couch: long sitting tightens the hips.', opts:[['yes', 'Yes, most of the day'], ['no', 'No, I’m up and about']] },
+  { id:'about', q:'A little <em>about you</em>', sub:'For your heart-rate zones and the standards for your age. Skip if you’d rather.', about:true },
+];
+const intakeUi = { step:0, a:null };
+function intakeAnswers(){
+  if (intakeUi.a) return intakeUi.a;
+  const i = doc.intake ?? {}, p = doc.profile;
+  return intakeUi.a = { goal:i.goal ?? null, canRun:i.canRun ?? null, days:i.days ?? null, niggles:[...(i.niggles ?? [])], sits:i.sits ?? null,
+    sex:p.sex ?? '', born:p.birthYear ?? '', ft:p.heightIn ? Math.floor(p.heightIn / 12) : '', inch:p.heightIn ? p.heightIn % 12 : '', lbs:currentWeight() ?? '' };
+}
+// Which plan, and where in it to start, from the goal and what you can run now.
+function intakePlan(a){
+  const c = +a.canRun;
+  if (a.goal === 'track') return { plan:'track', week:1, why:'You’ll get the log, charts and trends without weekly assignments.' };
+  if (a.goal === 'race') return { plan:'marathon', week:1, why:c < 15 ? 'A race plan from here is a big jump: the long runs will be capped to what you can actually do, and you’ll see straight away if the date is too soon.' : 'Built backward from your race date, from what you can run now.' };
+  if (a.goal === '5k' && c < 15) return { plan:'build', week:c >= 5 ? 3 : 1, why:'Build to 20 minutes of easy running first; the 5K plan starts from there.' };
+  if (c >= 30) return { plan:'5k', week:3, why:'You can already run 30 minutes, so you skip the base weeks and start building.' };
+  if (c >= 15) return { plan:'5k', week:1, why:'You can run 15–30 minutes, so you start the 5K build from week 1.' };
+  return { plan:'build', week:c >= 5 ? 3 : 1, why:c >= 5 ? 'You can already run 5–15 minutes, so you skip the first two weeks.' : 'Starting with run/walk: short jogs, walk breaks, three times a week.' };
+}
+// What to look after. Before someone has an intake, Stride keeps its old defaults.
+function focus(){
+  const i = doc.intake;
+  if (!i) return { hips:true, knees:true, calves:true, back:false, shins:false, legacy:true };
+  const n = i.niggles ?? [];
+  return { hips:n.includes('hips') || i.sits === 'yes', knees:n.includes('knees'), calves:n.some(x => ['calves', 'achilles'].includes(x)), back:n.includes('back'), shins:n.includes('shins') };
+}
+function focusLines(f){
+  return [
+    f.hips && ['Hip flexor stretches', doc.intake?.sits === 'yes' ? 'you sit most of the day' : 'you flagged your hips'],
+    f.calves && ['Extra calf and Achilles care', 'you flagged calves or Achilles'],
+    f.knees && ['Glute strength', 'strong glutes take load off the knees'],
+    f.shins && ['Toe raises for the shins', 'you flagged shins'],
+    f.back && ['Back mobility', 'you flagged your lower back'],
+  ].filter(Boolean);
+}
+
+function renderIntake(){
+  const a = intakeAnswers(), n = INTAKE_Q.length, step = intakeUi.step, page = $('#page-intake');
+  if (step >= n) return renderIntakeResult();
+  const Q = INTAKE_Q[step], first = !doc.planId;
+  const val = Q.id === 'about' ? null : a[Q.id];
+  page.innerHTML = band({ eyebrow:`${first ? 'Welcome to Stride · ' : ''}Question ${step + 1} of ${n}`, title:Q.q, sub:Q.sub,
+    extra:`<div class="intake-bar">${INTAKE_Q.map((_, i) => `<i class="${i < step ? 'done' : i === step ? 'now' : ''}"></i>`).join('')}</div>` }) + `<div class="wrap intake">
+    ${Q.about ? `<div class="card"><div class="field-row">
+        <div class="field"><label for="in-sex">Sex</label><select id="in-sex"><option value="">—</option><option value="m"${a.sex === 'm' ? ' selected' : ''}>Male</option><option value="f"${a.sex === 'f' ? ' selected' : ''}>Female</option></select></div>
+        <div class="field"><label for="in-born">Birth year</label><input id="in-born" type="number" inputmode="numeric" placeholder="e.g. 1998" value="${a.born}"></div>
+        <div class="field"><label for="in-ft">Height (ft)</label><input id="in-ft" type="number" inputmode="numeric" value="${a.ft}"></div>
+        <div class="field"><label for="in-in">Height (in)</label><input id="in-in" type="number" inputmode="numeric" value="${a.inch}"></div>
+        <div class="field"><label for="in-lbs">Weight (lbs)</label><input id="in-lbs" type="number" inputmode="decimal" value="${a.lbs}"></div>
+      </div></div>`
+    : `<div class="intake-opts${Q.many ? ' many' : ''}">${Q.opts.map(([v, l, h]) => {
+        const on = Q.many ? a.niggles.includes(v) : val === v;
+        return `<button class="intake-opt" data-intake="${Q.id}|${v}" aria-pressed="${on}"><b>${l}</b>${h ? `<span>${h}</span>` : ''}</button>`; }).join('')}</div>`}
+    <div class="btn-row" style="margin-top:20px">
+      ${step ? '<button class="btn" data-action="intake-back">← Back</button>' : ''}
+      ${Q.many || Q.about ? `<button class="btn primary" data-action="intake-next">${Q.about ? 'See my plan' : 'Next'}</button>` : ''}
+      ${Q.about ? '<button class="link-btn" data-action="intake-skip-about">Skip</button>' : ''}
+      ${first && !step ? `<span class="card-sub" style="margin-left:auto">Know what you want? <a href="#welcome" data-action="intake-manual">Pick a plan yourself</a>${syncOn() && !SESSION ? ` · <button class="link-btn" data-action="goto-signin">Sign in</button>` : ''}</span>` : ''}
+    </div>
+  </div>`;
+}
+function renderIntakeResult(){
+  const a = intakeAnswers(), r = intakePlan(a), pl = PLANS[r.plan], page = $('#page-intake');
+  const pf = (() => { const saved = doc.intake; doc.intake = { ...a }; const x = focus(); doc.intake = saved; return x; })();
+  const wk = pl.weeks.length && r.plan !== 'marathon' ? pl.weeks[r.week - 1] : null;
+  const thisMon = weekStart(todayYmd()), nextMon = addDays(thisMon, 7);
+  intakeUi.start ??= thisMon;
+  const has = !!doc.planId;
+  page.innerHTML = band({ eyebrow:'Your plan', title:`${esc(pl.name).replace(/^(\S+)/, '$1 <em>')}</em>`,
+    sub:esc(r.why), stats: wk ? [['Start at week', r.week, `/${pl.weeks.length}`], ['Runs a week', 3], ['First runs', esc(wk.session)]] : [],
+    extra:`<div class="intake-bar">${INTAKE_Q.map(() => '<i class="done"></i>').join('')}</div>` }) + `<div class="wrap intake">
+    <div class="grid two" style="align-items:start">
+      <div class="card"><div class="card-head"><h2>Built from your answers</h2></div>
+        <ul class="intake-why">
+          ${wk ? `<li><b>${esc(wk.phase)}:</b> ${esc(wk.detail.charAt(0).toLowerCase() + wk.detail.slice(1))}.</li>` : ''}
+          ${a.days === '2' && r.plan !== 'track' && r.plan !== 'marathon' ? '<li>The plan asks for three runs a week. On two-run weeks it simply repeats the week, and that’s fine.</li>' : ''}
+          ${a.days && +a.days >= 4 && r.plan !== 'marathon' && r.plan !== 'track' ? `<li>You can run ${a.days} days, but three runs plus rest days is what builds without injury. Use the extra days for strength or a walk.</li>` : ''}
+          <li>Each week moves up only when it went well: runs done, legs fine at 48 hours, heart rate in check.</li>
+        </ul>
+      </div>
+      <div class="card"><div class="card-head"><h2>Your extras</h2><span class="card-sub">what Today will remind you of</span></div>
+        <ul class="intake-why">${[['Calf stretches after runs', 'every runner'], ...focusLines(pf)].map(([t, w]) => `<li><b>${t}</b> · ${w}</li>`).join('')}</ul>
+      </div>
+    </div>
+    ${r.plan !== 'track' && r.plan !== 'marathon' ? `<div class="section-label">Start</div>
+      <div class="filter-row">${[[thisMon, `This week · ${fmtDate(thisMon).slice(4)}`], [nextMon, `Next Monday · ${fmtDate(nextMon).slice(4)}`]].map(([d, l]) => `<button class="pill" data-intake-start="${d}" aria-pressed="${intakeUi.start === d}">${l}</button>`).join('')}</div>` : ''}
+    <div class="btn-row" style="margin-top:22px">
+      <button class="btn primary big" data-action="intake-go">${r.plan === 'marathon' ? 'Set up my race' : has && doc.planId === r.plan ? 'Use this' : 'Start this plan'}</button>
+      ${has ? '<button class="btn" data-action="intake-keep">Keep my current plan, just tailor the extras</button>' : ''}
+      <button class="link-btn" data-action="intake-back">← Back</button>
+      <a class="link-btn" href="#welcome" data-action="intake-manual">Pick a different plan</a>
+    </div>
+  </div>`;
+}
+// Save what the intake learned: answers, profile, and zones from age if none yet.
+async function intakeSave(){
+  const a = intakeAnswers(), p = doc.profile;
+  doc.intake = { goal:a.goal, canRun:a.canRun, days:a.days, niggles:a.niggles.filter(x => x !== 'none'), sits:a.sits, at:todayYmd() };
+  if (a.sex) p.sex = a.sex;
+  const yr = new Date().getFullYear(); if (+a.born > yr - 100 && +a.born < yr - 8) p.birthYear = +a.born;
+  const h = Math.round((+a.ft || 0) * 12 + (+a.inch || 0)); if (h >= 48 && h <= 90) p.heightIn = h;
+  const lbs = +a.lbs; if (lbs > 50 && lbs < 600 && lbs !== currentWeight()) p.weights = [...p.weights.filter(w => w.date !== todayYmd()), { date:todayYmd(), lbs }].sort((x, y) => x.date < y.date ? -1 : 1);
+  await autoZones();
+}
+function intakeRead(){
+  const a = intakeAnswers(), v = id => $('#' + id)?.value ?? '';
+  if ($('#in-sex')) Object.assign(a, { sex:v('in-sex'), born:v('in-born'), ft:v('in-ft'), inch:v('in-in'), lbs:v('in-lbs') });
+}
+
+/* ── Zones that set themselves ───────────────────────────────────────
+   Every Garmin FIT file carries the watch's lactate-threshold estimate; until
+   a run brings one, an age-based estimate stands in. Zones someone set by
+   hand are never touched. */
+async function autoZones(){
+  const p = doc.profile;
+  if (p.zonesSet) return false;
+  const glt = sortedRuns().reverse().find(r => r.garminLthr)?.garminLthr, age = ageNow();
+  const [lthr, src] = glt ? [glt, 'watch'] : age ? [Math.round((208 - .7 * age) * .88), 'age'] : [null, null];
+  if (!lthr || (p.zonesAuto === src && p.lthr === lthr)) return false;
+  Object.assign(p, { lthr, guardHr:lthr, zones:{ easy:Math.round(lthr * .86), mod:Math.round(lthr * .94) }, zonesAuto:src });
+  await rescoreAll();
+  return true;
 }
 
 /* ═══ WELCOME / CHOOSE A PLAN ════════════════════════════════════════ */
@@ -4217,6 +4485,7 @@ function renderSetup(){
             <div class="field"><label for="s-guard">Max HR guardrail</label><input id="s-guard" type="number" value="${p.guardHr}"></div>
           </div>
           <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="save-zones">Save zones</button></div>
+          ${!p.zonesSet && p.zonesAuto ? `<p class="card-sub" style="margin:12px 0 0"><b>Set automatically</b> from ${p.zonesAuto === 'watch' ? 'your watch’s threshold estimate' : 'your age, until a run brings your watch’s estimate'}. Saving your own numbers here stops that.</p>` : ''}
           <p class="card-sub" style="margin:12px 0 0">Not sure? Garmin estimates your lactate threshold after a few runs (Performance Stats → Lactate Threshold). Easy and moderate are roughly 85% and 93% of it.</p>
         </div>
         <div class="card"><div class="card-head"><h2>About you</h2><span class="card-sub">for the standards on Body and Progress</span></div>
@@ -4618,6 +4887,7 @@ async function enrichRuns(){
         catch { weatherOk = false; }   // offline or blocked: try again next open
       }
     }
+    if (await autoZones()) changed = true;
   } finally { enriching = false; }
   if (!changed) return;
   await save();
@@ -4709,10 +4979,28 @@ document.addEventListener('click', async e => {
     if (sh.retired && doc.defaultShoe === sh.id) doc.defaultShoe = activeShoes()[0]?.id ?? null;
     await save(); render(); return;
   }
+  const gi = e.target.closest('[data-goal-idea]');
+  if (gi){
+    const [type, v] = gi.dataset.goalIdea.split('|');
+    doc.goals = [...(doc.goals ?? []), { id:'gl' + Date.now().toString(36), type, target:+v, by:null, since:todayYmd() }];
+    await save(); toast('Goal added'); render(); return;
+  }
   const dg = e.target.closest('[data-del-goal]');
   if (dg){ doc.goals = doc.goals.filter(g => g.id !== dg.dataset.delGoal); await save(); render(); return; }
   const sm = e.target.closest('[data-seen-milestones]');
   if (sm){ prefs.set('seenMilestones', [...prefs.get('seenMilestones', []), ...sm.dataset.seenMilestones.split(',')].slice(-200)); render(); return; }
+  const ia = e.target.closest('[data-intake]');
+  if (ia){
+    const [id, v] = ia.dataset.intake.split('|'), a = intakeAnswers();
+    if (id === 'niggles'){
+      // "Nothing" is exclusive; anything else clears it.
+      a.niggles = v === 'none' ? (a.niggles.includes('none') ? [] : ['none']) : a.niggles.includes(v) ? a.niggles.filter(x => x !== v) : [...a.niggles.filter(x => x !== 'none'), v];
+      renderIntake();
+    } else { a[id] = v; intakeUi.step++; renderIntake(); scrollTo(0, 0); arrive(); }
+    return;
+  }
+  const ist = e.target.closest('[data-intake-start]');
+  if (ist){ intakeUi.start = ist.dataset.intakeStart; renderIntake(); return; }
   const go = e.target.closest('[data-goto]');
   if (go){ location.hash = go.dataset.goto; return; }
   const rs = e.target.closest('[data-routine-start]');
@@ -4847,12 +5135,14 @@ document.addEventListener('click', async e => {
         if (!(r.longest > 0)){ toast('Enter your longest recent run'); break; }
         const moved = doc.race?.date !== r.date || doc.planStart !== welcomeUi.start;
         doc.race = { ...r, setAt: todayYmd() };
-        doc.planId = 'marathon'; doc.planStart = welcomeUi.start;
+        doc.planId = 'marathon'; doc.planStart = welcomeUi.start; doc.startWeek = 1;
         if (moved) doc.decisions = {};
         welcomeUi.plan = welcomeUi.start = welcomeUi.race = null;
         await save(); location.hash = 'today'; render(); break;
       }
       const changed = doc.planId !== welcomeUi.plan;
+      if (doc.planId !== welcomeUi.plan || welcomeUi.start !== doc.planStart) doc.startWeek = welcomeUi.startWeek ?? 1;
+      welcomeUi.startWeek = null;
       doc.planId = welcomeUi.plan;
       if (PLANS[doc.planId].weeks.length && (changed || welcomeUi.start !== doc.planStart)){
         if (welcomeUi.start !== doc.planStart) doc.decisions = {};   // a new start date means a fresh week history
@@ -4860,6 +5150,35 @@ document.addEventListener('click', async e => {
       }
       welcomeUi.plan = welcomeUi.start = welcomeUi.race = null;
       await save(); location.hash = 'today'; render(); break;
+    }
+    case 'hide-intake-nudge': prefs.set('intakeNudgeHidden', true); render(); break;
+    case 'intake-back': intakeRead(); intakeUi.step = Math.max(0, intakeUi.step - 1); renderIntake(); scrollTo(0, 0); break;
+    case 'intake-next': {
+      const Q = INTAKE_Q[intakeUi.step];
+      if (Q?.many && !intakeAnswers()[Q.id].length){ toast('Pick at least one, or “Nothing”'); break; }
+      intakeRead(); intakeUi.step++; renderIntake(); scrollTo(0, 0); arrive(); break;
+    }
+    case 'intake-skip-about': intakeUi.step++; renderIntake(); scrollTo(0, 0); arrive(); break;
+    case 'intake-manual': intakeUi.step = 0; break;   // the link itself goes to the plan picker
+    case 'intake-go': {
+      intakeRead(); const a = intakeAnswers(), res = intakePlan(a);
+      await intakeSave();
+      if (res.plan === 'marathon'){
+        welcomeUi.plan = 'marathon'; welcomeUi.start = null;
+        welcomeUi.race = { date:'', name:'', longest:8, perWeek:Math.min(5, Math.max(3, +a.days || 4)), longDay:6, ...(doc.race ?? {}) };
+        Object.assign(intakeUi, { step:0, a:null, start:null });
+        await save(); location.hash = 'welcome'; break;
+      }
+      const start = res.plan === 'track' ? (doc.planStart ?? weekStart(todayYmd())) : (intakeUi.start ?? weekStart(todayYmd()));
+      if (doc.planId !== res.plan || doc.planStart !== start || (doc.startWeek || 1) !== res.week) doc.decisions = {};
+      Object.assign(doc, { planId:res.plan, planStart:start, startWeek:res.week });
+      Object.assign(intakeUi, { step:0, a:null, start:null });
+      await save(); toast('Your plan is set'); location.hash = 'today'; break;
+    }
+    case 'intake-keep': {
+      intakeRead(); await intakeSave();
+      Object.assign(intakeUi, { step:0, a:null, start:null });
+      await save(); toast('Your extras are tailored'); location.hash = 'today'; break;
     }
     case 'add-measure': {
       const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
@@ -4927,11 +5246,12 @@ document.querySelectorAll('.tab[data-page]').forEach(b => b.addEventListener('cl
 function render(){
   let [page, arg] = (location.hash.slice(1) || 'today').split('/');
   if (page === 'upload') page = 'setup';   // older links
-  let pg = ['today', 'progress', 'runs', 'body', 'plan', 'setup', 'welcome', 'routine'].includes(page) ? page : 'today';
+  let pg = ['today', 'progress', 'runs', 'body', 'plan', 'setup', 'welcome', 'routine', 'intake'].includes(page) ? page : 'today';
   // Leaving the player mid-routine pauses it rather than letting it run on unseen.
   if (pg !== 'routine') pauseRoutine(true);
   // No plan chosen yet: everything but Setup (where you can sign in) waits on the welcome screen.
-  if (!doc.planId && pg !== 'setup' && pg !== 'routine') pg = 'welcome';
+  // No plan yet: the intake, unless they've chosen to pick a plan by hand.
+  if (!doc.planId && !['setup', 'routine', 'welcome', 'intake'].includes(pg)) pg = 'intake';
   document.querySelectorAll('.tab[data-page]').forEach(b => b.dataset.page === pg ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + pg));
   tip.classList.remove('show');
@@ -4943,6 +5263,7 @@ function render(){
   if (pg === 'plan') renderPlan();
   if (pg === 'setup') renderSetup();
   if (pg === 'routine') renderRoutine(arg);
+  if (pg === 'intake') renderIntake();
 }
 /* ── Arrival motion ──────────────────────────────────────────────────
    Played when you land on a page, never on the re-renders that sync and

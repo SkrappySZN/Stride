@@ -94,6 +94,20 @@ data runs through it, so treat changes to data handling with care.
   finished week (Sunday evening, or Monday/Tuesday). Each shows once per device, tracked
   in `prefs` (`arrivalSeen`, `weekSeen`). The first time a device opens, it records where
   you are and shows nothing, so an old backlog doesn't flood in.
+- **Intake** (`#intake`, `INTAKE_Q`, `intakePlan`): first-time users answer about six
+  questions (goal, how long they can run now, days a week, niggles, whether they sit all
+  day, about them). The answers pick the plan and `doc.startWeek`, and are stored in
+  `doc.intake`. `focus()` turns them into what Stride emphasises: Today's stretches
+  (`dayTasks`), the soreness options (`soreOptions`) and the routine it suggests. With no
+  intake, `focus()` returns the old defaults, so existing accounts don't change until
+  they take it.
+- **Self-setting numbers**: `autoZones()` sets the zones from the watch's threshold in
+  the FIT files, or from age until a run brings one (`profile.zonesAuto`). It never
+  overrides `zonesSet`. `goalIdeas()` suggests goals from the person's own runs.
+- **Coach notes** (`coachNotes`): rules over the data (gaps, heat, test-route HR trend,
+  drift, too-hard runs, effort versus HR, ramp, recovery, cadence and stride, weight).
+  The top three show on Today and Progress. Add a rule as one more `add(priority, tone,
+  html)` call.
 - **Charts**: hand-built SVG (`chartLine`, `chartColumns`, `chartDaily`, `chartTrace`)
   with hover via `_tip`. One measure per chart, never two y-axes.
 
