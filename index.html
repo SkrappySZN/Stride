@@ -744,6 +744,7 @@ body.moment-on{overflow:hidden}
 .moment.signin .card-sub{color:#aab0a8; font-size:14px}
 .moment.signin .card-sub b{color:#eef0ea}
 .moment.signin .field label{color:#8a9088}
+.moment.signin form .field-row{grid-template-columns:minmax(0,1fr)}
 .moment.signin .field input{background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.14); color:#eef0ea; font-size:16px}
 .moment.signin .link-btn{color:#aab0a8}
 .m-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px}
@@ -1551,7 +1552,8 @@ function paintSync(){
 }
 
 /* sign-in, done inline on the Upload page so it works on phones too */
-const authUi = { stage:'email', email:'', busy:false };
+// mode: 'password' (default), 'signup', or 'code' (emailed code / link, also the forgot-password road).
+const authUi = { stage:'email', mode:'password', email:'', busy:false };
 async function sendLink(){
   const email = authField('si-email')?.value.trim() || authUi.email;
   if (!/^\S+@\S+\.\S+$/.test(email || '')){ toast('Enter your email'); return; }
@@ -1580,9 +1582,58 @@ async function verifyCode(){
   try {
     const r = await sb('/auth/v1/verify', { method:'POST', body:JSON.stringify(body) }, false);
     if (!r.ok){ toast(body.token_hash ? 'That link didn’t work — it may have expired or been used' : 'That code didn’t work'); return; }
-    setSession(await r.json()); await fetchUser();
-    authUi.stage = 'email'; if (momentOpen) closeMoment(); paintSync(); render(); toast('Signed in');
-    await firstSync();
+    await signedInWith(await r.json());
+  } catch { toast('Network error'); }
+}
+async function signedInWith(d){
+  setSession(d); await fetchUser();
+  Object.assign(authUi, { stage:'email', mode:'password', busy:false });
+  if (momentOpen) closeMoment();
+  paintSync(); render(); toast('Signed in');
+  await firstSync();
+}
+const authEmail = () => { const v = authField('si-email')?.value.trim() ?? ''; return /^\S+@\S+\.\S+$/.test(v) ? v : null; };
+const authBusy = on => { authUi.busy = on; document.querySelectorAll('[data-auth-form] button[type=submit]').forEach(b => { b.disabled = on; }); };
+async function passwordSignin(){
+  const email = authEmail(), password = authField('si-pass')?.value ?? '';
+  if (!email){ toast('Enter your email'); return; }
+  if (!password){ toast('Enter your password'); return; }
+  authUi.email = email; authBusy(true);
+  try {
+    const r = await sb('/auth/v1/token?grant_type=password', { method:'POST', body:JSON.stringify({ email, password }) }, false);
+    if (r.ok){ await signedInWith(await r.json()); return; }
+    const j = await r.json().catch(() => ({}));
+    toast(j.error_code === 'email_not_confirmed' ? 'Confirm your email first: check your inbox for the link'
+      : 'Wrong email or password. Never set one? Use “Email me a code” once, then set a password on the account card.');
+  } catch { toast('Network error'); }
+  authBusy(false);
+}
+async function passwordSignup(){
+  const email = authEmail(), password = authField('si-pass')?.value ?? '';
+  if (!email){ toast('Enter your email'); return; }
+  if (password.length < 8){ toast('Use at least 8 characters'); return; }
+  authUi.email = email; authBusy(true);
+  try {
+    const back = encodeURIComponent(location.origin + location.pathname);
+    const r = await sb('/auth/v1/signup?redirect_to=' + back, { method:'POST', body:JSON.stringify({ email, password }) }, false);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok){ toast(j.msg || j.message || 'Couldn’t create the account'); authBusy(false); return; }
+    if (j.access_token){ await signedInWith(j); return; }
+    // Email confirmation is on: one tap of the link, then the password works everywhere.
+    Object.assign(authUi, { mode:'password', busy:false }); paintAuth();
+    toast('Check your email and tap the confirm link, then sign in');
+  } catch { toast('Network error'); authBusy(false); }
+}
+// Signed in already (e.g. by email code): add a password so other devices can use it.
+async function setPassword(){
+  const password = $('#set-pass')?.value ?? '';
+  if (password.length < 8){ toast('Use at least 8 characters'); return; }
+  if (!await ensureToken()){ toast('Sign in again first'); return; }
+  try {
+    const r = await sb('/auth/v1/user', { method:'PUT', body:JSON.stringify({ password }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok){ toast(j.error_code === 'same_password' ? 'That’s already your password' : j.msg || j.message || 'Couldn’t save the password'); return; }
+    $('#set-pass').value = ''; toast('Password saved. Sign in with it on your other devices');
   } catch { toast('Network error'); }
 }
 async function signOut(){
@@ -4237,11 +4288,33 @@ function accountCard(){
   if (SESSION) return `<div class="card"><div class="card-head"><h2>Account</h2><span class="card-sub">${esc(SESSION.email)}</span></div>
     <div data-sync-line class="sync-line sync-${SYNC.status}"><span class="dot"></span>${esc(syncLine())}</div>
     <p class="card-sub" style="margin:10px 0 12px">Sign in with the same email on your phone or another computer and your runs follow you.</p>
-    <div class="btn-row"><button class="btn small" data-action="sync-now">Sync now</button><button class="btn small" data-action="signout">Sign out</button></div></div>`;
+    <div class="btn-row"><button class="btn small" data-action="sync-now">Sync now</button><button class="btn small" data-action="signout">Sign out</button></div>
+    <details style="margin-top:14px"><summary class="link-btn" style="display:inline-block">Set a password</summary>
+      <form data-setpw-form style="margin-top:12px">
+        <input type="email" autocomplete="username" value="${esc(SESSION.email)}" hidden>
+        <div class="field"><label for="set-pass">New password (8+ characters)</label><input id="set-pass" type="password" autocomplete="new-password"></div>
+        <div class="btn-row" style="margin-top:10px"><button class="btn small primary" type="submit">Save password</button></div>
+        <p class="card-sub" style="margin:8px 0 0">Then sign in on your phone with this email and password; it can save them for Face ID.</p>
+      </form>
+    </details></div>`;
   return `<div class="card" id="signin"><div class="card-head"><h2>Sign in</h2><span class="card-sub">keeps your runs on every device</span></div>${signinBody()}</div>`;
 }
-// The email-then-link form, shared by the Setup card and the pop-up from the top bar.
+// Email + password by default; the emailed code is the fallback (and the way in
+// for accounts made before passwords). Shared by the Setup card and the pop-up.
 function signinBody(){
+  if (authUi.mode !== 'code'){
+    const up = authUi.mode === 'signup';
+    return `<p class="card-sub" style="margin:0 0 12px">${up ? 'Make an account with your email and a password (8+ characters). Anything already in this browser moves into it.' : 'Sign in with your email and password. Your phone can save them for Face ID.'}</p>
+      <form data-auth-form data-mode="${up ? 'signup' : 'signin'}">
+        <div class="field-row">
+          <div class="field"><label for="si-email">Email</label><input id="si-email" type="email" autocomplete="username email" placeholder="you@example.com" value="${esc(authUi.email)}"></div>
+          <div class="field"><label for="si-pass">Password</label><input id="si-pass" type="password" autocomplete="${up ? 'new-password' : 'current-password'}"></div>
+        </div>
+        <div class="btn-row" style="margin-top:14px"><button class="btn small primary" type="submit">${up ? 'Create account' : 'Sign in'}</button>
+          <button class="link-btn" type="button" data-action="auth-mode" data-mode="${up ? 'password' : 'signup'}">${up ? 'I have an account' : 'Create an account'}</button>
+          <button class="link-btn" type="button" data-action="auth-mode" data-mode="code">${up ? 'Use an emailed code instead' : 'Forgot it, or never set one? Email me a code'}</button></div>
+      </form>`;
+  }
   const code = authUi.stage === 'code';
   return `<p class="card-sub" style="margin:0 0 12px">${code
       ? installed() && isIos()
@@ -4252,8 +4325,8 @@ function signinBody(){
       ? `<div class="field" style="grid-column:1 / -1"><label for="si-code">Code from the email (or paste its link)</label><input id="si-code" autocomplete="one-time-code" inputmode="text" placeholder="123456"></div>`
       : `<div class="field"><label for="si-email">Email</label><input id="si-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(authUi.email)}"></div>`}</div>
     <div class="btn-row" style="margin-top:14px">${code
-      ? `<button class="btn small primary" data-action="verify-code">Sign in</button><button class="link-btn" data-action="change-email">Use a different email</button><button class="link-btn" data-action="send-link">Resend</button>`
-      : `<button class="btn small primary" data-action="send-link"${authUi.busy ? ' disabled' : ''}>${authUi.busy ? 'Sending…' : 'Email me a code'}</button>`}</div>`;
+      ? `<button class="btn small primary" data-action="verify-code">Sign in</button><button class="link-btn" data-action="change-email">Use a different email</button><button class="link-btn" data-action="send-link">Resend</button><button class="link-btn" data-action="auth-mode" data-mode="password">Use a password</button>`
+      : `<button class="btn small primary" data-action="send-link"${authUi.busy ? ' disabled' : ''}>${authUi.busy ? 'Sending…' : 'Email me a code'}</button><button class="link-btn" data-action="auth-mode" data-mode="password">Use a password</button>`}</div>`;
 }
 // The top bar's Sign in opens this wherever you are: on a phone the Setup card is
 // below the fold, and a page can't scroll a phone to a field it focuses for you.
@@ -4807,13 +4880,14 @@ document.addEventListener('click', async e => {
     case 'send-link': sendLink(); break;
     case 'verify-code': verifyCode(); break;
     case 'change-email': authUi.stage = 'email'; paintAuth(); break;
+    case 'auth-mode': { const em = authField('si-email')?.value.trim(); if (em) authUi.email = em; Object.assign(authUi, { mode:e.target.closest('[data-mode]').dataset.mode, stage:'email' }); paintAuth(); setTimeout(() => (authField('si-email')?.value ? authField('si-pass') : authField('si-email'))?.focus(), 50); break; }
     case 'signout': signOut(); break;
     case 'sync-now': if (doc.sync?.dirty) pushRow().catch(e => setSync('error', e.message)); else { await refreshFromRemote(); setSync(SYNC.status === 'off' ? 'ok' : SYNC.status); toast('Up to date'); } break;
   }
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && momentOpen){ closeMoment(); return; }
-  if (e.key === 'Enter' && e.target.id === 'si-email'){ sendLink(); return; }
+  if (e.key === 'Enter' && e.target.id === 'si-email' && authUi.mode === 'code'){ sendLink(); return; }
   if (e.key === 'Enter' && e.target.id === 'si-code'){ verifyCode(); return; }
   if (e.key === 'Enter' && e.target.id === 'icu-key'){ connectIntervals(); return; }
   if (e.key === 'Enter' && e.target.matches('tr[data-run]')) location.hash = 'runs/' + e.target.dataset.run;
@@ -4835,6 +4909,12 @@ document.addEventListener('input', e => {
   if (e.target.id === 'mr-name') r.name = v;
   if (e.target.id === 'mr-long') r.longest = Math.min(22, Math.max(0, +v || 0));
   const pv = $('#mara-preview'); if (pv) pv.innerHTML = maraPreview();
+});
+
+// Real forms (so phones offer to save and fill the password); the app does the submitting.
+document.addEventListener('submit', e => {
+  if (e.target.matches('[data-auth-form]')){ e.preventDefault(); if (!authUi.busy) (e.target.dataset.mode === 'signup' ? passwordSignup : passwordSignin)(); }
+  else if (e.target.matches('[data-setpw-form]')){ e.preventDefault(); setPassword(); }
 });
 
 /* ── Routing ─────────────────────────────────────────────────────── */
