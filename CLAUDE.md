@@ -87,6 +87,11 @@ data runs through it, so treat changes to data handling with care.
   frames, not just the end poses. and `ROUTINES` (before/after a run, desk break, strength). The player
   (`RP`, `#routine/<id>`) times from the clock, keeps the screen awake and beeps on changes.
   Finishing ticks the matching Today tasks and appends to `doc.routines`.
+- **Lifting** (Body tab, `LIFTS`, `LIFT_PROGS`): `doc.lifts` is one entry per exercise per
+  session (`{ date, ex, sets:[{lb, reps}], day? }`), custom exercises in `doc.liftEx`, the
+  optional program in `doc.liftProg`. PRs use estimated 1-rep max (Epley); `progWeight()`
+  adds a step after every rep is hit and drops ~10% after two misses. Lifting never changes
+  the run plan: `liftRunTips()` and one coach note only suggest.
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.

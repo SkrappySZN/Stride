@@ -626,6 +626,23 @@ a.btn.primary{color:var(--accent-ink)}
 .pbar{height:8px; border-radius:4px; background:var(--line); overflow:hidden; margin:6px 0 4px}
 .pbar i{display:block; height:100%; background:var(--fig-hl); border-radius:4px}
 .badges{display:flex; flex-wrap:wrap; gap:8px}
+/* Lifting */
+.lift-list{list-style:none; margin:0; padding:0}
+.lift-list li{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--line)}
+.lift-list li:first-child{border-top:0; padding-top:0}
+.lift-list li > span:first-child{display:flex; flex-direction:column; gap:2px; min-width:0}
+.lift-list small{color:var(--muted); font-size:12.5px; line-height:1.4}
+.lift-list .btn-row{flex-wrap:nowrap; flex:none}
+.lift-sets{display:flex; flex-direction:column; gap:8px; margin-top:14px}
+.lift-set{display:flex; align-items:center; gap:8px}
+.lift-set > .num{width:16px; color:var(--muted); font-family:var(--mono); font-size:12px}
+.lift-set input{width:86px; font:inherit; font-size:16px; padding:7px 9px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
+.lift-prs tr{cursor:pointer}
+.lift-prs tr[aria-current] td:first-child{color:var(--accent-text); font-weight:700}
+table.lift-prs td:nth-child(3), table.lift-recent td:nth-child(3){text-align:right}
+table.lift-recent td:nth-child(2){text-align:left; font-weight:600}
+table.lift-recent td:first-child{white-space:nowrap; padding-right:12px}
+.lift-tips{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.5}
 .mbadge{display:inline-flex; flex-direction:column; padding:8px 12px; border-radius:12px; background:var(--accent); color:var(--accent-ink)}
 .mbadge b{font-size:13.5px}
 .mbadge small{font-size:11.5px; opacity:.75}
@@ -1338,12 +1355,12 @@ function freshDoc(){
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
     // refDays/refInfo held sport days, a retired feature; kept so older docs stay valid.
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1,
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], liftProg: null,
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, ...d,
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], liftProg:null, ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, zonesAuto:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
@@ -2386,6 +2403,8 @@ const EXPLAIN = {
   treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the test-route trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
+  e1rm: () => 'The first number is your estimated one-rep max: the most you could likely lift once, worked out from a set of several reps (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set.',
+  liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
   standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
 };
 const infoBtn = `<button class="info-btn" data-explain aria-expanded="false" aria-label="What does this mean?">?</button>`;
@@ -2914,6 +2933,9 @@ function coachNotes(){
   const add = (pri, tone, html) => out.push({ pri, tone, html });
   if (runs.length < 3){ add(1, 'wait', 'A few more runs and these notes get specific to you: heart-rate trends, heat, consistency and form.'); return out; }
   const last = runs.at(-1), since = diffDays(last.date, today);
+  // Lifting stays out of the plan, but heavy legs the day before changes how a run feels.
+  if (doc.lifts.some(l => l.date === addDays(today, -1) && liftDef(l.ex).legs) && (runsOn(today).length || (coached() && schedule(today, 1)[0].kind === 'run')))
+    add(5, 'wait', '<b>Legs yesterday, run today.</b> Keep it easy and skip strides. A few extra beats of heart rate is the lifting, not lost fitness.');
   // Consistency beats everything early on.
   if (since >= 5) add(9, 'warn', `<b>${since} days since your last run.</b> A short, easy one beats waiting for the perfect day.`);
   const recent = runs.filter(r => diffDays(r.date, today) <= 30);
@@ -3806,6 +3828,167 @@ function standardsCard(){
   </div>`;
 }
 
+/* ═══ LIFTING: a simple log, PRs and an optional program ════════════
+   doc.lifts holds one entry per exercise per session: { id, date, ex,
+   sets:[{ lb, reps }], day? }. `day` ('A'/'B') marks entries logged for the
+   program, which is how it knows what's next and what to progress from.
+   Lifting never changes the run plan; liftRunTips() only suggests. */
+const LIFTS = [
+  { id:'squat', name:'Back squat', inc:10, legs:true },
+  { id:'deadlift', name:'Deadlift', inc:10, legs:true },
+  { id:'rdl', name:'Romanian deadlift', inc:10, legs:true },
+  { id:'split', name:'Split squat (per dumbbell)', inc:5, legs:true },
+  { id:'calf', name:'Calf raise', inc:10, legs:true },
+  { id:'bench', name:'Bench press', inc:5 },
+  { id:'press', name:'Overhead press', inc:5 },
+  { id:'row', name:'Barbell row', inc:5 },
+  { id:'pullup', name:'Pull-up', inc:5, bw:true },
+];
+const LIFT_PROGS = {
+  linear: { name:'Linear 3×5', who:'Classic beginner strength: three big lifts a session, alternating A and B, two or three times a week.',
+    days:{ A:[['squat', 3, 5], ['bench', 3, 5], ['row', 3, 5]], B:[['squat', 3, 5], ['press', 3, 5], ['deadlift', 1, 5]] } },
+  runner: { name:'Runner’s strength', who:'Twice a week, built for running: single-leg work, hip hinges and calves that protect knees, hips and Achilles, plus some upper body.',
+    days:{ A:[['squat', 3, 6], ['split', 3, 8], ['calf', 3, 12], ['bench', 3, 8]], B:[['rdl', 3, 8], ['split', 3, 8], ['press', 3, 8], ['row', 3, 8]] } },
+};
+const liftDef = id => LIFTS.find(l => l.id === id) ?? doc.liftEx.find(l => l.id === id) ?? { id, name:id, inc:5 };
+// Epley's estimated one-rep max, so 5 × 225 and 3 × 240 compare fairly.
+const e1rm = s => s.reps <= 1 ? s.lb : Math.round(s.lb * (1 + s.reps / 30));
+const liftScore = (def, s) => def.bw ? s.reps : e1rm(s);
+const liftHist = ex => doc.lifts.filter(l => l.ex === ex).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+const topLb = l => Math.max(...l.sets.map(s => s.lb));
+const round5 = v => Math.round(v / 5) * 5;
+const progExercises = id => [...new Set(Object.values(LIFT_PROGS[id].days).flat().map(x => x[0]))];
+// "3 × 5 @ 185 lb" when every set matches, otherwise each set.
+function fmtSets(sets, bw){
+  const s0 = sets[0], same = sets.length > 1 && sets.every(s => s.lb === s0.lb && s.reps === s0.reps);
+  if (same) return `${sets.length} × ${s0.reps}${s0.lb ? ` @ ${bw ? '+' : ''}${s0.lb} lb` : ''}`;
+  return sets.map(s => bw ? `${s.reps}${s.lb ? ` @ +${s.lb}` : ''}` : `${s.lb}×${s.reps}`).join(', ');
+}
+function liftBest(ex){
+  const def = liftDef(ex); let best = null, heavy = null;
+  for (const l of liftHist(ex)) for (const s of l.sets){
+    if (!best || liftScore(def, s) > best.v) best = { v:liftScore(def, s), s, date:l.date };
+    if (!heavy || s.lb > heavy.s.lb) heavy = { s, date:l.date };
+  }
+  return { def, best, heavy };
+}
+function logLift(e){
+  const def = liftDef(e.ex), before = liftBest(e.ex).best?.v ?? 0;
+  doc.lifts = [...doc.lifts, { id:'lf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...e }];
+  const after = liftBest(e.ex).best.v;
+  toast(before && after > before ? `New PR · ${def.name}: ${def.bw ? `${after} reps` : `est. 1-rep max ${after} lb`}` : 'Saved');
+}
+
+// Up a step after a session with every rep, the same weight after a miss,
+// back ~10% after missing the same weight twice running.
+function progWeight(ex, sets, reps){
+  const P = doc.liftProg, h = liftHist(ex).filter(l => l.day && l.date >= P.since);
+  if (!h.length) return P.start[ex] ?? 0;
+  const hit = l => l.sets.filter(s => s.lb >= topLb(l) && s.reps >= reps).length >= sets;
+  const last = h.at(-1), prev = h.at(-2), w = topLb(last);
+  if (hit(last)) return w + liftDef(ex).inc;
+  if (prev && topLb(prev) === w && !hit(prev)) return round5(w * 0.9);
+  return w;
+}
+// The workout logged today, else the one after the last programmed session.
+function progNext(){
+  const P = doc.liftProg, keys = Object.keys(LIFT_PROGS[P.id].days);
+  const last = doc.lifts.filter(l => l.day && l.date >= P.since).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0).at(-1);
+  if (last?.date === todayYmd()) return { day:last.day, today:true };
+  return { day: last ? keys[(keys.indexOf(last.day) + 1) % keys.length] : keys[0], today:false };
+}
+
+const liftUi = { ex:'squat', date:null, sets:[{ lb:'', reps:'' }], day:null, name:'', legs:true, setup:null, chart:null };
+function liftProgCard(){
+  const P = doc.liftProg;
+  if (!P && liftUi.setup){
+    const prog = LIFT_PROGS[liftUi.setup];
+    return `<div class="card"><div class="card-head"><h2>Start ${prog.name}</h2><span class="card-sub">starting weights</span></div>
+      <p class="card-sub" style="margin:0 0 12px">Start lighter than you think: a weight you could lift a few more reps than the program asks. It goes up every session you hit every rep, so the first weeks move fast.</p>
+      <div class="field-row">${progExercises(liftUi.setup).map(ex => {
+        const b = liftBest(ex).best, sug = b ? round5(b.v * 0.75) : '';
+        return `<div class="field"><label for="lp-${ex}">${esc(liftDef(ex).name)} (lbs)</label><input id="lp-${ex}" type="number" inputmode="decimal" step="5" value="${sug}"></div>`; }).join('')}</div>
+      <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="lift-prog-start">Start</button><button class="btn small" data-action="lift-prog-cancel">Cancel</button></div></div>`;
+  }
+  if (!P) return `<div class="card"><div class="card-head"><h2>Follow a program${infoBtn}</h2><span class="card-sub">optional</span></div>${explain('liftProg')}
+    <ul class="lift-list">${Object.entries(LIFT_PROGS).map(([id, p]) => `<li><span><b>${p.name}</b><small>${p.who}</small></span><button class="btn small" data-lift-prog="${id}">Choose</button></li>`).join('')}</ul>
+    <p class="card-sub" style="margin:12px 0 0">Or skip it and just log what you lift.</p></div>`;
+  const prog = LIFT_PROGS[P.id], { day, today } = progNext(), keys = Object.keys(prog.days);
+  const done = doc.lifts.filter(l => l.date === todayYmd() && l.day === day);
+  const rows = prog.days[day].map(([ex, n, reps], i) => {
+    const d = done.find(l => l.ex === ex), def = liftDef(ex);
+    return `<li><span><b>${esc(def.name)}</b><small>${d ? `done ✓ · ${fmtSets(d.sets, def.bw)}` : `${n} × ${reps} @ ${progWeight(ex, n, reps)} lb`}</small></span>
+      ${d ? '' : `<span class="btn-row"><button class="btn small primary" data-lift-did="${i}">Did it</button><button class="btn small" data-lift-edit="${i}">Change</button></span>`}</li>`;
+  });
+  const allDone = done.length >= prog.days[day].length;
+  return `<div class="card"><div class="card-head"><h2>${today ? 'Today' : 'Next'}: workout ${day}${infoBtn}</h2><span class="card-sub">${prog.name} · <button class="link-btn" data-action="lift-prog-stop">stop</button></span></div>${explain('liftProg')}
+    <ul class="lift-list">${rows.join('')}</ul>
+    <p class="card-sub" style="margin:12px 0 0">${allDone ? `All done. Next time: workout ${keys[(keys.indexOf(day) + 1) % keys.length]}.` : '“Did it” logs every set as written. Missed reps or a different weight? Tap “Change”.'}</p></div>`;
+}
+function liftLogCard(){
+  const u = liftUi, custom = u.ex === '_new', def = custom ? {} : liftDef(u.ex), last = custom ? null : liftHist(u.ex).at(-1);
+  const recent = [...doc.lifts].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0).slice(0, 8);
+  return `<div class="card" id="lift-log"><div class="card-head"><h2>Log a lift</h2><span class="card-sub">${u.day ? `workout ${u.day} · ` : ''}${last ? `last time ${fmtDate(last.date).slice(4)}: ${fmtSets(last.sets, def.bw)}` : 'weight × reps for each set'}</span></div>
+    <div class="field-row">
+      <div class="field"><label for="lf-date">Date</label><input id="lf-date" type="date" value="${u.date || todayYmd()}"></div>
+      <div class="field"><label for="lf-ex">Exercise</label><select id="lf-ex">${[...LIFTS, ...doc.liftEx].map(l => `<option value="${l.id}"${l.id === u.ex ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}<option value="_new"${custom ? ' selected' : ''}>Something else…</option></select></div>
+      ${custom ? `<div class="field"><label for="lf-name">Name</label><input id="lf-name" type="text" placeholder="e.g. Hip thrust" value="${esc(u.name)}"></div>
+      <div class="field"><label for="lf-legs">Works the legs?</label><select id="lf-legs"><option value="1"${u.legs ? ' selected' : ''}>Yes</option><option value=""${u.legs ? '' : ' selected'}>No</option></select></div>` : ''}
+    </div>
+    <div class="lift-sets">${u.sets.map((s, i) => `<div class="lift-set"><span class="num">${i + 1}</span>
+      <input type="number" inputmode="decimal" step="2.5" data-set-lb="${i}" value="${s.lb}" placeholder="${def.bw ? '+ lbs' : 'lbs'}" aria-label="Set ${i + 1} weight">
+      <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-set-reps="${i}" value="${s.reps}" placeholder="reps" aria-label="Set ${i + 1} reps">
+      ${u.sets.length > 1 ? `<button class="link-btn" data-set-del="${i}" aria-label="Remove set ${i + 1}">remove</button>` : ''}</div>`).join('')}</div>
+    ${def.bw ? '<p class="card-sub" style="margin:8px 0 0">Weight is anything added (a belt or vest). Leave it empty for body weight.</p>' : ''}
+    <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="lift-add-set">+ Set</button>${last ? '<button class="btn small" data-action="lift-same">Same as last time</button>' : ''}<button class="btn small primary" data-action="lift-save">Save</button></div>
+    ${recent.length ? `<table class="quiet lift-recent" style="margin-top:16px">${recent.map(l => `<tr><td>${fmtDate(l.date).slice(4)}</td><td>${esc(liftDef(l.ex).name)}</td><td>${fmtSets(l.sets, liftDef(l.ex).bw)} <button class="link-btn" data-del-lift="${l.id}">remove</button></td></tr>`).join('')}</table>` : ''}
+  </div>`;
+}
+// Keeps what's typed when the card redraws (adding a set, switching exercise).
+function readLiftForm(){
+  if (!$('#lift-log')) return;
+  liftUi.date = $('#lf-date').value; liftUi.ex = $('#lf-ex').value;
+  if ($('#lf-name')){ liftUi.name = $('#lf-name').value; liftUi.legs = !!$('#lf-legs').value; }
+  liftUi.sets = liftUi.sets.map((s, i) => ({ lb:$(`[data-set-lb="${i}"]`)?.value ?? s.lb, reps:$(`[data-set-reps="${i}"]`)?.value ?? s.reps }));
+}
+const redrawLiftLog = () => { $('#lift-log').outerHTML = liftLogCard(); };
+function liftPRCard(){
+  const exs = [...new Set(doc.lifts.map(l => l.ex))].map(ex => { const h = liftHist(ex); return { ex, ...liftBest(ex), first:h[0].date, last:h.at(-1).date }; })
+    .sort((a, b) => a.last < b.last ? 1 : a.last > b.last ? -1 : 0);
+  if (!exs.length) return `<div class="card"><div class="card-head"><h2>PRs${infoBtn}</h2><span class="card-sub">your bests, per lift</span></div>${explain('e1rm')}<div class="pending-box">Log a lift and your bests show here.</div></div>`;
+  const sel = exs.find(x => x.ex === liftUi.chart) ?? exs[0];
+  return `<div class="card"><div class="card-head"><h2>PRs${infoBtn}</h2><span class="card-sub">tap a lift for its chart</span></div>${explain('e1rm')}
+    <table class="quiet lift-prs">${exs.map(x => `<tr data-lift-chart="${x.ex}"${x.ex === sel.ex ? ' aria-current="true"' : ''}>
+      <td>${esc(x.def.name)}${x.best.date > x.first && diffDays(x.best.date, todayYmd()) <= 14 ? ' <span class="badge test">new PR</span>' : ''}</td>
+      <td>${x.def.bw ? `${x.best.v} reps` : `${x.best.v} lb`}</td>
+      <td>${x.def.bw ? (x.heavy.s.lb ? `heaviest +${x.heavy.s.lb} lb` : 'body weight') : `heaviest ${x.heavy.s.lb} × ${x.heavy.s.reps}`}</td></tr>`).join('')}</table>
+    <p class="card-sub" style="margin:16px 0 4px">${esc(sel.def.name)} · ${sel.def.bw ? 'most reps in a set' : 'estimated 1-rep max'}, best set each day</p>
+    <div class="chart" id="c-lift" data-ex="${sel.ex}"></div></div>`;
+}
+function drawLiftChart(){
+  const host = $('#c-lift'); if (!host) return;
+  const def = liftDef(host.dataset.ex), m = {};
+  for (const l of liftHist(def.id)){ const v = Math.max(...l.sets.map(s => liftScore(def, s))); if (!m[l.date] || v > m[l.date].v) m[l.date] = { v, r:{ date:l.date } }; }
+  const pts = Object.values(m), vs = pts.map(p => p.v), lo0 = Math.min(...vs), hi0 = Math.max(...vs);
+  const step = def.bw ? Math.max(1, Math.ceil((hi0 - lo0) / 4)) : Math.max(5, round5((hi0 - lo0) / 4));
+  chartLine(host, pts, { lo:Math.max(0, Math.floor(lo0 / step) * step - step), hi:Math.ceil(hi0 / step) * step + step, step,
+    tipFmt:p => `<b>${fmtDate(p.r.date)}</b><br>${def.bw ? `${p.v} reps` : `est. 1-rep max ${p.v} lb`}` });
+}
+
+// Suggestions only: lifting never moves or changes a run.
+function liftRunTips(){
+  const today = todayYmd(), legsOn = d => doc.lifts.some(l => l.date === d && liftDef(l.ex).legs);
+  const days = coached() ? schedule(today, 2) : [];
+  const runToday = runsOn(today).length > 0 || days[0]?.kind === 'run', runTomorrow = days[1]?.kind === 'run', tips = [];
+  if (legsOn(addDays(today, -1)) && runToday) tips.push('<b>Legs yesterday, run today:</b> keep it truly easy and skip any strides. Heart rate may sit a few beats higher than usual. That’s the lifting, not lost fitness.');
+  if (runTomorrow && !legsOn(today)) tips.push('<b>Run tomorrow:</b> if you lift today, make it upper body, or keep leg work light and stop well short of failure.');
+  if (runToday) tips.push('<b>Lifting on a run day?</b> Run first and lift after, ideally a few hours later. Tired legs make for a sloppy run.');
+  else if (coached() && !runTomorrow) tips.push('<b>No run today or tomorrow:</b> a good window for your heaviest leg day.');
+  tips.push('Keep heavy leg days at least 48 hours before your longest or hardest run of the week, and skip heavy legs in race week.');
+  return `<div class="card"><div class="card-head"><h2>Lifting around your runs</h2><span class="card-sub">suggestions · your run plan doesn’t change</span></div>
+    <ul class="lift-tips">${tips.map(t => `<li>${t}</li>`).join('')}</ul></div>`;
+}
+
 const BODY_RANGES = [[30, '30 days'], [90, '90 days'], [365, '1 year']];
 function renderBody(){
   const days = prefs.get('bodyRange', 90);
@@ -3832,6 +4015,9 @@ function renderBody(){
       ${chartCard('c-hrv', 'HRV', 'overnight · a sudden drop can mean run down', hrv)}
       ${chartCard('c-sleep', 'Sleep', 'hours per night', sleep)}
     </div>
+    <div class="section-label" id="lifting">Lifting</div>
+    <div class="grid two">${liftProgCard()}${liftLogCard()}</div>
+    <div class="grid two" style="margin-top:16px">${liftPRCard()}${liftRunTips()}</div>
     <div class="section-label">Fitness & composition</div>
     <div class="grid two">
       <div class="card"><div class="card-head"><h2>VO2 max</h2><span class="card-sub">${vo2.length ? 'Garmin’s estimate · moves slowly' : 'Garmin’s estimate'}</span></div>
@@ -3866,6 +4052,7 @@ function renderBody(){
   if (hrv.length) chartDaily($('#c-hrv'), hrv, { days, unit:'ms', step:10 });
   if (sleep.length) chartDaily($('#c-sleep'), sleep, { days, unit:'hrs', step:2, dec:1, bars:true });
   if (vo2.length > 1) chartDaily($('#c-vo2'), vo2, { days:Math.max(days, 90), unit:'', step:2, gapDays:60 });
+  drawLiftChart();
 }
 
 /* ═══ ROUTINES: follow-along stretching and strength ═════════════════
@@ -4938,6 +5125,22 @@ document.addEventListener('click', async e => {
     else doc.profile.comps = (doc.profile.comps ?? []).filter(c => c.date !== date);
     await save(); renderBody(); return;
   }
+  const lp = e.target.closest('[data-lift-prog]');
+  if (lp){ liftUi.setup = lp.dataset.liftProg; readLiftForm(); renderBody(); return; }
+  const ld = e.target.closest('[data-lift-did], [data-lift-edit]');
+  if (ld){
+    const { day } = progNext(), [ex, n, reps] = LIFT_PROGS[doc.liftProg.id].days[day][+(ld.dataset.liftDid ?? ld.dataset.liftEdit)];
+    const sets = Array.from({ length:n }, () => ({ lb:progWeight(ex, n, reps), reps }));
+    if (ld.dataset.liftDid != null){ readLiftForm(); logLift({ date:todayYmd(), ex, sets, day }); liftUi.chart = ex; await save(); renderBody(); }
+    else { Object.assign(liftUi, { ex, date:todayYmd(), sets, day }); redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' }); }
+    return;
+  }
+  const sdl = e.target.closest('[data-set-del]');
+  if (sdl){ readLiftForm(); liftUi.sets.splice(+sdl.dataset.setDel, 1); redrawLiftLog(); return; }
+  const lc = e.target.closest('[data-lift-chart]');
+  if (lc){ liftUi.chart = lc.dataset.liftChart; readLiftForm(); renderBody(); return; }
+  const dl = e.target.closest('[data-del-lift]');
+  if (dl){ readLiftForm(); doc.lifts = doc.lifts.filter(l => l.id !== dl.dataset.delLift); await save(); renderBody(); toast('Removed'); return; }
   const task = e.target.closest('[data-task]');
   if (task){
     const k = task.dataset.task;
@@ -5189,6 +5392,37 @@ document.addEventListener('click', async e => {
         { date, ...(fat ? { bodyFat:fat } : {}), ...(vo2 ? { vo2 } : {}), ...(note ? { note } : {}) }];
       await save(); toast('Saved'); renderBody(); break;
     }
+    case 'lift-add-set': readLiftForm(); liftUi.sets.push({ ...liftUi.sets.at(-1) }); redrawLiftLog(); break;
+    case 'lift-same': {
+      readLiftForm(); const last = liftHist(liftUi.ex).at(-1);
+      if (last){ liftUi.sets = last.sets.map(s => ({ lb:s.lb || '', reps:s.reps })); redrawLiftLog(); }
+      break;
+    }
+    case 'lift-save': {
+      readLiftForm();
+      const u = liftUi, custom = u.ex === '_new', bw = !custom && liftDef(u.ex).bw, name = u.name.trim();
+      const sets = u.sets.map(s => ({ lb:+s.lb || 0, reps:Math.round(+s.reps) || 0 })).filter(s => s.reps > 0 && (s.lb > 0 || bw));
+      if (custom && !name){ toast('Name the exercise'); break; }
+      if (!u.date || !sets.length){ toast(bw ? 'Enter the reps for at least one set' : 'Enter weight and reps for at least one set'); break; }
+      if (sets.some(s => s.lb > 1500 || s.reps > 100)){ toast('That set looks off'); break; }
+      let ex = u.ex;
+      if (custom){
+        const have = [...LIFTS, ...doc.liftEx].find(l => l.name.toLowerCase() === name.toLowerCase());
+        if (have) ex = have.id;
+        else { ex = 'lx' + Date.now().toString(36); doc.liftEx = [...doc.liftEx, { id:ex, name, inc:5, ...(u.legs ? { legs:true } : {}) }]; }
+      }
+      logLift({ date:u.date, ex, sets, ...(u.day ? { day:u.day } : {}) });
+      Object.assign(liftUi, { ex, day:null, name:'', chart:ex, sets:[{ lb:'', reps:'' }] });
+      await save(); renderBody(); break;
+    }
+    case 'lift-prog-cancel': liftUi.setup = null; readLiftForm(); renderBody(); break;
+    case 'lift-prog-start': {
+      const id = liftUi.setup, exs = progExercises(id), miss = exs.find(ex => !(+$(`#lp-${ex}`).value > 0));
+      if (miss){ toast(`Enter a starting weight for ${liftDef(miss).name}`); break; }
+      doc.liftProg = { id, since:todayYmd(), start:Object.fromEntries(exs.map(ex => [ex, +$(`#lp-${ex}`).value])) };
+      liftUi.setup = null; readLiftForm(); await save(); renderBody(); break;
+    }
+    case 'lift-prog-stop': doc.liftProg = null; readLiftForm(); await save(); renderBody(); toast('Program stopped. Your lifts stay logged'); break;
     case 'export': exportBackup(); break;
     case 'install-app': if (installPrompt){ installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; installPrompt = null; if (outcome !== 'accepted') renderSetup(); } break;
     case 'icu-connect': connectIntervals(); break;
@@ -5226,6 +5460,10 @@ document.addEventListener('change', e => {
   const t = GOAL_TYPES[e.target.value];
   $('#g-unit').textContent = `(${t.unit})`; $('#g-val').placeholder = t.ph; $('#g-val').inputMode = t.unit === 'mi' ? 'decimal' : 'text';
 });
+document.addEventListener('change', e => {
+  if (e.target.id !== 'lf-ex') return;
+  readLiftForm(); liftUi.day = null; redrawLiftLog();
+});
 document.addEventListener('input', e => {
   if (!e.target.id?.startsWith('mr-') || !welcomeUi.race) return;
   const r = welcomeUi.race, v = e.target.value;
@@ -5259,7 +5497,7 @@ function render(){
   if (pg === 'today') renderToday();
   if (pg === 'progress') renderProgress();
   if (pg === 'runs'){ $('#page-runs').dataset.run = ''; arg ? renderRunDetail(arg) : renderRunsList(); }
-  if (pg === 'body'){ renderBody(); if (arg === 'pain') setTimeout(() => $('#pain-map')?.scrollIntoView({ block:'start' }), 50); }
+  if (pg === 'body'){ renderBody(); if (arg === 'pain' || arg === 'lifting') setTimeout(() => $(arg === 'pain' ? '#pain-map' : '#lifting')?.scrollIntoView({ block:'start' }), 50); }
   if (pg === 'plan') renderPlan();
   if (pg === 'setup') renderSetup();
   if (pg === 'routine') renderRoutine(arg);
