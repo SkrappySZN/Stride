@@ -16,7 +16,12 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='48' height='48' rx='11' fill='%23131416'/%3E%3Cg transform='translate%284 4%29 scale%280.83%29 rotate%28-18 24 24%29'%3E%3Crect x='4' y='12' width='40' height='24' rx='12' fill='none' stroke='%23F4F4F0' stroke-width='5'/%3E%3Cpath d='M24 30 H18 a6 6 0 0 1 0 -12 H30 a6 6 0 0 1 0 12' fill='none' stroke='%23d4ff3a' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='24' r='5' fill='%23d4ff3a'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // Night is the default look; set before first paint so there's no flash of the light theme.
+  try { document.documentElement.dataset.theme = JSON.parse(localStorage.getItem('stride:theme')) || 'dark'; }
+  catch { document.documentElement.dataset.theme = 'dark'; }
+</script>
 <style>
 /* ── Tokens ───────────────────────────────────────────────────────── */
 :root{
@@ -46,8 +51,12 @@
   --warn:#fab219;  --warn-text:#8a5a00;
   --crit:#d03b3b;  --crit-text:#b02a2a;
 
-  --radius:14px;
-  --radius-sm:9px;
+  --radius:12px;
+  --radius-sm:8px;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --glow:0 0 0 transparent;
+  --glow-text:none;
+  --hair:rgba(12,13,14,.06);
   --shadow:0 1px 0 rgba(12,13,14,.04), 0 1px 3px rgba(12,13,14,.06);
 }
 @media (prefers-color-scheme:dark){
@@ -65,11 +74,14 @@
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0a0b0d; --surface:#14161a; --surface-2:#1b1e22;
-  --ink:#f3f4f0; --ink-2:#b8bbb3; --muted:#7f838a;
-  --line:#24272c; --grid:#22252a; --axis:#393d43;
+  --bg:#060708; --surface:#0d0f12; --surface-2:#14171b;
+  --ink:#eef0ea; --ink-2:#aab0a8; --muted:#6c727a;
+  --line:#1c2025; --grid:#171a1f; --axis:#2c3137;
   --accent-text:#d4ff3a; --logo-accent:#d4ff3a;
-  --series-1:#3987e5; --series-1-wash:rgba(57,135,229,.10);
+  --series-1:#52d3ff; --series-1-wash:rgba(82,211,255,.08);
+  --glow:0 0 22px rgba(212,255,58,.28);
+  --glow-text:0 0 18px rgba(212,255,58,.45);
+  --hair:rgba(255,255,255,.035);
   --walk:#4a4e55;
   --good-text:#3fcf3f; --warn-text:#fab219; --crit-text:#ff7a7a;
   --shadow:none;
@@ -674,6 +686,108 @@ table.crew td:nth-child(2){white-space:nowrap}
   .runs-table-card .table-wrap{display:none}
   .run-cards{display:block}
 }
+/* journey map */
+.journey{margin-bottom:16px}
+.journey-map{margin:0 -6px}
+.journey text{font-family:var(--mono); font-size:10px; fill:var(--muted); letter-spacing:.06em}
+.journey .j-label.now{fill:var(--accent-text); font-weight:700}
+.journey .j-ms{fill:var(--ink-2); font-size:10.5px}
+.journey .j-you{fill:var(--accent-text); font-weight:700; font-size:10.5px}
+.journey .j-finish{fill:var(--ink); font-size:10.5px; font-weight:600}
+.journey-foot{display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; margin-top:4px; padding-top:12px; border-top:1px solid var(--line)}
+.journey-foot .j-ch{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-text)}
+@media (prefers-reduced-motion: no-preference){
+  .j-pulse{transform-box:fill-box; transform-origin:center; animation:jpulse 2.2s ease-out infinite}
+}
+@keyframes jpulse{0%{transform:scale(.6); opacity:.9} 100%{transform:scale(2.6); opacity:0}}
+:root[data-theme="dark"] .journey .route-line{filter:drop-shadow(0 0 6px rgba(212,255,58,.6))}
+
+/* ══ Night-run look ════════════════════════════════════════════════════
+   Volt is light, not paint: it glows on what's live. Data reads like a
+   watch face (mono, tabular), surfaces are quiet panels on a faint grid,
+   and things arrive with a little motion. Light mode keeps the same
+   structure without the glow. */
+:root[data-theme="dark"] body{
+  background:
+    radial-gradient(1100px 520px at 85% -8%, rgba(212,255,58,.07), transparent 62%),
+    radial-gradient(900px 600px at -12% 38%, rgba(82,211,255,.05), transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+}
+/* faint grid + film grain over everything, never in the way */
+:root[data-theme="dark"] body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:linear-gradient(var(--hair) 1px, transparent 1px), linear-gradient(90deg, var(--hair) 1px, transparent 1px);
+  background-size:56px 56px;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 0%, #000 0%, transparent 75%); mask-image:radial-gradient(ellipse at 50% 0%, #000 0%, transparent 75%);
+}
+:root[data-theme="dark"] body::after{
+  content:""; position:fixed; inset:-50%; pointer-events:none; z-index:100; opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+main, .topbar{position:relative; z-index:1}
+.topbar{z-index:30}
+
+/* type: mono for readouts and labels */
+.eyebrow, .section-label, .bstat-l, .card-head .card-sub, .d-name, .kv div, .s-l, .ms-l, table.runs th, .badge, .k-dir{font-family:var(--mono); letter-spacing:.08em}
+.eyebrow, .section-label, .bstat-l, table.runs th{font-size:10.5px; font-weight:600}
+.card-head .card-sub{font-size:11px; text-transform:lowercase}
+table.runs td, .kv b, .stat .s-v, .rc-nums, .te-cell b, .wx-h span, .num:not(.display){font-family:var(--mono); font-feature-settings:"zero" 1}
+.kv b, .stat .s-v{font-weight:600}
+.card h2{font-size:14px; font-weight:750; letter-spacing:.01em; display:flex; align-items:center; gap:8px}
+.section-label{color:var(--ink-2)}
+.section-label::before{content:""; width:6px; height:6px; border-radius:1px; background:var(--accent); box-shadow:var(--glow)}
+.section-label::after{background:linear-gradient(90deg, var(--line), transparent)}
+
+/* panels */
+:root[data-theme="dark"] .card{
+  background:linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,0) 40%), var(--surface);
+  border-color:var(--line); box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 20px 40px -30px rgba(0,0,0,.8);
+}
+:root[data-theme="dark"] a.card-link:hover, :root[data-theme="dark"] .routine-pick:hover{border-color:color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow:var(--glow)}
+.card{transition:border-color .2s, box-shadow .2s}
+
+/* glow on what's live */
+:root[data-theme="dark"] .band-title em, :root[data-theme="dark"] .band .eyebrow{text-shadow:var(--glow-text)}
+:root[data-theme="dark"] .bstat-v{text-shadow:0 0 24px rgba(255,255,255,.12)}
+:root[data-theme="dark"] .btn.primary, :root[data-theme="dark"] .routine-pick.pick, :root[data-theme="dark"] .mbadge, :root[data-theme="dark"] .tag-run{box-shadow:var(--glow)}
+:root[data-theme="dark"] .chart path[stroke-width="2"], :root[data-theme="dark"] .chart polyline{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--series-1) 60%, transparent))}
+:root[data-theme="dark"] .pbar i, :root[data-theme="dark"] .ring-fg{filter:drop-shadow(0 0 6px rgba(212,255,58,.5))}
+:root[data-theme="dark"] .day.today{outline-color:var(--accent); box-shadow:var(--glow)}
+
+/* controls: sharper, lit on press */
+.btn{border-radius:9px; transition:transform .12s, box-shadow .2s, border-color .2s}
+.btn:active{transform:scale(.97)}
+:root[data-theme="dark"] .btn:not(.primary){background:rgba(255,255,255,.03)}
+.pill{border-radius:9px}
+.pill[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); box-shadow:var(--glow)}
+.tab{border-radius:9px; position:relative}
+.tab[aria-current="page"]{background:color-mix(in srgb, var(--ink) 8%, transparent); color:var(--ink)}
+.tab[aria-current="page"]::after{content:""; position:absolute; left:12px; right:12px; bottom:-11px; height:2px; border-radius:2px; background:var(--accent); box-shadow:0 0 12px rgba(212,255,58,.7)}
+:root[data-theme="dark"] .topbar{background:color-mix(in srgb, var(--bg) 72%, transparent); border-bottom-color:rgba(255,255,255,.06)}
+:root[data-theme="dark"] .band{border-bottom:0}
+:root[data-theme="dark"] .band::after{content:""; position:absolute; left:0; right:0; bottom:0; height:2px; background:linear-gradient(90deg, transparent, var(--accent) 30%, var(--accent) 70%, transparent); box-shadow:0 0 18px rgba(212,255,58,.55); z-index:2}
+@media (max-width:720px){
+  .tab[aria-current="page"]::after{bottom:auto; top:-7px; left:30%; right:30%}
+  :root[data-theme="dark"] .tabs{background:color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border-top-color:rgba(255,255,255,.07)}
+}
+
+/* motion: only on arriving at a page, never on background refreshes */
+@media (prefers-reduced-motion: no-preference){
+  .page.entering .wrap > *, .page.entering .band-in > *{animation:rise .55s cubic-bezier(.2,.7,.2,1) both}
+  .page.entering .wrap > *:nth-child(2){animation-delay:.06s}
+  .page.entering .wrap > *:nth-child(3){animation-delay:.12s}
+  .page.entering .wrap > *:nth-child(4){animation-delay:.18s}
+  .page.entering .wrap > *:nth-child(n+5){animation-delay:.24s}
+  .page.entering .band-in > *:nth-child(2){animation-delay:.08s}
+  .page.entering .band-title{animation:titleIn .7s cubic-bezier(.2,.7,.2,1) both}
+  .page.entering .band-bg{animation:bgIn 1.2s ease-out both}
+  .page.entering .chart .bar{transform-box:fill-box; transform-origin:50% 100%; animation:grow .7s cubic-bezier(.2,.7,.2,1) both}
+}
+@keyframes rise{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+@keyframes titleIn{from{opacity:0; transform:translateX(-18px) skewX(-6deg); filter:blur(6px)} to{opacity:1; transform:none; filter:none}}
+@keyframes bgIn{from{opacity:0; transform:scale(1.06)} to{opacity:1; transform:none}}
+@keyframes grow{from{transform:scaleY(0)} to{transform:none}}
 </style>
 </head>
 <body>
@@ -1841,7 +1955,7 @@ const prefs = {
   set(k, v){ try { localStorage.setItem('stride:' + k, JSON.stringify(v)); } catch {} },
 };
 const savedTheme = prefs.get('theme', null);
-if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+document.documentElement.dataset.theme = savedTheme || 'dark';
 document.querySelectorAll('[data-theme-toggle]').forEach(b => b.addEventListener('click', () => {
   const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const next = cur === 'dark' ? 'light' : 'dark';
@@ -1944,8 +2058,8 @@ function chartColumns(host, { cats, series, max, ticks, fmt, guard, labelFmt, ti
       if (v <= 0) return;
       const y0 = y(acc), y1 = y(acc + v), gap = acc > 0 ? 2 : 0;
       const top = series.slice(si + 1).every(s2 => !(c[s2.key] > 0));
-      if (top) el('path', { d:colPath(cx - bw / 2, y1, bw, y0 - gap), fill:s.color }, svg);
-      else el('rect', { x:cx - bw / 2, y:y1, width:bw, height:Math.max(0, y0 - y1 - gap), fill:s.color }, svg);
+      if (top) el('path', { d:colPath(cx - bw / 2, y1, bw, y0 - gap), fill:s.color, class:'bar' }, svg);
+      else el('rect', { x:cx - bw / 2, y:y1, width:bw, height:Math.max(0, y0 - y1 - gap), fill:s.color, class:'bar' }, svg);
       acc += v;
     });
     if (labelFmt && band > 34) el('text', { x:cx, y:y(acc) - 6, 'text-anchor':'middle', class:'lbl num' }, svg).textContent = labelFmt(c);
@@ -2118,6 +2232,7 @@ const EXPLAIN = {
   gate: () => 'Each Sunday night the plan looks back at the week: did you get your runs in, were your legs fine at 48 hours, and did you stay under your heart-rate limits? All green moves you up a week; otherwise you repeat it. Repeating a week is normal and keeps you healthy.',
   zones: () => 'Your threshold is the heart rate where running stops feeling sustainable. Garmin estimates it after a few runs. Every zone, limit and chart in Stride is set from it, so it’s worth getting right.',
   treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the test-route trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
+  journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
   standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
 };
 const infoBtn = `<button class="info-btn" data-explain aria-expanded="false" aria-label="What does this mean?">?</button>`;
@@ -2283,9 +2398,11 @@ function renderToday(){
       stats: [['Runs this week', weekRuns.length], ['Miles', weekMi.toFixed(1)], ['Jogging', Math.round(weekRuns.reduce((a, r) => a + (r.runSec ?? 0), 0) / 60), 'min']],
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
     }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${guideCard()}
+      ${doc.runs.length ? journeyCard('j-today') : ''}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid two" style="margin-top:16px">${routineCard()}${weatherCard()}</div>
       <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
+    drawJourney($('#j-today'));
     return;
   }
 
@@ -2386,9 +2503,11 @@ function renderToday(){
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>${cta}`,
   }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${guideCard()}
+    ${journeyCard('j-today')}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
     <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
+  drawJourney($('#j-today'));
 }
 
 function lastRunCard(r){
@@ -2401,6 +2520,120 @@ function lastRunCard(r){
       <div>${r.jogHr != null ? 'Jog HR' : 'Avg HR'}<b class="num">${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}</b></div>
       <div>Pace<b class="num">${fmtDur(r.avgPaceSec)}</b></div>
     </div></a>`;
+}
+
+/* ═══ THE JOURNEY: every run a waypoint on one road ═══════════════════
+   Left to right from the first run (or the plan's start) to the end of the
+   plan; the road ahead is dashed. Chapters are the plan's phases, or
+   months when there's no plan. */
+function journeyChapters(start, horizon){
+  if (!coached()){
+    const out = [];
+    for (let d = start.slice(0, 8) + '01'; d <= horizon; ){
+      const dt = parseYmd(d), next = ymd(new Date(dt.getFullYear(), dt.getMonth() + 1, 1));
+      out.push({ start:d < start ? start : d, end:addDays(next, -1) > horizon ? horizon : addDays(next, -1), label:MON_LONG[dt.getMonth()].toUpperCase() });
+      d = next;
+    }
+    return out;
+  }
+  const weeks = planState(), cur = weeks.at(-1), out = [];
+  const push = (ws, pw) => {
+    const ph = planWeekObj(pw)?.phase ?? '', last = out.at(-1);
+    if (last && last.phase === ph) last.end = addDays(ws, 6); else out.push({ phase:ph, start:ws, end:addDays(ws, 6) });
+  };
+  weeks.forEach(w => push(w.start, w.planWeek));
+  // The road ahead, if every week from here moves up.
+  for (let pw = cur.planWeek, ws = cur.start; pw < planLen(); ){ pw++; ws = addDays(ws, 7); push(ws, pw); }
+  out.forEach((c, i) => { c.label = `CH.${i + 1} ${c.phase.toUpperCase()}`; c.n = i + 1; });
+  return out;
+}
+// What the flag at the end of the road stands for (plain text: it's set with textContent).
+function journeyFinish(){
+  if (isMarathon()) return `Race day · ${doc.race?.name || 'marathon'}`;
+  if (coached()) return activePlan().goal ? `Finish · ${activePlan().goal}` : 'Finish';
+  const g = (doc.goals ?? []).find(g => !goalState(g).hit);
+  if (g) return `Goal · ${GOAL_TYPES[g.type].fmt(g.target)}`;
+  const nx = nextMilestones(milestones())[0];
+  return nx ? `Next · ${nx[0]}` : 'Keep going';
+}
+function journeySpan(){
+  const runs = sortedRuns(), today = todayYmd();
+  const start = [runs[0]?.date, coached() ? doc.planStart : null, today].filter(Boolean).sort()[0];
+  let chapters = journeyChapters(start, addDays(today, 21));
+  const horizon = coached() ? chapters.at(-1).end : addDays(today, 21);
+  if (!coached()) chapters = journeyChapters(start, horizon);
+  return { start, horizon, chapters, today };
+}
+function journeyCard(id){
+  const runs = sortedRuns(), { start, chapters, today } = journeySpan();
+  const ch = chapters.find(c => c.start <= today && today <= c.end);
+  const day = diffDays(start, today) + 1, mi = runs.reduce((a, r) => a + (r.distMi ?? 0), 0);
+  return `<div class="card journey"><div class="card-head"><h2>The journey${infoBtn}</h2><span class="card-sub">day ${day} · ${runs.length} runs · ${mi.toFixed(1)} mi</span></div>
+    ${explain('journey')}
+    <div class="chart journey-map" id="${id}"></div>
+    ${ch && coached() ? `<div class="journey-foot"><span class="j-ch">Chapter ${ch.n}</span> <b>${esc(ch.phase)}</b> <span class="card-sub">${esc(planWeekObj(planState().at(-1).planWeek)?.session ?? '')}</span></div>` : ''}
+  </div>`;
+}
+function drawJourney(host){
+  if (!host) return;
+  const runs = sortedRuns(), { start, horizon, chapters, today } = journeySpan();
+  const narrow = host.clientWidth < 560, H = narrow ? 230 : 260, m = { l:22, r:narrow ? 26 : 34, t:34, b:30 };
+  const [svg, W] = svgFor(host, H);
+  const span = Math.max(14, diffDays(start, horizon) + 1);
+  const X = d => m.l + diffDays(start, d) / span * (W - m.l - m.r);
+  const mid = H * .56, amp = H * .17, turns = narrow ? 1.6 : 2.3;
+  const Y = x => mid + amp * Math.sin((x - m.l) / (W - m.l - m.r) * Math.PI * turns + .5);
+  const lit = css('--fig-hl'), quiet = css('--axis'), ink = css('--ink'), muted = css('--muted');
+  // Chapters: alternating faint bands, the current one named in volt.
+  chapters.forEach((c, i) => {
+    const x0 = X(c.start), x1 = X(addDays(c.end, 1)), now = c.start <= today && today <= c.end;
+    if (i % 2) el('rect', { x:x0, y:m.t - 18, width:Math.max(0, x1 - x0), height:H - m.t - m.b + 30, fill:ink, 'fill-opacity':.025 }, svg);
+    el('line', { x1:x0, x2:x0, y1:m.t - 18, y2:H - m.b + 12, stroke:css('--line'), 'stroke-dasharray':'2 4' }, svg);
+    if (x1 - x0 > (narrow ? 46 : 64)) el('text', { x:x0 + 8, y:m.t - 4, class:'j-label' + (now ? ' now' : '') }, svg).textContent = narrow ? c.label.replace(/^(CH\.\d+).*/, '$1') : c.label;
+  });
+  // The road: travelled solid and lit, ahead dashed.
+  const tx = Math.min(X(today), W - m.r), pts = (a, b) => { const p = []; for (let x = a; x <= b; x += 3) p.push(`${x.toFixed(1)},${Y(x).toFixed(1)}`); p.push(`${b.toFixed(1)},${Y(b).toFixed(1)}`); return 'M' + p.join('L'); };
+  el('path', { d:pts(m.l, W - m.r), fill:'none', stroke:quiet, 'stroke-width':1.8, 'stroke-dasharray':'3 6', 'stroke-linecap':'round' }, svg);
+  el('path', { d:pts(m.l, tx), fill:'none', stroke:lit, 'stroke-width':3.5, 'stroke-linecap':'round', class:'route-line' }, svg);
+  // Milestones as checkpoints; the latest few get a flag line and their name.
+  const ms = milestones().sort((a, b) => a.date < b.date ? -1 : 1), named = narrow ? [] : ms.slice(-3);
+  // Named checkpoints get a row each above the road, the lowest row that doesn't collide.
+  const rows = [];
+  const labelRow = (x0, x1) => { let i = 0; while ((rows[i] ?? []).some(([a, b]) => x0 < b + 10 && x1 > a - 10)) i++; (rows[i] ??= []).push([x0, x1]); return i; };
+  ms.forEach(c => {
+    const x = X(c.date), y = Y(x);
+    el('path', { d:`M${x} ${y - 9}l6 6l-6 6l-6 -6z`, fill:css('--surface'), stroke:lit, 'stroke-width':1.6 }, svg);
+    if (named.includes(c)){
+      const w = c.label.length * 6.4, right = x > W * .7, x0 = right ? x - 4 - w : x + 4;
+      const ty = m.t + 14 + labelRow(x0, x0 + w) * 14;
+      el('line', { x1:x, x2:x, y1:y - 10, y2:ty + 3, stroke:lit, 'stroke-opacity':.45 }, svg);
+      el('text', { x:right ? x - 4 : x + 4, y:ty, class:'j-ms', 'text-anchor':right ? 'end' : 'start' }, svg).textContent = c.label;
+    }
+    tipOn(el('circle', { cx:x, cy:y - 3, r:10, fill:'transparent' }, svg), `<b>Checkpoint</b><br>${esc(c.label)} · ${fmtDate(c.date)}`);
+  });
+  // Every run, sized by distance.
+  const perDay = {};
+  runs.forEach(r => {
+    const k = perDay[r.date] = (perDay[r.date] ?? 0) + 1, x = X(r.date) + (k - 1) * 5, y = Y(x);
+    const rad = 3 + Math.min(5, (r.distMi ?? 0) * 1.6), tread = isTreadmill(r);
+    el('circle', { cx:x, cy:y, r:rad, fill:tread ? css('--surface') : isClean(r) ? lit : ink, stroke:tread ? css('--series-1') : css('--surface'), 'stroke-width':tread ? 2 : 1.5, class:'j-run' }, svg);
+    const hit = el('circle', { cx:x, cy:y, r:Math.max(10, rad + 4), fill:'transparent', style:'cursor:pointer', 'data-goto':'runs/' + r.id }, svg);
+    tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${fmtMi(r.distMi)} mi · ${fmtDur(r.timerSec)} · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${tread ? ' · treadmill' : isClean(r) ? ' · test route' : ''}`);
+  });
+  // You are here.
+  const ty = Y(tx);
+  el('circle', { cx:tx, cy:ty, r:9, fill:lit, 'fill-opacity':.25, class:'j-pulse' }, svg);
+  el('circle', { cx:tx, cy:ty, r:5.5, fill:lit, stroke:css('--surface'), 'stroke-width':2 }, svg);
+  el('text', { x:tx, y:ty + 26, 'text-anchor':'middle', class:'j-you' }, svg).textContent = 'YOU';
+  // The flag at the end of the road.
+  const fx = W - m.r, fy = Y(fx);
+  el('path', { d:`M${fx} ${fy}V${fy - 30}l14 5l-14 5`, fill:'none', stroke:ink, 'stroke-width':1.6, 'stroke-linejoin':'round' }, svg);
+  el('path', { d:`M${fx} ${fy - 30}l14 5l-14 5z`, fill:lit }, svg);
+  // The finish words get whatever room the start label leaves, cut short if need be.
+  const startTxt = `START · ${fmtDate(start).slice(4).toUpperCase()}`, room = Math.floor((W - m.l - m.r - startTxt.length * 6.2 - 20) / 6.4);
+  const fin = journeyFinish();
+  el('text', { x:fx + 6, y:H - 8, 'text-anchor':'end', class:'j-finish' }, svg).textContent = fin.length > room ? fin.slice(0, Math.max(4, room - 1)).trimEnd() + '…' : fin;
+  el('text', { x:m.l, y:H - 8, class:'j-label' }, svg).textContent = startTxt;
 }
 
 /* ═══ PROGRESS ═══════════════════════════════════════════════════════ */
@@ -2460,7 +2693,8 @@ function renderProgress(){
     sub: 'The question every chart answers: is the same effort costing fewer heartbeats?',
     stats: [['Runs', runs.length], ['Clean on test route', clean.length], ['Miles', totMi.toFixed(1)], ['Hours jogging', (totJog / 3600).toFixed(1)]],
   }) + `<div class="wrap">
-    <div class="section-label" style="margin-top:0">Getting fitter?</div>
+    ${journeyCard('j-progress')}
+    <div class="section-label">Getting fitter?</div>
     <div class="grid kpis">
       <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · test route${infoBtn}</div>${explain('jogHr')}${kpiHr}</div>
       <div class="card kpi"><div class="eyebrow">Recovery HR · 2-min drop${infoBtn}</div>${explain('recovery')}${kpiRec}</div>
@@ -2527,6 +2761,7 @@ function renderProgress(){
     </div></div>`;
 
   const openRun = c => { location.hash = 'runs/' + c.id; };
+  drawJourney($('#j-progress'));
   chartHrTrend($('#c-hr'), runs);
   if (tread.length >= 2){
     const hrs = tread.map(r => Math.round(hrMetric(r)));
@@ -3094,7 +3329,7 @@ function chartDaily(host, pts, { days, unit = '', step, dec = 0, smooth = false,
   let line = pts;
   if (bars){
     const bw = Math.max(2, Math.min(14, band - 2));
-    pts.forEach(p => el('path', { d:colPath(x(p.date) - bw / 2, y(p.v), bw, y(lo)), fill:c }, svg));
+    pts.forEach(p => el('path', { d:colPath(x(p.date) - bw / 2, y(p.v), bw, y(lo)), fill:c, class:'bar' }, svg));
   } else if (smooth){
     pts.forEach(p => el('circle', { cx:x(p.date), cy:y(p.v), r:3, fill:c, 'fill-opacity':.28 }, svg));
     line = pts.map(p => ({ date:p.date, v:windowAvg(pts, 7, p.date) }));
@@ -4258,6 +4493,8 @@ document.addEventListener('click', async e => {
   if (dg){ doc.goals = doc.goals.filter(g => g.id !== dg.dataset.delGoal); await save(); render(); return; }
   const sm = e.target.closest('[data-seen-milestones]');
   if (sm){ prefs.set('seenMilestones', [...prefs.get('seenMilestones', []), ...sm.dataset.seenMilestones.split(',')].slice(-200)); render(); return; }
+  const go = e.target.closest('[data-goto]');
+  if (go){ location.hash = go.dataset.goto; return; }
   const rs = e.target.closest('[data-routine-start]');
   if (rs){ startRoutine(rs.dataset.routineStart); return; }
   const ex = e.target.closest('[data-explain]');
@@ -4492,8 +4729,49 @@ function render(){
   if (pg === 'setup') renderSetup();
   if (pg === 'routine') renderRoutine(arg);
 }
+/* ── Arrival motion ──────────────────────────────────────────────────
+   Played when you land on a page, never on the re-renders that sync and
+   imports trigger, so numbers don't keep re-counting under you. */
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+let enterTimer;
+function arrive(){
+  const page = $('.page.active'); if (!page || calm()) return;
+  page.classList.remove('entering'); void page.offsetWidth; page.classList.add('entering');
+  clearTimeout(enterTimer); enterTimer = setTimeout(() => page.classList.remove('entering'), 1400);
+  // Charts and some pages draw a beat after render, so let them land first.
+  setTimeout(() => {
+    // Headline numbers count up from zero, keeping their decimals.
+    page.querySelectorAll('.bstat-v, .k-val, .ms-v, .next-run-big').forEach(el => {
+      const t = [...el.childNodes].find(n => n.nodeType === 3 && /\d/.test(n.textContent)); if (!t) return;
+      const m = t.textContent.match(/^(\s*)(\d+(?:\.\d+)?)(.*)$/s); if (!m) return;
+      const end = +m[2], dec = (m[2].split('.')[1] ?? '').length, t0 = performance.now();
+      if (!end) return;
+      const step = now => {
+        const k = Math.min(1, (now - t0) / 900), e = 1 - Math.pow(1 - k, 3);
+        t.textContent = m[1] + (end * e).toFixed(dec) + m[3];
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+    // Lines trace themselves in.
+    page.querySelectorAll('.chart path[stroke-width="2"][fill="none"], .journey .route-line').forEach(p => {
+      const L = p.getTotalLength?.(); if (!L) return;
+      p.animate([{ strokeDasharray:`${L} ${L}`, strokeDashoffset:L }, { strokeDasharray:`${L} ${L}`, strokeDashoffset:0 }], { duration:1100, easing:'cubic-bezier(.3,.6,.2,1)' });
+    });
+  }, 40);
+}
+// The header photo drifts a little slower than the page.
+let parallaxRaf = 0;
+addEventListener('scroll', () => {
+  if (calm() || parallaxRaf) return;
+  parallaxRaf = requestAnimationFrame(() => {
+    parallaxRaf = 0;
+    const bg = $('.page.active .band-bg'); if (bg) bg.style.transform = `translateY(${Math.min(scrollY, 400) * 0.35}px)`;
+  });
+}, { passive:true });
+
 let lastRoute = null;
-addEventListener('hashchange', () => { render(); if (location.hash !== lastRoute) scrollTo(0, 0); lastRoute = location.hash; });
+addEventListener('hashchange', () => { render(); if (location.hash !== lastRoute){ scrollTo(0, 0); arrive(); } lastRoute = location.hash; });
 let rt, lastW = innerWidth;
 addEventListener('resize', () => {
   if (innerWidth === lastW) return; lastW = innerWidth;
@@ -4511,6 +4789,7 @@ await saveLocal();
 if (!storageOk) toast('Storage is blocked here — changes won’t survive a reload');
 lastRoute = location.hash;
 render();
+arrive();
 paintSync();
 syncInit(fromLink).finally(() => checkIntervals().finally(() => { enrichRuns(); crewPush().catch(() => {}); }));
 </script>
