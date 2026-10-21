@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Running tracker: automatic Garmin import, heart-rate trends, body metrics and a plan that adapts week to week.">
 <title>Stride</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -413,7 +413,8 @@ details.stored summary::-webkit-details-marker{display:none}
   .brand{flex:1}
   .tabs{
     position:fixed; left:0; right:0; bottom:0; z-index:40; justify-content:space-around; gap:0;
-    padding:6px 4px calc(6px + env(safe-area-inset-bottom)); background:var(--surface); border-top:1px solid var(--line)
+    padding:6px max(4px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
+    background:var(--surface); border-top:1px solid var(--line)
   }
   .tab{flex-direction:column; gap:3px; font-size:10.5px; padding:6px 2px; border-radius:10px; flex:1; min-width:0}
   .tab span{overflow:hidden; text-overflow:ellipsis; max-width:100%}
@@ -423,7 +424,7 @@ details.stored summary::-webkit-details-marker{display:none}
   .bstat-v{font-size:32px}
   .bstat-l{font-size:10px; letter-spacing:.08em}
   .band-title{font-size:58px}
-  main{padding-bottom:110px}
+  main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
   .kpi .k-val{font-size:54px}
 }
 
@@ -781,8 +782,9 @@ body.moment-on{overflow:hidden}
   content:""; position:fixed; inset:-50%; pointer-events:none; z-index:100; opacity:.05;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-main, .topbar{position:relative; z-index:1}
-.topbar{z-index:30}
+main{position:relative; z-index:1}
+/* With viewport-fit=cover the page reaches the screen's edges; keep content off a sideways notch. */
+body{padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right)}
 
 /* type: mono for readouts and labels */
 .eyebrow, .section-label, .bstat-l, .card-head .card-sub, .d-name, .kv div, .s-l, .ms-l, table.runs th, .badge, .k-dir{font-family:var(--mono); letter-spacing:.08em}
@@ -825,7 +827,9 @@ table.runs td, .kv b, .stat .s-v, .rc-nums, .te-cell b, .wx-h span, .num:not(.di
 :root[data-theme="dark"] .band::after{content:""; position:absolute; left:0; right:0; bottom:0; height:2px; background:linear-gradient(90deg, transparent, var(--accent) 30%, var(--accent) 70%, transparent); box-shadow:0 0 18px rgba(212,255,58,.55); z-index:2}
 @media (max-width:720px){
   .tab[aria-current="page"]::after{bottom:auto; top:-7px; left:30%; right:30%}
-  :root[data-theme="dark"] .tabs{background:color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border-top-color:rgba(255,255,255,.07)}
+  /* Solid, not glass: on iPhone Safari the page scrolling through a see-through dock looks broken. */
+  :root[data-theme="dark"] .topbar{background:var(--bg)}   /* no blur on phones (it would trap the dock), so no see-through either */
+  :root[data-theme="dark"] .tabs{background:#0b0d10; border-top-color:rgba(255,255,255,.08); box-shadow:0 -12px 30px -18px rgba(0,0,0,.9)}
 }
 
 /* motion: only on arriving at a page, never on background refreshes */
