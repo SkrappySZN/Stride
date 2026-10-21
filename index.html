@@ -697,6 +697,16 @@ table.lift-recent td:first-child{white-space:nowrap; padding-right:12px}
 .lv-set.done .lv-tick{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); box-shadow:var(--glow)}
 .lv-set.done .lv-step{opacity:.7}
 .lv-foot{margin:12px 2px 0}
+.lv-fig{display:flex; justify-content:center; margin:2px 0 12px; padding:8px; border-radius:var(--radius-sm); background:var(--surface-2)}
+.lv-fig .fig{width:min(100%, 220px)}
+.fig .kit{fill:color-mix(in srgb, var(--fig-hl) 14%, transparent); stroke:var(--fig-hl); stroke-width:2}
+.fig .kit-hub, .fig .kit-solid{fill:var(--fig-hl)}
+.fig .kit-line{stroke:var(--muted); stroke-width:1.2}
+.fig .kit-plat{stroke:var(--fig-hl); stroke-width:3; stroke-linecap:round}
+.lv-plates{display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; margin-top:14px; padding:10px 12px; border-radius:var(--radius-sm); background:var(--surface-2)}
+.lv-plates small{color:var(--muted); font-size:12.5px}
+.lv-plate-row{display:flex; align-items:center; gap:3px}
+.plate{display:grid; place-items:center; width:24px; height:var(--h); border-radius:4px; background:var(--ink); color:var(--surface); font:700 10px/1 var(--mono); font-style:normal}
 .lv-done-stats{display:flex; gap:28px}
 .lv-done-stats span{display:flex; flex-direction:column}
 .lv-done-stats b{font-family:var(--mono); font-size:26px}
@@ -2469,7 +2479,7 @@ const EXPLAIN = {
   treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the test-route trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
-  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is weight × reps added up over every set, a rough measure of how much work you did. For dumbbells, the weight is one dumbbell.',
+  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is weight × reps added up over every set, a rough measure of how much work you did. For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
   e1rm: () => 'The first number is your estimated one-rep max: the most you could likely lift once, worked out from a set of several reps (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. Tested a true max? Log it as one set of 1 rep: a single counts as exactly what you lifted. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
   standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
@@ -4202,6 +4212,7 @@ function renderLive(){
     <div id="lv-rest">${liveRest()}</div>
     <div class="card lv-card">
       <div class="card-head"><h2>${esc(def.name)}${infoBtn}</h2><span class="card-sub">${left ? `${left} set${left > 1 ? 's' : ''} to go` : 'done ✓'}</span></div>${explain('liftLive')}
+      ${LMOVES[it.ex] ? `<div class="lv-fig">${figure(LMOVES[it.ex], { size:220, lift:it.ex, label:def.name })}</div>` : ''}
       ${how ? `<p class="lv-eq"><b>Use:</b> ${how.eq}</p>` : ''}
       <p class="lv-why">${it.why}</p>
       ${how ? `<button class="link-btn lv-how-btn" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how to do it' : 'How to do it'}</button>
@@ -4211,6 +4222,7 @@ function renderLive(){
         ${it.sets.map((s, i) => `<div class="lv-set${s.done ? ' done' : ''}"><span class="num">${i + 1}</span>${stepper(i, 'lb', s.lb, def.bw ? 'body' : 'lbs')}${stepper(i, 'reps', s.reps, 'reps')}
           <button class="lv-tick" data-lv-done="${i}" aria-pressed="${s.done}" aria-label="${s.done ? `Undo set ${i + 1}` : `Done set ${i + 1}`}">✓</button></div>`).join('')}
       </div>
+      ${BARBELL.includes(it.ex) ? `<div class="lv-plates" id="lv-plates">${platesLine(it)}</div>` : ''}
       <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="lv-add-set">+ Set</button><button class="btn small" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button>
         ${nextI >= 0 ? `<button class="btn small${left ? '' : ' primary'}" data-lv-go="${nextI}">${left ? 'Skip for now' : 'Next'}: ${esc(liftDef(LV.items[nextI].ex).name.replace(/ \(.*\)$/, ''))} →</button>` : `<button class="btn small primary" data-action="lv-finish">Finish workout</button>`}</div>
       ${LV.swap ? `<div class="wo-swap">${alts.length ? alts.map(l => `<button class="pill" data-lv-pick="${l.id}">${esc(l.name)}</button>`).join('') : '<small>No other variations listed for this one.</small>'}
@@ -4218,6 +4230,25 @@ function renderLive(){
     </div>
     <p class="card-sub lv-foot">Each ticked set saves as you go. ${nextI >= 0 ? '<button class="link-btn" data-action="lv-finish">End workout here</button>' : ''}</p>
   </div>`;
+  animateFigures();
+}
+/* Plate calculator: what goes on each side of the bar, heaviest first. */
+const BARBELL = ['squat', 'fsquat', 'deadlift', 'rdl', 'hipthrust', 'bench', 'incline', 'press', 'row'];
+const PLATES = [45, 35, 25, 10, 5, 2.5];
+function platesFor(lb, bar){
+  let side = (lb - bar) / 2; const out = [];
+  for (const p of PLATES) while (side >= p - 1e-9){ out.push(p); side -= p; }
+  return { out, short:Math.round(side * 2 * 10) / 10 };
+}
+function platesLine(it){
+  if (!BARBELL.includes(it.ex)) return '';
+  const s = it.sets.find(x => !x.done) ?? it.sets.at(-1), lb = +s.lb || 0, bar = prefs.get('barLb', 45);
+  const barBtn = `<button class="link-btn" data-action="lv-bar">${bar} lb bar</button>`;
+  if (!lb) return `<small>Enter a weight to see the plates. ${barBtn}</small>`;
+  if (lb < bar) return `<small>${lb} lb is less than the empty bar. ${barBtn}</small>`;
+  const { out, short } = platesFor(lb, bar);
+  return `<span class="lv-plate-row">${out.length ? out.map(p => `<i class="plate" style="--h:${Math.round(14 + p * .55)}px">${p}</i>`).join('') : '<small>Just the bar</small>'}</span>
+    <small>each side · ${barBtn}${short ? ` · nearest you can load is ${lb - short} lb` : ''}</small>`;
 }
 function liveRest(){
   if (!LV?.rest) return '';
@@ -4568,19 +4599,20 @@ const figLines = P => [[P.p, P.k2, P.f2, P.t2], [P.n, P.e2, P.w2], [P.n, P.p], [
   .map(l => l.map(q => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' '));
 
 // A move's figure as SVG. Still when asked, or when someone prefers reduced motion.
-function figure(m, { size = 240, still = false } = {}){
-  const moving = !still && !matchMedia('(prefers-reduced-motion: reduce)').matches && (m.b !== m.a);
-  const P = fullPose(m, moving ? m.a : m.b), L = figLines(P);
+function figure(m, { size = 240, still = false, lift = null, label = m.name } = {}){
+  const moving = !still && !matchMedia('(prefers-reduced-motion: reduce)').matches && (m.seq || m.b !== m.a);
+  // Held still, a lift shows its working position.
+  const P = fullPose(m, m.seq ? m.seq[moving ? 0 : 1] : moving ? m.a : m.b), L = figLines(P);
   const cls = ['far', 'far', 'body', 'near', 'near'];
-  const id = Object.keys(MOVES).find(k => MOVES[k] === m);
-  const prop = { wallR:'<rect x="94" y="6" width="5" height="104" rx="2" class="prop"/>', wallL:'<rect x="21" y="6" width="5" height="104" rx="2" class="prop"/>',
+  const id = lift ? null : Object.keys(MOVES).find(k => MOVES[k] === m);
+  const prop = m.props ?? { wallR:'<rect x="94" y="6" width="5" height="104" rx="2" class="prop"/>', wallL:'<rect x="21" y="6" width="5" height="104" rx="2" class="prop"/>',
     couch:'<rect x="4" y="82" width="32" height="28" rx="5" class="prop"/>', post:'<rect x="45" y="40" width="5" height="70" rx="2" class="prop"/>', mat:'<rect x="6" y="108" width="108" height="3" rx="1.5" class="prop"/>' }[m.prop] ?? '';
   // Floor moves only use the bottom of the box, so frame them tighter and bigger.
-  const vb = m.prop === 'mat' ? [0, 46, 120, 70] : [0, 0, 120, 120];
-  return `<svg class="fig" viewBox="${vb.join(' ')}" width="${size}" height="${Math.round(size * vb[3] / 120)}" role="img" aria-label="${esc(m.name)}"${moving && id ? ` data-move="${id}"` : ''}>
-    ${prop}<line x1="2" y1="110" x2="118" y2="110" class="ground"/>
+  const vb = m.vb ?? (m.prop === 'mat' ? [0, 46, 120, 70] : [0, 0, 120, 120]);
+  return `<svg class="fig" viewBox="${vb.join(' ')}" width="${size}" height="${Math.round(size * vb[3] / vb[2])}" role="img" aria-label="${esc(label)}"${moving && id ? ` data-move="${id}"` : ''}${moving && lift ? ` data-lmove="${lift}"` : ''}>
+    ${prop}${m.hang ? '' : '<line x1="2" y1="110" x2="118" y2="110" class="ground"/>'}
     ${L.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0)) ? ' hl' : ''}"/>`).join('')}
-    <circle cx="${P.h[0]}" cy="${P.h[1]}" r="7" class="head"/>
+    <circle cx="${P.h[0]}" cy="${P.h[1]}" r="7" class="head"/><g class="gear">${m.gear?.(P) ?? ''}</g>
   </svg>`;
 }
 // One animation loop for whatever moving figures are on screen.
@@ -4589,19 +4621,248 @@ function animateFigures(){
   cancelAnimationFrame(figRaf);
   const t0 = performance.now();
   const step = now => {
-    const figs = document.querySelectorAll('svg.fig[data-move]');
+    const figs = document.querySelectorAll('svg.fig[data-move], svg.fig[data-lmove]');
     if (!figs.length) return;
     for (const svg of figs){
-      const m = MOVES[svg.dataset.move], loop = m.dur * (moveKeys(m).length - 1) * 1000;
+      const m = svg.dataset.lmove ? LMOVES[svg.dataset.lmove] : MOVES[svg.dataset.move], loop = m.dur * (moveKeys(m).length - 1) * 1000;
       // A frame's timestamp can predate t0 by a few ms; a negative phase would index past the poses.
       const P = poseAt(m, (Math.max(0, now - t0) % loop) / loop), L = figLines(P), pl = svg.querySelectorAll('polyline');
       L.forEach((pts, i) => pl[i].setAttribute('points', pts));
       const hd = svg.querySelector('.head'); hd.setAttribute('cx', P.h[0].toFixed(1)); hd.setAttribute('cy', P.h[1].toFixed(1));
+      if (m.gear) svg.querySelector('.gear').innerHTML = m.gear(P);
     }
     figRaf = requestAnimationFrame(step);
   };
   figRaf = requestAnimationFrame(step);
 }
+
+/* Lift figures: the same side-on stick figure as the routines, posed from a
+   few anchor points (pelvis, ankles, wrists) and a torso angle. Knees and
+   elbows are solved, so every bone keeps its length in every pose. Angles are
+   degrees: 0 is the way the figure faces, 90 straight down, -90 straight up.
+   `gear` draws what moves with the body (bar, dumbbells, cable), `props` what
+   stays put (bench, rack, machine). */
+const deg = a => a * Math.PI / 180;
+const at = (o, a, l) => [o[0] + Math.cos(deg(a)) * l, o[1] + Math.sin(deg(a)) * l];
+// Two-bone reach from a toward b; bend 1 or -1 picks which side the joint goes.
+function ik(a, b, l1, l2, bend){
+  const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.max(.01, Math.min(Math.hypot(dx, dy), l1 + l2 - .01)), base = Math.atan2(dy, dx);
+  const t = Math.acos(Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))));
+  const j = [a[0] + Math.cos(base + bend * t) * l1, a[1] + Math.sin(base + bend * t) * l1], a2 = Math.atan2(b[1] - j[1], b[0] - j[0]);
+  return [j, [j[0] + Math.cos(a2) * l2, j[1] + Math.sin(a2) * l2]];
+}
+// w is relative to the shoulder (neck point); W is absolute. Far limbs sit a touch behind.
+function lpose({ p, t = -90, hd, len = 35, f1, f2, kb = -1, kb2 = kb, ft = 0, ft2 = ft, w, w2r, W, W2, eb = 1, eb2 = eb, front }){
+  const P = { p };
+  P.n = at(p, t, len); P.h = at(P.n, hd ?? t, 11);
+  f2 ??= [f1[0] - 2, f1[1]];
+  [P.k1, P.f1] = ik(p, f1, 23, 22, kb); [P.k2, P.f2] = ik(p, f2, 23, 22, kb2);
+  P.t1 = front ? P.f1 : at(P.f1, ft, 7); P.t2 = front ? P.f2 : at(P.f2, ft2, 7);
+  const w1 = W ?? [P.n[0] + w[0], P.n[1] + w[1]], w2 = W2 ?? (w2r ? [P.n[0] + w2r[0], P.n[1] + w2r[1]] : [w1[0] - 2, w1[1]]);
+  [P.e1, P.w1] = ik(P.n, w1, 17, 15, eb); [P.e2, P.w2] = ik(P.n, w2, 17, 15, eb2);
+  return P;
+}
+// Arms swung out toward or away from the viewer: same angles, foreshortened.
+function wide(P, k){
+  const sc = q => [P.n[0] + (q[0] - P.n[0]) * k, P.n[1] + (q[1] - P.n[1]) * k];
+  return { ...P, e1:sc(P.e1), w1:sc(P.w1), e2:sc(P.e2), w2:sc(P.w2) };
+}
+const plate = (c, r = 9.5) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${r}" class="kit"/><circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="2" class="kit-hub"/>`;
+const bell = c => `<rect x="${(c[0] - 6).toFixed(1)}" y="${(c[1] - 3.5).toFixed(1)}" width="12" height="7" rx="3" class="kit-solid"/>`;
+const bellUp = c => `<rect x="${(c[0] - 3.5).toFixed(1)}" y="${(c[1] - 7).toFixed(1)}" width="7" height="12" rx="3" class="kit-solid"/>`;
+const cable = (a, b) => `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" class="kit-line"/>`;
+const pulley = (x, y) => `<circle cx="${x}" cy="${y}" r="3" class="prop"/>`;
+const knob = (c, r = 4) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${r}" class="kit-solid"/>`;
+// Static pieces of kit.
+const BENCH = '<rect x="14" y="84" width="80" height="5" rx="2" class="prop"/><rect x="22" y="89" width="4" height="21" class="prop"/><rect x="82" y="89" width="4" height="21" class="prop"/>';
+const SEAT = (x = 28, y = 86, back = true) => `<rect x="${x}" y="${y}" width="30" height="5" rx="2" class="prop"/><rect x="${x + 13}" y="${y + 5}" width="4" height="${110 - y - 5}" class="prop"/>${back ? `<rect x="${x - 6}" y="${y - 44}" width="5" height="44" rx="2" class="prop"/>` : ''}`;
+const RACK = (x = 22) => `<rect x="${x}" y="20" width="4" height="90" class="prop"/>`;
+const PULLBAR = y => `<rect x="20" y="${y - 2}" width="80" height="4" rx="2" class="prop"/>`;
+const STACK = '<rect x="104" y="8" width="10" height="102" rx="2" class="prop"/>';
+
+const STANDF = [60, 107];
+// Seated, facing you, arms out wide; brought together in front they point at you, so they shorten.
+const FLYOPEN = lpose({ p:[60, 83], f1:[66, 107], f2:[54, 107], kb:-1, kb2:1, front:true, w:[29, 6], w2r:[-29, 6], eb:1, eb2:-1 });
+const LMOVES = {
+  squat: { dur:1.4, props:RACK(96),
+    a:lpose({ p:[60, 62], f1:STANDF, w:[-6, 0], eb:-1 }),
+    b:lpose({ p:[44, 86], t:-48, f1:STANDF, w:[-6, 1], eb:-1 }),
+    gear:P => plate(at(P.n, -150, 4)) },
+  fsquat: { dur:1.4, props:RACK(96),
+    a:lpose({ p:[60, 62], f1:STANDF, w:[4, -2], eb:-1 }),
+    b:lpose({ p:[46, 87], t:-62, f1:STANDF, w:[4, -2], eb:-1 }),
+    gear:P => plate([P.w1[0], P.w1[1]]) },
+  goblet: { dur:1.4,
+    a:lpose({ p:[60, 62], f1:STANDF, w:[10, 6], eb:1 }),
+    b:lpose({ p:[46, 88], t:-68, f1:STANDF, w:[10, 6], eb:1 }),
+    gear:P => bellUp(P.w1) },
+  legpress: { dur:1.6, props:'<polygon points="42,98 47,93 13,59 8,64" class="prop"/><rect x="40" y="96" width="5" height="14" class="prop"/><line x1="60" y1="77" x2="104" y2="33" class="ground"/>',
+    a:lpose({ p:[40, 90], t:-135, hd:-115, f1:[70, 59], kb:-1, ft:-135, W:[44, 92], eb:1 }),
+    b:lpose({ p:[40, 90], t:-135, hd:-115, f1:[57, 72], kb:-1, ft:-135, W:[44, 92], eb:1 }),
+    gear:P => { const c = at(P.f1, -125, 3); return `<line x1="${at(c, -135, 12)[0].toFixed(1)}" y1="${at(c, -135, 12)[1].toFixed(1)}" x2="${at(c, 45, 12)[0].toFixed(1)}" y2="${at(c, 45, 12)[1].toFixed(1)}" class="kit-plat"/>`; } },
+  deadlift: { dur:1.5,
+    a:lpose({ p:[41, 80], t:-34, f1:[56, 107], W:[63, 99], eb:1 }),
+    b:lpose({ p:[58, 62], f1:[56, 107], w:[2, 31], eb:1 }),
+    gear:P => plate(P.w1) },
+  rdl: { dur:1.6,
+    a:lpose({ p:[58, 62], f1:[56, 107], w:[2, 31], eb:1 }),
+    b:lpose({ p:[42, 66], t:-22, f1:[56, 107], W:[63, 86], eb:1 }),
+    gear:P => plate(P.w1) },
+  hipthrust: { dur:1.5, props:'<rect x="4" y="84" width="24" height="5" rx="2" class="prop"/><rect x="12" y="89" width="4" height="21" class="prop"/>',
+    a:lpose({ p:[52, 98], t:-154, hd:-150, f1:[84, 107], W:[56, 92] }),
+    b:lpose({ p:[54, 76], t:-176, hd:-160, f1:[84, 107], W:[57, 70] }),
+    gear:P => plate([P.p[0] + 2, P.p[1] - 7]) },
+  split: { dur:1.4,
+    a:lpose({ p:[57, 64], f1:[78, 107], f2:[36, 104], ft2:35, kb2:-1, w:[1, 31] }),
+    b:lpose({ p:[55, 84], f1:[78, 107], f2:[34, 104], ft2:35, kb2:-1, w:[1, 31] }),
+    gear:P => bell(P.w1) },
+  lunge: { dur:.9,
+    // Near leg steps forward, back to standing, then the far leg.
+    seq:[lpose({ p:[50, 62], f1:[50, 107], w:[1, 31] }),
+      lpose({ p:[58, 64], f1:[80, 107], f2:[38, 104], ft2:35, w:[1, 31] }),
+      lpose({ p:[56, 84], f1:[80, 107], f2:[36, 104], ft2:35, w:[1, 31] }),
+      lpose({ p:[58, 64], f1:[80, 107], f2:[38, 104], ft2:35, w:[1, 31] }),
+      lpose({ p:[50, 62], f1:[50, 107], w:[1, 31] }),
+      lpose({ p:[58, 64], f2:[80, 107], f1:[38, 104], ft:35, ft2:0, w:[1, 31] }),
+      lpose({ p:[56, 84], f2:[80, 107], f1:[36, 104], ft:35, ft2:0, w:[1, 31] }),
+      lpose({ p:[58, 64], f2:[80, 107], f1:[38, 104], ft:35, ft2:0, w:[1, 31] })],
+    gear:P => bell(P.w1) },
+  stepup: { dur:1.4, vb:[-8, -18, 136, 136], props:'<rect x="66" y="86" width="40" height="24" rx="2" class="prop"/>',
+    a:lpose({ p:[54, 64], f1:[76, 84], f2:[48, 107], w:[1, 31] }),
+    b:lpose({ p:[76, 41], f1:[76, 84], f2:[64, 80], kb2:-1, ft2:40, w:[1, 31] }),
+    gear:P => bell(P.w1) },
+  legcurl: { dur:1.6, props:SEAT(22, 82),
+    a:lpose({ p:[38, 79], t:-100, f1:[82, 84], W:[44, 82] }),
+    b:lpose({ p:[38, 79], t:-100, f1:[53.5, 100.7], W:[44, 82] }),
+    gear:P => knob(at(P.f1, 20, 4)) },
+  nordic: { dur:1.8, props:'<rect x="38" y="104" width="22" height="6" rx="2" class="prop"/><circle cx="20" cy="101" r="4" class="prop"/>',
+    seq:[lpose({ p:[46, 83], f1:[24, 106], kb:-1, ft:160, w:[6, 18] }),
+      lpose({ p:[63, 91], t:-40, f1:[24, 106], kb:-1, ft:160, w:[10, 18] }),
+      lpose({ p:[68, 101], t:-12, hd:-5, f1:[24, 106], kb:-1, ft:160, W:[96, 108], eb:1 })] },
+  legext: { dur:1.6, props:SEAT(22, 82),
+    a:lpose({ p:[38, 79], t:-100, f1:[59, 102], W:[44, 82] }),
+    b:lpose({ p:[38, 79], t:-100, f1:[83, 78], W:[44, 82] }),
+    gear:P => knob(at(P.f1, -60, 4)) },
+  calf: { dur:1.2, vb:[-8, -14, 136, 136], props:'<rect x="63" y="100" width="34" height="10" rx="2" class="prop"/>',
+    a:lpose({ p:[60, 60], f1:[60, 104], ft:-28, f2:[58, 104], w:[1, 31] }),
+    b:lpose({ p:[63, 49], f1:[63.5, 93.5], ft:68, f2:[61.5, 93.5], w:[1, 31] }),
+    gear:P => bell(P.w1) },
+  bench: { dur:1.6, props:BENCH + RACK(16),
+    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[34, 49], eb:1 }),
+    b:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[40, 72], eb:1 }),
+    gear:P => plate(P.w1) },
+  incline: { dur:1.6, props:'<polygon points="30,52 66,84 70,80 34,48" class="prop"/><rect x="58" y="84" width="22" height="5" rx="2" class="prop"/><rect x="64" y="89" width="4" height="21" class="prop"/>',
+    a:lpose({ p:[66, 79], t:-140, hd:-125, f1:[92, 107], kb:1, W:[44, 26], eb:1 }),
+    b:lpose({ p:[66, 79], t:-140, hd:-125, f1:[92, 107], kb:1, W:[47, 52], eb:1 }),
+    gear:P => plate(P.w1) },
+  chestmachine: { dur:1.6, props:SEAT(24, 84),
+    a:lpose({ p:[40, 81], t:-96, f1:[70, 107], w:[12, 8], eb:1 }),
+    b:lpose({ p:[40, 81], t:-96, f1:[70, 107], w:[30, 6], eb:1 }),
+    gear:P => bellUp(P.w1) },
+  inclinemachine: { dur:1.6, props:SEAT(24, 84),
+    a:lpose({ p:[40, 81], t:-96, f1:[70, 107], w:[11, 2], eb:1 }),
+    b:lpose({ p:[40, 81], t:-96, f1:[70, 107], w:[24, -20], eb:1 }),
+    gear:P => bellUp(P.w1) },
+  press: { dur:1.5, vb:[-8, -18, 136, 136],
+    a:lpose({ p:[60, 62], f1:STANDF, w:[5, -2], eb:1 }),
+    b:lpose({ p:[60, 62], f1:STANDF, hd:-96, w:[1, -31], eb:1 }),
+    gear:P => plate(P.w1) },
+  dbpress: { dur:1.5, props:SEAT(34, 84),
+    a:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[3, -5], eb:1 }),
+    b:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[1, -31], eb:1 }),
+    gear:P => bell(P.w1) },
+  shouldermachine: { dur:1.5, props:SEAT(34, 84),
+    a:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[4, -5], eb:1 }),
+    b:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[2, -31], eb:1 }),
+    gear:P => bellUp(P.w1) },
+  // Flies and lateral raises sweep sideways, so they're drawn facing you.
+  fly: { dur:1.6, front:true, props:SEAT(45, 86, false),
+    a:FLYOPEN, b:wide(FLYOPEN, .2),
+    gear:P => bellUp(P.w1) + bellUp(P.w2) },
+  dbfly: { dur:1.6, props:BENCH,
+    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[33, 49], eb:1 }),
+    // Arms opening out to the sides point away from you, so side-on they look short.
+    b:wide(lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[33, 49], eb:1 }), .22),
+    gear:P => bell(P.w1) },
+  lateral: { dur:1.5, front:true,
+    a:lpose({ p:[60, 62], f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[7, 31], w2r:[-7, 31], eb:-1, eb2:1 }),
+    b:lpose({ p:[60, 62], f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[31, 3], w2r:[-31, 3], eb:1, eb2:-1 }),
+    gear:P => bell(P.w1) + bell(P.w2) },
+  pushdown: { dur:1.3, props:STACK + pulley(104, 16),
+    a:lpose({ p:[58, 62], t:-84, f1:[58, 107], w:[13, 9], eb:1 }),
+    b:lpose({ p:[58, 62], t:-84, f1:[58, 107], w:[5, 31], eb:1 }),
+    gear:P => cable([104, 16], P.w1) + knob(P.w1, 2.5) },
+  ohext: { dur:1.5, props:SEAT(34, 84),
+    a:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[1, -31], eb:1 }),
+    b:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[-5, -6], eb:1 }),
+    gear:P => bellUp(P.w1) },
+  skull: { dur:1.6, props:BENCH,
+    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[34, 49], eb:1 }),
+    b:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[22, 66], eb:1 }),
+    gear:P => bell(P.w1) },
+  dips: { dur:1.5, props:'<rect x="38" y="62" width="34" height="4" rx="2" class="prop"/><rect x="66" y="66" width="4" height="44" class="prop"/>',
+    a:lpose({ p:[56, 65], f1:[30, 82], kb:-1, ft:-60, W:[55, 62], eb:1 }),
+    b:lpose({ p:[63, 80], t:-75, f1:[36, 96], kb:-1, ft:-60, W:[55, 62], eb:1 }),
+    hang:true },
+  pushup: { dur:1.4,
+    a:lpose({ p:[67, 89], t:-158, f1:[108, 104], ft:75, W:[36, 108], eb:1 }),
+    b:lpose({ p:[62, 101], t:-171, f1:[108, 104], ft:75, W:[36, 108], eb:-1 }) },
+  pullup: { dur:1.6, hang:true, vb:[-4, -8, 128, 128], props:PULLBAR(16),
+    a:lpose({ p:[60, 84], f1:[42, 114], kb:-1, ft:60, W:[62, 16], eb:1 }),
+    b:lpose({ p:[60, 52], f1:[42, 82], kb:-1, ft:60, W:[62, 16], eb:1 }) },
+  pulldown: { dur:1.5, props:SEAT(28, 84, false) + '<rect x="54" y="72" width="16" height="4" rx="2" class="prop"/>' + pulley(66, 4),
+    a:lpose({ p:[44, 81], t:-96, f1:[76, 107], w:[10, -31], eb:1 }),
+    b:lpose({ p:[44, 81], t:-104, f1:[76, 107], w:[14, 8], eb:1 }),
+    gear:P => cable([66, 4], P.w1) + `<rect x="${(P.w1[0] - 9).toFixed(1)}" y="${(P.w1[1] - 2).toFixed(1)}" width="18" height="4" rx="2" class="kit-solid"/>` },
+  row: { dur:1.4,
+    a:lpose({ p:[44, 68], t:-30, f1:[62, 107], W:[66, 98], eb:1 }),
+    b:lpose({ p:[44, 68], t:-30, f1:[62, 107], W:[58, 72], eb:1 }),
+    gear:P => plate(P.w1) },
+  // Far knee and far hand on the bench, near foot on the floor, near arm rowing past the bench's end.
+  dbrow: { dur:1.4, props:'<rect x="28" y="84" width="58" height="5" rx="2" class="prop"/><rect x="34" y="89" width="4" height="21" class="prop"/><rect x="78" y="89" width="4" height="21" class="prop"/>',
+    a:lpose({ p:[58, 63], t:-3, f1:[50, 107], f2:[36, 84], kb2:-1, ft2:180, W:[95, 93], W2:[83, 84], eb:1, eb2:1 }),
+    b:lpose({ p:[58, 63], t:-3, f1:[50, 107], f2:[36, 84], kb2:-1, ft2:180, W:[72, 68], W2:[83, 84], eb:-1, eb2:1 }),
+    gear:P => bell(P.w1) },
+  cablerow: { dur:1.6, props:'<rect x="24" y="96" width="34" height="5" rx="2" class="prop"/><rect x="88" y="78" width="5" height="32" class="prop"/>' + pulley(110, 86),
+    a:lpose({ p:[40, 93], t:-70, f1:[86, 90], kb:-1, ft:-80, w:[30, 6], eb:1 }),
+    b:lpose({ p:[40, 93], t:-95, f1:[86, 90], kb:-1, ft:-80, W:[52, 80], eb:1 }),
+    gear:P => cable([110, 86], P.w1) + knob(P.w1, 2.5) },
+  invrow: { dur:1.4, props:RACK(46) + '<rect x="40" y="40" width="12" height="4" rx="2" class="prop"/>',
+    a:lpose({ p:[72, 86], t:-160, hd:-160, f1:[106, 104], ft:-80, W:[46, 43], eb:1 }),
+    b:lpose({ p:[78, 74], t:-138, hd:-140, f1:[106, 104], ft:-80, W:[46, 43], eb:-1 }) },
+  facepull: { dur:1.5, props:STACK + pulley(104, 22),
+    a:lpose({ p:[56, 62], f1:[56, 107], w:[31, -4], eb:1 }),
+    b:lpose({ p:[56, 62], f1:[56, 107], w:[6, -10], eb:1 }),
+    gear:P => cable([104, 22], P.w1) + knob(P.w1, 2.5) },
+  reardelt: { dur:1.6, front:true, props:SEAT(45, 86, false),
+    a:wide(FLYOPEN, .2), b:FLYOPEN,
+    gear:P => knob(P.w1, 2.5) + knob(P.w2, 2.5) },
+  curl: { dur:1.4,
+    a:lpose({ p:[60, 62], f1:STANDF, w:[3, 31], eb:1 }),
+    b:lpose({ p:[60, 62], f1:STANDF, w:[8, 3], eb:1 }),
+    gear:P => plate(P.w1) },
+  dbcurl: { dur:1.4,
+    a:lpose({ p:[60, 62], f1:STANDF, w:[3, 31], eb:1 }),
+    b:lpose({ p:[60, 62], f1:STANDF, w:[8, 3], eb:1 }),
+    gear:P => bell(P.w1) },
+  shrug: { dur:1.4, front:true,
+    a:lpose({ p:[60, 62], f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[9, 31], w2r:[-9, 31], eb:-1, eb2:1 }),
+    b:lpose({ p:[60, 62], len:39, f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[9, 31], w2r:[-9, 31], eb:-1, eb2:1 }),
+    gear:P => bellUp(P.w1) + bellUp(P.w2) },
+  legraise: { dur:1.6, hang:true, props:PULLBAR(8),
+    a:lpose({ p:[60, 74], f1:[56, 118], ft:80, W:[62, 8], eb:1 }),
+    b:lpose({ p:[60, 74], f1:[76, 80], kb:-1, ft:80, W:[62, 8], eb:1 }) },
+  crunch: { dur:1.6, props:STACK + pulley(104, 8) + '<rect x="40" y="104" width="26" height="6" rx="2" class="prop"/>',
+    a:lpose({ p:[58, 83], t:-88, f1:[36, 106], ft:160, w:[5, -5], eb:1 }),
+    b:lpose({ p:[58, 83], t:-28, hd:20, f1:[36, 106], ft:160, w:[6, -2], eb:1 }),
+    gear:P => cable([104, 8], P.w1) },
+  backext: { dur:1.6, vb:[-4, -4, 128, 128], props:'<polygon points="58,84 72,70 76,74 62,88" class="prop"/><circle cx="30" cy="100" r="4" class="prop"/><line x1="36" y1="110" x2="68" y2="86" class="ground"/>',
+    a:lpose({ p:[66, 74], t:-45, f1:[34, 106], kb:-1, ft:-45, w:[4, 10], eb:-1 }),
+    b:lpose({ p:[66, 74], t:30, hd:45, f1:[34, 106], kb:-1, ft:-45, w:[4, 10], eb:-1 }) },
+};
+// Exercises that move the same way share a figure.
+Object.assign(LMOVES, { dbrdl:{ ...LMOVES.rdl, gear:P => bell(P.w1) }, dbbench:{ ...LMOVES.bench, props:BENCH, gear:P => bell(P.w1) },
+  dbincline:{ ...LMOVES.incline, gear:P => bell(P.w1) }, chinup:LMOVES.pullup, hammer:LMOVES.dbcurl });
 
 // The routine as timed steps. Sore spots from the last few days get longer holds.
 function routineSteps(rid){
@@ -5913,6 +6174,7 @@ document.addEventListener('click', async e => {
     case 'lv-rest-add': LV.rest = { end:Math.max(LV.rest?.end ?? 0, Date.now()) + 30000 }; liveSave(); $('#lv-rest').innerHTML = liveRest(); break;
     case 'lv-rest-skip': LV.rest = null; liveSave(); $('#lv-rest').innerHTML = ''; break;
     case 'lv-finish': liveFinish(); break;
+    case 'lv-bar': prefs.set('barLb', prefs.get('barLb', 45) === 45 ? 35 : 45); $('#lv-plates').innerHTML = platesLine(LV.items[LV.i]); break;
     case 'lv-summary-close': liftUi.summary = null; readLiftForm(); renderLift(); break;
     case 'lift-prog-cancel': liftUi.setup = null; readLiftForm(); renderLift(); break;
     case 'lift-prog-start': {
@@ -5969,6 +6231,7 @@ document.addEventListener('input', e => {
   const it = LV.items[LV.i], s = it.sets[+i];
   s[e.target.dataset.lvLb != null ? 'lb' : 'reps'] = e.target.value;
   liveSave();
+  const pl = $('#lv-plates'); if (pl) pl.innerHTML = platesLine(it);
   if (s.done){ liveCommit(it); clearTimeout(liveTyping); liveTyping = setTimeout(save, 800); }
 });
 let liveTyping;

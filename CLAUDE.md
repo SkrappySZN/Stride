@@ -102,6 +102,11 @@ data runs through it, so treat changes to data handling with care.
   a ✓ per set that writes to `doc.lifts` at once (`liveCommit`), and a timestamp-based rest timer. Where
   you are lives in `prefs` ('liftLive'), so it resumes after a reload. Give every new exercise a `HOWTO`
   entry. Lift opens without a run plan.
+  Each exercise also has a figure in `LMOVES`, posed with `lpose()` from a few anchor points (pelvis,
+  ankles, wrists, torso angle) so knees and elbows are solved and bone lengths stay fixed; `gear` draws
+  the bar, dumbbells or cable that move with it, `props` the bench or machine. Same rule as routines:
+  check every pose against its `HOWTO` cues on a contact sheet. Barbell lifts (`BARBELL`) show a plate
+  calculator (`platesFor`, bar weight in `prefs` 'barLb').
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.
