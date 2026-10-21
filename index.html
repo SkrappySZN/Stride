@@ -702,6 +702,61 @@ table.crew td:nth-child(2){white-space:nowrap}
 @keyframes jpulse{0%{transform:scale(.6); opacity:.9} 100%{transform:scale(2.6); opacity:0}}
 :root[data-theme="dark"] .journey .route-line{filter:drop-shadow(0 0 6px rgba(212,255,58,.6))}
 
+/* moments */
+.moment{position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:20px; background:rgba(4,5,6,.72); backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2); opacity:0; transition:opacity .25s; overflow-y:auto}
+.moment.show{opacity:1}
+.moment[hidden]{display:none}
+body.moment-on{overflow:hidden}
+.moment-in{position:relative; width:min(560px, 100%); padding:30px 28px 26px; border-radius:18px; color:#eef0ea;
+  background:radial-gradient(500px 260px at 100% 0%, rgba(212,255,58,.16), transparent 70%), linear-gradient(180deg, #121519, #0a0c0e);
+  border:1px solid rgba(212,255,58,.28); box-shadow:0 0 0 1px rgba(255,255,255,.04) inset, 0 30px 80px -20px rgba(0,0,0,.8), 0 0 60px -20px rgba(212,255,58,.35);
+  transform:translateY(18px) scale(.97); transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.moment.show .moment-in{transform:none}
+.moment-x{position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:9px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#eef0ea; cursor:pointer}
+.m-eyebrow{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#d4ff3a; text-shadow:0 0 14px rgba(212,255,58,.5); padding-right:40px}
+.m-chapter{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#aab0a8; margin-top:8px}
+.m-hero{display:flex; align-items:baseline; gap:10px; margin:10px 0 6px}
+.m-big{font-size:clamp(84px, 22vw, 132px); line-height:.85; color:#d4ff3a; text-shadow:0 0 34px rgba(212,255,58,.45)}
+.m-unit{font-size:32px; color:#aab0a8}
+.m-head{font-size:clamp(36px, 8vw, 54px); line-height:.92; margin:12px 0 18px; color:#eef0ea}
+.m-stats{display:grid; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); gap:10px; margin:14px 0 4px}
+.m-stats div, .m-grid div{padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07)}
+.m-stats > div > span, .m-grid > div > span{display:block; font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#6c727a}
+.m-stats b{font-family:var(--mono); font-size:20px; font-weight:600}
+.m-stats small{font-size:11px; color:#6c727a; margin-left:2px}
+.m-grid{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px}
+.m-grid b{display:block; font-size:44px; line-height:1; color:#eef0ea}
+.m-grid div:first-child b{color:#d4ff3a; text-shadow:0 0 22px rgba(212,255,58,.4)}
+.m-route{margin:14px 0 0; padding:6px; border-radius:12px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06)}
+.m-route svg{display:block; width:100%; height:150px}
+.m-route path{stroke:#d4ff3a; filter:drop-shadow(0 0 6px rgba(212,255,58,.6))}
+@media (prefers-reduced-motion: no-preference){ .moment.show .m-route path{stroke-dasharray:1200; stroke-dashoffset:1200; animation:trace 1.6s .3s cubic-bezier(.3,.6,.2,1) forwards} }
+@keyframes trace{to{stroke-dashoffset:0}}
+.m-lines{list-style:none; margin:16px 0 0; padding:0; display:grid; gap:8px; font-size:15px; color:#cfd3cc}
+.m-lines li{padding-left:16px; position:relative}
+.m-lines li::before{content:""; position:absolute; left:0; top:.55em; width:6px; height:6px; border-radius:1px; background:#d4ff3a; box-shadow:0 0 8px rgba(212,255,58,.8)}
+.m-lines b{color:#eef0ea}
+.m-verdict{margin:16px 0 0; font-size:15px; color:#cfd3cc}
+.m-verdict b{color:#d4ff3a}
+.m-checkpoints{display:grid; gap:8px; margin-top:16px}
+.m-cp{display:grid; grid-template-columns:22px auto 1fr; gap:10px; align-items:center; padding:10px 12px; border-radius:10px; border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); background:color-mix(in srgb, var(--accent) 7%, transparent)}
+.m-cp i{width:12px; height:12px; transform:rotate(45deg); border:2px solid var(--accent-text); justify-self:center; box-shadow:0 0 10px rgba(212,255,58,.5)}
+.m-cp span{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.m-cp b{font-size:15px}
+.moment .m-cp span{color:#8a9088}
+.m-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px}
+.moment .btn:not(.primary){background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.12); color:#eef0ea}
+@media (prefers-reduced-motion: no-preference){
+  .moment.show .m-eyebrow, .moment.show .m-hero, .moment.show .m-head, .moment.show .m-stats, .moment.show .m-grid, .moment.show .m-route, .moment.show .m-lines, .moment.show .m-checkpoints, .moment.show .m-verdict, .moment.show .m-actions{animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+  .moment.show .m-hero, .moment.show .m-head{animation-delay:.08s}
+  .moment.show .m-stats, .moment.show .m-grid{animation-delay:.18s}
+  .moment.show .m-route, .moment.show .m-verdict{animation-delay:.28s}
+  .moment.show .m-lines, .moment.show .m-checkpoints{animation-delay:.4s}
+  .moment.show .m-actions{animation-delay:.5s}
+  .m-cp i{animation:cpGlow 2s ease-in-out infinite}
+}
+@keyframes cpGlow{50%{box-shadow:0 0 18px rgba(212,255,58,.9)}}
+
 /* ══ Night-run look ════════════════════════════════════════════════════
    Volt is light, not paint: it glows on what's live. Data reads like a
    watch face (mono, tabular), surfaces are quiet panels on a faint grid,
@@ -793,6 +848,7 @@ table.runs td, .kv b, .stat .s-v, .rc-nums, .te-cell b, .wx-h span, .num:not(.di
 <body>
 <div id="tip" role="tooltip"></div>
 <div class="toast" id="toast" role="status"></div>
+<div class="moment" id="moment" hidden></div>
 <dialog id="choose"></dialog>
 
 <header class="topbar">
@@ -2413,33 +2469,33 @@ function renderToday(){
   // Shown as text, not just the strip's hover tip, so it reads on a phone.
   const yRef = addDays(today, -1);
   const afterSport = isRef(yRef) && !todayRuns.length && !red
-    ? `<b>Sport day yesterday${refLabel(yRef) ? ` (${refLabel(yRef)})` : ''}.</b> If your legs are heavy, keep today all easy or skip it. `
+    ? `<b>Sport day yesterday${refLabel(yRef) ? ` (${refLabel(yRef)})` : ''}.</b> Heavy legs? Go easy or skip. `
     : '';
   if (red){
     eyebrow = `${dateLine} · plan paused`;
     title = 'Get it <em>checked</em>';
-    copy = 'A hard-stop symptom is logged. No running until a doctor or physical therapist has looked at it. Walking and the hip stretch are fine if they don’t hurt.';
+    copy = 'A hard-stop symptom is logged. No running until a doctor or physical therapist checks it. Walking is fine if it doesn’t hurt.';
     tasks = tasksFor(today, ['hip']) + `<li><button class="btn small" data-action="clear-red">I’ve been cleared to run</button></li>`;
   } else if (t.kind === 'done'){
     const r = todayRuns.at(-1);
     title = 'Run <em>done</em>';
-    copy = `${fmtMi(r.distMi)} mi · ${fmtDur(r.runSec)} jogging · ${r.jogHr != null ? `jogging HR ${Math.round(r.jogHr)}` : `avg HR ${r.avgHr}`}${r.recoveryHr != null ? ` · recovery ${r.recoveryHr}` : ''}. Stretch the calves tonight; there’s a soreness check tomorrow.`;
+    copy = `${fmtMi(r.distMi)} mi · ${fmtDur(r.runSec)} jogging · ${r.jogHr != null ? `jogging HR ${Math.round(r.jogHr)}` : `avg HR ${r.avgHr}`}${r.recoveryHr != null ? ` · recovery ${r.recoveryHr}` : ''}. Stretch tonight. Soreness check tomorrow.`;
     tasks = tasksFor(today, ['calf', 'roll', 'hip']);
   } else if (t.kind === 'ref'){
     title = 'Sport <em>day</em>';
-    copy = 'Not a rest day — another sport still loads the legs. Stretch between sessions, and skip the next run if the legs are done.';
+    copy = 'Not a rest day. Stretch between sessions; skip the next run if your legs are done.';
     tasks = tasksFor(today, ['sporthip', 'calf']);
   } else if (t.kind === 'run'){
     const s = sessionFor(pw, t.slot, today);
     eyebrow = `${dateLine} · week ${Math.min(pw, len)}, run ${t.slot}`;
     title = esc(s.title).replace(/^(\S+)/, '$1 <em>') + '</em>';
-    copy = `${afterSport}${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note && !afterSport ? ' ' + t.note + '.' : ''}${isMarathon() ? '' : ' The protocol is below.'}`;
+    copy = `${afterSport}${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note && !afterSport ? ' ' + t.note + '.' : ''}`;
     tasks = tasksFor(today, ['hip', 'calf']);
   } else {
     title = 'Rest <em>day</em>';
-    copy = afterSport + (isRef(addDays(today, 1)) ? 'Sport day tomorrow — rest today and go in fresh. Mobility only.'
-      : ranYesterday ? 'You ran yesterday. The 24–48 hours after a run are when soreness peaks — let the legs settle. Mobility only.'
-      : t.note === 'Week’s runs are in' ? 'This week’s three runs are in. A walk is fine; keep the stretching going.'
+    copy = afterSport + (isRef(addDays(today, 1)) ? 'Sport day tomorrow. Rest and go in fresh.'
+      : ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
+      : t.note === 'Week’s runs are in' ? 'This week’s runs are in. Walk, stretch, recover.'
       : 'Mobility only today.');
     tasks = tasksFor(today, ranYesterday ? ['hip', 'calf', 'roll', 'bridge'] : ['hip', 'bridge']);
   }
@@ -2636,6 +2692,124 @@ function drawJourney(host){
   el('text', { x:m.l, y:H - 8, class:'j-label' }, svg).textContent = startTxt;
 }
 
+/* ═══ MOMENTS: full-screen scenes for the things worth stopping for ════
+   A run arriving, a checkpoint passed, a week finished. Each shows once
+   per device; the first time Stride opens on a device it only notes where
+   you are, so an old backlog never floods in. */
+let momentOpen = false;
+function showMoment(kind, html, after){
+  const box = $('#moment');
+  box.className = 'moment ' + kind;
+  box.innerHTML = `<div class="moment-in" role="dialog" aria-modal="true">${html}</div>`;
+  box.hidden = false; momentOpen = true;
+  document.body.classList.add('moment-on');
+  requestAnimationFrame(() => box.classList.add('show'));
+  // Count the big numbers up and trace any route, same as arriving on a page.
+  if (!calm()) setTimeout(() => {
+    box.querySelectorAll('.m-count').forEach(el => {
+      const end = +el.dataset.v, dec = +(el.dataset.dec ?? 0), t0 = performance.now();
+      const step = now => { const k = Math.min(1, (now - t0) / 1100), e = 1 - Math.pow(1 - k, 3); el.textContent = (end * e).toFixed(dec); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+  }, 250);
+  box.querySelector('[data-moment-close]')?.focus();
+  box._after = after;
+}
+function closeMoment(){
+  const box = $('#moment'); if (box.hidden) return;
+  box.classList.remove('show'); momentOpen = false;
+  document.body.classList.remove('moment-on');
+  setTimeout(() => { box.hidden = true; box.innerHTML = ''; const f = box._after; box._after = null; f?.(); setTimeout(maybeMoment, 400); }, 260);
+}
+const mCount = (v, dec = 0) => `<span class="m-count" data-v="${v}" data-dec="${dec}">${calm() ? Number(v).toFixed(dec) : (0).toFixed(dec)}</span>`;
+
+// Arrival: what this run changed, not just what it was.
+async function arrivalMoment(r){
+  const runs = sortedRuns(), prior = runs.filter(x => x.start < r.start);
+  const lines = [];
+  const firstClean = runs.find(isClean);
+  if (isClean(r) && firstClean && firstClean !== r){
+    const d = Math.round(hrMetric(r) - hrMetric(firstClean));
+    lines.push(d < 0 ? `<b>${-d} bpm lower</b> than your first test-route run — same route, less heart.` : d > 0 ? `${d} bpm higher than your first test-route run${r.tempF >= HOT_F ? ` — it was ${r.tempF}°F, heat adds beats` : ''}.` : 'Same heart rate as your first test-route run.');
+  }
+  if (isTreadmill(r)) lines.push('Treadmill run — counted, but kept out of your street heart-rate trend.');
+  if (prior.length && r.distMi > Math.max(...prior.map(x => x.distMi ?? 0)) + .02) lines.push('<b>Your longest run yet.</b>');
+  if (r.recoveryHr != null && prior.some(x => x.recoveryHr != null) && r.recoveryHr > Math.max(...prior.filter(x => x.recoveryHr != null).map(x => x.recoveryHr))) lines.push(`<b>Best recovery yet</b> — HR dropped ${r.recoveryHr} in 2 minutes.`);
+  if (r.anaerobicTE > 1) lines.push('That one got hard (hard-effort score above 1). Keep the next one easy.');
+  const ms = milestones().filter(x => x.date === r.date);
+  const s = r.hasSamples ? await getSamples(r.id).catch(() => null) : null;
+  showMoment('arrival', `
+    <button class="moment-x" data-moment-close aria-label="Close">✕</button>
+    <div class="m-eyebrow">New run · ${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''}</div>
+    <div class="m-hero display"><span class="m-big">${mCount(r.distMi ?? 0, 2)}</span><span class="m-unit">mi</span></div>
+    <div class="m-stats">
+      <div><span>Time</span><b>${fmtDur(r.timerSec)}</b></div>
+      <div><span>Pace</span><b>${fmtDur(r.avgPaceSec)}<small>/mi</small></b></div>
+      <div><span>${r.jogHr != null ? 'Jog HR' : 'Avg HR'}</span><b>${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}</b></div>
+      ${r.recoveryHr != null ? `<div><span>Recovery</span><b>−${r.recoveryHr}</b></div>` : ''}
+    </div>
+    ${s?.path?.length > 1 && !isTreadmill(r) ? `<div class="m-route">${routeSvg(s.path)}</div>` : ''}
+    ${lines.length ? `<ul class="m-lines">${lines.map(l => `<li>${l}</li>`).join('')}</ul>` : ''}
+    ${ms.length ? `<div class="m-checkpoints">${ms.map(x => `<div class="m-cp"><i></i><span>Checkpoint reached</span><b>${esc(x.label)}</b></div>`).join('')}</div>` : ''}
+    <div class="m-actions">
+      <a class="btn primary big" href="#runs/${r.id}" data-moment-close>Open the run</a>
+      ${r.date === todayYmd() ? '<a class="btn big" href="#routine/post" data-moment-close>Cool down</a>' : ''}
+      <button class="btn big" data-moment-close>Done</button>
+    </div>`);
+  // Seen milestones don't get their own card too.
+  if (ms.length) prefs.set('seenMilestones', [...prefs.get('seenMilestones', []), ...ms.map(x => x.id)].slice(-200));
+}
+
+// Week complete: the week as a poster, and what it means for the plan.
+function weekMoment(ws){
+  const R = recap(ws), we = addDays(ws, 6);
+  let chapter = '', verdict = '';
+  if (coached()){
+    const w = planState().find(x => x.start === ws);
+    if (w){
+      const ph = planWeekObj(w.planWeek)?.phase, chs = journeySpan().chapters, ch = chs.find(c => c.start <= ws && ws <= c.end);
+      chapter = `${ch ? `Chapter ${ch.n} · ` : ''}${esc(ph ?? '')} · week ${w.planWeek}`;
+      verdict = isMarathon() ? '' : w.decision === 'advance' || (!w.decision && w.gate.auto === 'advance') ? `<b>Moving up to week ${Math.min(planLen(), w.planWeek + 1)}.</b> The week did its job.`
+        : `<b>Repeating week ${w.planWeek}.</b> That’s the plan working, not failing: same week again, then up.`;
+    }
+  }
+  showMoment('week', `
+    <button class="moment-x" data-moment-close aria-label="Close">✕</button>
+    <div class="m-eyebrow">Week complete · ${fmtDate(ws).slice(4)} – ${fmtDate(we).slice(4)}</div>
+    ${chapter ? `<div class="m-chapter">${chapter}</div>` : ''}
+    <h2 class="m-head display">${esc(R.headline.replace(/[.—\s]+$/, ''))}</h2>
+    <div class="m-grid">
+      <div><b class="display">${mCount(R.runs.length)}</b><span>runs</span></div>
+      <div><b class="display">${mCount(R.mi, 1)}</b><span>miles</span></div>
+      <div><b class="display">${mCount(Math.round(R.min))}</b><span>minutes</span></div>
+      <div><b class="display">${R.longest ? mCount(R.longest, 2) : '—'}</b><span>longest</span></div>
+    </div>
+    ${verdict ? `<p class="m-verdict">${verdict}</p>` : ''}
+    ${R.ms.length ? `<div class="m-checkpoints">${R.ms.map(x => `<div class="m-cp"><i></i><span>Checkpoint</span><b>${esc(x.label)}</b></div>`).join('')}</div>` : ''}
+    <div class="m-actions">
+      <button class="btn primary big" data-share-recap="${ws}">Share the week</button>
+      <button class="btn big" data-moment-close>On to the next one</button>
+    </div>`);
+}
+
+// Which moment, if any, is due. Called after boot, sync and imports.
+function maybeMoment(){
+  if (momentOpen || !doc.planId || location.hash.startsWith('#routine')) return;
+  const runs = sortedRuns(), last = runs.at(-1);
+  if (last){
+    const seen = prefs.get('arrivalSeen', null);
+    if (seen == null){ prefs.set('arrivalSeen', last.start); }
+    else if (last.start > seen && diffDays(last.date, todayYmd()) <= 3){ prefs.set('arrivalSeen', last.start); arrivalMoment(last); return; }
+  }
+  // Sunday evening shows this week; Monday and Tuesday show last week.
+  const now = new Date(), dow = now.getDay(), ws = dow === 0 && now.getHours() >= 17 ? weekStart(todayYmd()) : dow === 1 || dow === 2 ? addDays(weekStart(todayYmd()), -7) : null;
+  if (ws && prefs.get('weekSeen', null) !== ws && recap(ws).runs.length){
+    if (prefs.get('weekSeen', null) == null && !runs.some(r => r.date < ws)){ prefs.set('weekSeen', ws); return; }
+    prefs.set('weekSeen', ws); prefs.set('recapSeen', ws);
+    weekMoment(ws);
+  }
+}
+
 /* ═══ PROGRESS ═══════════════════════════════════════════════════════ */
 function renderProgress(){
   const runs = sortedRuns(), p = doc.profile;
@@ -2690,7 +2864,7 @@ function renderProgress(){
   page.innerHTML = band({
     eyebrow: `Since ${fmtDate(runs[0].date).slice(4)}${firstClean ? ` · baseline ${fmtDate(firstClean.date).slice(4)}` : ''}`,
     title: 'Pro<em>gress</em>',
-    sub: 'The question every chart answers: is the same effort costing fewer heartbeats?',
+    sub: 'Same effort, fewer heartbeats. That’s the whole game.',
     stats: [['Runs', runs.length], ['Clean on test route', clean.length], ['Miles', totMi.toFixed(1)], ['Hours jogging', (totJog / 3600).toFixed(1)]],
   }) + `<div class="wrap">
     ${journeyCard('j-progress')}
@@ -2938,8 +3112,8 @@ function goalsCard(){
 function milestoneCard(){
   const seen = prefs.get('seenMilestones', []), fresh = milestones().filter(x => diffDays(x.date, todayYmd()) <= 2 && !seen.includes(x.id));
   if (!fresh.length) return '';
-  return `<div class="card milestone-new" style="margin-bottom:16px"><div class="card-head"><h2>🎉 New milestone${fresh.length > 1 ? 's' : ''}</h2><button class="link-btn" data-seen-milestones="${fresh.map(x => x.id).join(',')}">Nice, hide this</button></div>
-    <div class="badges">${fresh.map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div></div>`;
+  return `<div class="card milestone-new" style="margin-bottom:16px"><div class="card-head"><h2>Checkpoint${fresh.length > 1 ? 's' : ''} reached</h2><button class="link-btn" data-seen-milestones="${fresh.map(x => x.id).join(',')}">Hide</button></div>
+    <div class="m-checkpoints">${fresh.map(x => `<div class="m-cp"><i></i><span>${fmtDate(x.date)}</span><b>${esc(x.label)}</b></div>`).join('')}</div></div>`;
 }
 
 /* ── Week in review ───────────────────────────────────────────────── */
@@ -3605,13 +3779,13 @@ const MOVES = {
   rest: { name:'Rest', cue:'Shake it out and breathe. Next set coming up.', sec:20, dur:3, rest:true, a:STAND, b:up(STAND, 1) },
 };
 const ROUTINES = {
-  pre: { name:'Before you run', title:'Warm <em>up</em>', sub:'Moving, not holding. Wakes the legs up so the first mile isn’t the warm-up.', tasks:['p2'],
+  pre: { name:'Before you run', title:'Warm <em>up</em>', sub:'Moving, not holding. So the first mile isn’t the warm-up.', tasks:['p2'],
     moves:['march', 'swingFB', 'swingSide', 'lunge', 'hipCircle', 'hipKneel', 'calfRaise', 'highKnees'] },
   post: { name:'After you run', title:'Cool <em>down</em>', sub:'Gentle holds, while you’re still warm. Stretch to mild tension, never pain.', tasks:['calf', 'hip'],
     moves:['calfStraight', 'calfBent', 'couch', 'quad', 'figure4', 'hamstring'] },
-  desk: { name:'Desk break', title:'Desk <em>break</em>', sub:'For long sitting days. Sitting is what tightens the hip flexors, so undo it through the day.', tasks:['hip'],
+  desk: { name:'Desk break', title:'Desk <em>break</em>', sub:'Sitting tightens the hips. Undo it through the day.', tasks:['hip'],
     moves:['march', 'hipStand', 'quad', 'calfRaise'] },
-  strength: { name:'Strength', title:'Get <em>strong</em>', sub:'Twice a week. Strong glutes and calves take load off your knees and hips.', tasks:['bridge'],
+  strength: { name:'Strength', title:'Get <em>strong</em>', sub:'Twice a week. Strong glutes and calves protect knees and hips.', tasks:['bridge'],
     moves:[['bridge', 45], 'rest', ['bridge', 45], 'rest', ['calfRaise', 45], 'rest', ['calfRaise', 45], 'sideRaise', 'plank'] },
 };
 // Alternating moves put each foot down before lifting the other: knee up, stand, other knee up, stand.
@@ -3856,7 +4030,7 @@ function paintPlayer(full){
 function renderPlan(){
   const plan = activePlan(), len = planLen();
   if (!coached()){
-    $('#page-plan').innerHTML = band({ eyebrow:'Plan', title:'Just <em>tracking</em>', sub:'No plan, no weekly gate. Stride logs every run and charts the trends. Want structure? Pick a plan — your runs stay as they are.',
+    $('#page-plan').innerHTML = band({ eyebrow:'Plan', title:'Just <em>tracking</em>', sub:'No plan, no gate. Every run logged and charted. Pick a plan any time; your runs stay.',
       extra:`<a class="btn small" href="#welcome" style="text-decoration:none">Choose a plan</a>` }) + `<div class="wrap">${planChoices(doc.planId)}</div>`;
     return;
   }
@@ -3873,7 +4047,7 @@ function renderPlan(){
   } : {
     eyebrow: `${esc(plan.name)} · three runs a week, rest day between`,
     title: pw > len ? 'Plan <em>done</em>' : `Week <em>${pw}</em>`,
-    sub: `Goal: ${esc(plan.goal)}. Each week has to pass its gate before the next one unlocks.`,
+    sub: `Goal: ${esc(plan.goal)}. Each week unlocks the next.`,
     stats: [['Plan length', len, 'wks'], ['Started', fmtDate(doc.planStart).slice(4)], ['Phase', esc(planWeekObj(pw).phase)]],
     extra: `<a class="btn small" href="#welcome" style="text-decoration:none">Change plan</a>`,
   }) + `<div class="wrap"><div class="grid today-grid">
@@ -4016,7 +4190,7 @@ function renderSetup(){
   const p = doc.profile;
   $('#page-setup').innerHTML = band({
     eyebrow: 'Setup', title: 'Your <em>setup</em>',
-    sub: 'Your account, automatic import from your watch, heart-rate zones and your data.',
+    sub: 'Account, watch import, zones and your data.',
     stats: [['Runs', doc.runs.length], ['Threshold', p.lthr, 'bpm'], ['Easy below', p.zones.easy, 'bpm']],
   }) + `<div class="wrap"><div class="grid two" style="align-items:start">
       <div class="col">
@@ -4163,7 +4337,7 @@ async function handleFiles(files){
   }
   await save();
   if (location.hash === '#setup') $('#log').innerHTML = importLog.map(logItem).join('');
-  enrichRuns();
+  enrichRuns(); maybeMoment();
 }
 
 function matchRoute(r){
@@ -4313,7 +4487,7 @@ async function checkIntervals({ manual = false } = {}){
     setIcuLocal({ ...loc, seen:[...seen].slice(-500), lastChecked:new Date().toISOString() });
     icuUi.status = 'idle';
     icuUi.msg = added ? `${added} new run${added > 1 ? 's' : ''} just now` : problems ? `${problems} couldn’t be imported — see the log` : '';
-    if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); enrichRuns(); crewPush().catch(() => {}); }
+    if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); enrichRuns(); crewPush().catch(() => {}); maybeMoment(); }
     else if (bodyChanged){ await save(); if (['', '#today', '#body'].includes(location.hash)) render(); }
     else if (manual) toast(problems ? 'Some runs couldn’t be imported' : 'No new runs');
   } catch (err){
@@ -4425,6 +4599,8 @@ async function importBackup(file){
 
 /* ── Actions ─────────────────────────────────────────────────────── */
 document.addEventListener('click', async e => {
+  // A moment closes on its buttons or a tap outside it; links in it still navigate.
+  if (e.target.closest('[data-moment-close]') || e.target.id === 'moment'){ closeMoment(); if (!e.target.closest('a')) return; }
   const pk = e.target.closest('[data-pick-plan]');
   if (pk){ welcomeUi.plan = pk.dataset.pickPlan; if (location.hash !== '#welcome' && doc.planId) location.hash = 'welcome'; else renderWelcome(); return; }
   const mp = e.target.closest('[data-mr-per], [data-mr-day]');
@@ -4683,6 +4859,7 @@ document.addEventListener('click', async e => {
   }
 });
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && momentOpen){ closeMoment(); return; }
   if (e.key === 'Enter' && e.target.id === 'si-email'){ sendLink(); return; }
   if (e.key === 'Enter' && e.target.id === 'si-code'){ verifyCode(); return; }
   if (e.key === 'Enter' && e.target.id === 'icu-key'){ connectIntervals(); return; }
@@ -4791,7 +4968,7 @@ lastRoute = location.hash;
 render();
 arrive();
 paintSync();
-syncInit(fromLink).finally(() => checkIntervals().finally(() => { enrichRuns(); crewPush().catch(() => {}); }));
+syncInit(fromLink).finally(() => checkIntervals().finally(() => { enrichRuns(); crewPush().catch(() => {}); maybeMoment(); }));
 </script>
 </body>
 </html>

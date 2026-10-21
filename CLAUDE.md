@@ -36,6 +36,11 @@ data runs through it, so treat changes to data handling with care.
 
 - **CSS tokens**: colours on `:root` with dark-mode overrides. Volt `--accent` #d4ff3a and
   Archivo condensed italic `.display` headings are the identity.
+- **Night-run look** (the "Night-run look" CSS block): dark is the default (set by the
+  inline script in `<head>`, before first paint). Volt is used as light: it glows on what's
+  live (`--glow`). Readouts and labels use JetBrains Mono (`--mono`). Surfaces sit on a faint
+  grid with grain. Motion plays only when you arrive at a page (`arrive()`), never on
+  re-renders, and is off with reduced motion.
 - **Layout**: a top bar with tabs (a bottom dock under 720px), and every page starts with
   `band({ eyebrow, title, sub, stats, extra })`, the full-width "poster" header, then
   `<div class="wrap">` cards. Neil chose this layout to differ from his other sites. Don't
@@ -82,6 +87,13 @@ data runs through it, so treat changes to data handling with care.
   frames, not just the end poses. and `ROUTINES` (before/after a run, desk break, strength). The player
   (`RP`, `#routine/<id>`) times from the clock, keeps the screen awake and beeps on changes.
   Finishing ticks the matching Today tasks and appends to `doc.routines`.
+- **The journey** (`drawJourney`): one road from the first run to the end of the plan,
+  split into chapters (plan phases, or months). Runs are waypoints, milestones are
+  checkpoints, and a marker shows today. It's on Today and Progress.
+- **Moments** (`maybeMoment`): full-screen scenes for a new run arriving and for a
+  finished week (Sunday evening, or Monday/Tuesday). Each shows once per device, tracked
+  in `prefs` (`arrivalSeen`, `weekSeen`). The first time a device opens, it records where
+  you are and shows nothing, so an old backlog doesn't flood in.
 - **Charts**: hand-built SVG (`chartLine`, `chartColumns`, `chartDaily`, `chartTrace`)
   with hover via `_tip`. One measure per chart, never two y-axes.
 
