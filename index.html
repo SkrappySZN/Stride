@@ -440,6 +440,7 @@ table.runs tbody tr:hover td{background:var(--surface-2)}
 .badge.test{background:var(--accent); color:var(--accent-ink); border-color:transparent}
 .badge.warn{color:var(--warn-text); border-color:color-mix(in srgb, var(--warn) 50%, transparent)}
 .badge.crit{color:var(--crit-text); border-color:color-mix(in srgb, var(--crit) 50%, transparent)}
+.badge.tread{color:var(--ink); border-color:var(--ink-2)}
 .badge.sport{background:var(--ink); color:var(--surface); border-color:transparent}
 table.runs tbody tr.sport-row{cursor:default}
 table.runs tbody tr.sport-row:hover td{background:none}
@@ -1435,7 +1436,13 @@ function refLabel(d){
 }
 function dropRef(d){ doc.refDays = doc.refDays.filter(x => x !== d); delete doc.refInfo[d]; }
 const testRoute = () => doc.routes.find(r => r.isTest);
-const isTest = r => r.testOverride ?? (!!r.routeId && !!doc.routes.find(x => x.id === r.routeId)?.isTest);
+// Indoors: the watch's sub-sport says so, or a FIT run came in with no GPS at all.
+// The SDK's enum spelling varies (treadmill / indoorRunning / indoor_running / 1 / 45).
+const INDOOR_SUBS = ['treadmill', 'indoorrunning', '1', '45'];
+const isTreadmill = r => r.indoorOverride ?? (INDOOR_SUBS.includes(String(r.subSport ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')) || (r.source === 'fit' && !r.startLL));
+// Wrist-estimated treadmill distance can be 5–10% off, so no PBs or time goals from it.
+const timedRun = r => !isTreadmill(r);
+const isTest = r => !isTreadmill(r) && (r.testOverride ?? (!!r.routeId && !!doc.routes.find(x => x.id === r.routeId)?.isTest));
 const isClean = r => isTest(r) && (r.idleSec ?? 0) <= IDLE_TOLERANCE;
 const hrMetric = r => r.jogHr ?? r.avgHr;
 // Garmin's feel scale, 0–100 in steps of 25.
@@ -1458,7 +1465,8 @@ const windowAvg = (pts, n, end = todayYmd()) => avgOf(pts.filter(p => p.date <= 
 
 function exclusionReasons(r){
   const why = [];
-  if (!isTest(r)) why.push(r.gainFt > 50 ? `not the test route (${r.gainFt} ft gain)` : 'not the test route');
+  if (isTreadmill(r)) why.push('treadmill — indoor HR isn’t comparable to outside');
+  else if (!isTest(r)) why.push(r.gainFt > 50 ? `not the test route (${r.gainFt} ft gain)` : 'not the test route');
   if ((r.idleSec ?? 0) > IDLE_TOLERANCE) why.push(`idle ${fmtDur(r.idleSec)} — timer left running`);
   return why;
 }
@@ -1467,7 +1475,8 @@ function exclusionReasons(r){
 function flagsFor(r){
   const f = [], p = doc.profile;
   if ((r.idleSec ?? 0) > IDLE_TOLERANCE) f.push(['warn', `Idle ${fmtDur(r.idleSec)}`, 'Timer left running while standing — drags average pace and HR']);
-  if (!isTest(r)) f.push(['wait', 'Not the test route', r.gainFt != null ? `${r.gainFt} ft of gain — kept out of the HR trend` : 'Kept out of the HR trend']);
+  if (isTreadmill(r)) f.push(['wait', 'Treadmill', 'Kept out of the HR trend and personal bests — indoor HR and watch distance aren’t comparable to outside']);
+  else if (!isTest(r)) f.push(['wait', 'Not the test route', r.gainFt != null ? `${r.gainFt} ft of gain — kept out of the HR trend` : 'Kept out of the HR trend']);
   if (r.recoveryHr == null) f.push(['wait', 'No recovery HR', 'Stop the timer, stand still 2 min, then save. Or type it in from Garmin Connect']);
   if (r.anaerobicTE != null && r.anaerobicTE > 1.0) f.push(['crit', `Anaerobic TE ${r.anaerobicTE.toFixed(1)}`, 'Too hard for an easy run — should be near 0.0']);
   if (r.maxHr != null && r.maxHr > p.guardHr) f.push(['warn', `Max HR ${r.maxHr}`, `Over the ~${p.guardHr} guardrail — take a walk break when HR passes ${p.zones.mod}`]);
@@ -2089,6 +2098,7 @@ const EXPLAIN = {
   drift: () => 'How much your heart rate rose from the first half of the jog to the second at the same pace. Under about 5 bpm means your body is coping well and you’re ready to go a little longer.',
   gate: () => 'Each Sunday night the plan looks back at the week: did you get your runs in, were your legs fine at 48 hours, and did you stay under your heart-rate limits? All green moves you up a week; otherwise you repeat it. Repeating a week is normal and keeps you healthy.',
   zones: () => 'Your threshold is the heart rate where running stops feeling sustainable. Garmin estimates it after a few runs. Every zone, limit and chart in Stride is set from it, so it’s worth getting right.',
+  treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the test-route trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
   standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
 };
 const infoBtn = `<button class="info-btn" data-explain aria-expanded="false" aria-label="What does this mean?">?</button>`;
@@ -2384,6 +2394,7 @@ function renderProgress(){
     return;
   }
   const clean = runs.filter(isClean);
+  const tread = runs.filter(r => isTreadmill(r) && hrMetric(r) != null).slice(-12);
   const lastClean = clean.at(-1), firstClean = clean[0];
   const rec = runs.filter(r => r.recoveryHr != null);
   const lastRun = runs.at(-1);
@@ -2448,6 +2459,11 @@ function renderProgress(){
       </div>
       <div class="chart" id="c-hr"></div>
     </div>
+    ${tread.length >= 2 ? `<div class="card" style="margin-top:16px">
+      <div class="card-head"><div><h2>Treadmill heart rate${infoBtn}</h2>
+        <div class="card-sub">Treadmill runs compared only with each other · lower is better</div></div></div>
+      ${explain('treadmill')}<div class="chart" id="c-tread"></div>
+    </div>` : ''}
     <div class="section-label">Showing up</div>
     ${recapCard()}
     ${crewCard() ? `<div style="margin-top:16px">${crewCard()}</div>` : ''}
@@ -2493,6 +2509,12 @@ function renderProgress(){
 
   const openRun = c => { location.hash = 'runs/' + c.id; };
   chartHrTrend($('#c-hr'), runs);
+  if (tread.length >= 2){
+    const hrs = tread.map(r => Math.round(hrMetric(r)));
+    chartLine($('#c-tread'), tread.map((r, i) => ({ r, v:hrs[i] })), {
+      lo: Math.floor(Math.min(...hrs) / 10) * 10 - 10, hi: Math.ceil(Math.max(...hrs) / 10) * 10 + 10, step: 10,
+      tipFmt: pt => `<b>${fmtDate(pt.r.date)}</b><br>${pt.v} bpm ${pt.r.jogHr != null ? 'jogging' : 'average'} · ${fmtDur(pt.r.jogPaceSec ?? pt.r.avgPaceSec)} /mi on the watch` });
+  }
   const wMax = Math.max(4, ...weeks.map(w => w.n));
   chartColumns($('#c-weeks'), {
     cats: weeks, series: [{ key:'n', color:css('--series-1') }], max: wMax, ticks: niceTicks(0, wMax, 1),
@@ -2542,7 +2564,7 @@ function renderProgress(){
 function bestsCard(runs){
   const p = doc.profile, age = ageNow(), sex = p.sex, graded = !!(age && sex);
   const longest = runs.reduce((a, r) => !a || (r.distMi ?? 0) > a.distMi ? r : a, null);
-  const fastest = k => runs.filter(r => r.best?.[k]).reduce((a, r) => !a || r.best[k] < a.best[k] ? r : a, null);
+  const fastest = k => runs.filter(r => r.best?.[k] && timedRun(r)).reduce((a, r) => !a || r.best[k] < a.best[k] ? r : a, null);
   const pb = (label, k, need) => {
     const r = fastest(k);
     if (!r) return `<tr><td>${label}</td><td>—</td><td>${need}</td></tr>`;
@@ -2626,7 +2648,7 @@ function goalState(g){
     for (const r of runs) if (r.date >= g.since && (!g.by || r.date <= g.by)){ sum += r.distMi ?? 0; if (!hit && sum >= g.target) hit = r.date; }
     return { cur:sum, pct:Math.min(1, sum / g.target), hit, txt:`${sum.toFixed(1)} of ${g.target} mi since ${fmtDate(g.since).slice(4)}` };
   }
-  const k = g.type, withB = runs.filter(r => r.best?.[k]);
+  const k = g.type, withB = runs.filter(r => r.best?.[k] && timedRun(r));
   const best = withB.length ? Math.min(...withB.map(r => r.best[k])) : null;
   return { cur:best, pct:best ? Math.min(1, g.target / best) : 0, hit:withB.find(r => r.best[k] <= g.target)?.date,
     txt:best ? `best ${fmtDur(best)}, ${best <= g.target ? 'done' : `${fmtDur(best - g.target)} to go`}` : 'no time yet' };
@@ -2854,7 +2876,7 @@ function renderRunsList(){
   const page = $('#page-runs');
   // Past sport days sit among the runs so the week reads as it happened; they never count as runs.
   const sport = doc.refDays.filter(d => d <= todayYmd());
-  const rows = [...runs, ...sport.map(date => ({ date, sport:true }))].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+  const rows = [...runs, ...sport.map(date => ({ date, sportDay:true }))].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
   if (!runs.length && !sport.length){
     page.innerHTML = band({ eyebrow:'No runs yet', title:'Runs' }) + `<div class="wrap">
       <div class="empty"><b>No runs yet.</b><br>They appear once your watch syncs — <a href="#setup">set that up</a>, or upload a FIT file.</div></div>`;
@@ -2869,17 +2891,17 @@ function renderRunsList(){
   }) + `<div class="wrap">
     ${shoesCard()}
     <div class="card runs-table-card">
-    <ul class="run-cards">${rows.map(r => r.sport
+    <ul class="run-cards">${rows.map(r => r.sportDay
       ? `<li><div class="rc-sport"><div class="rc-main">${fmtDate(r.date)}</div><div class="rc-right"><span class="badge sport">Sport</span></div><div class="rc-nums">${refLabel(r.date) || 'Sport day'} · not counted as a run</div></div></li>`
       : `<li><a href="#runs/${r.id}">
           <div class="rc-main">${fmtDate(r.date)} · ${fmtMi(r.distMi)} mi</div>
-          <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? '<span class="badge test">Test</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
+          <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? '<span class="badge test">Test</span>' : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
           <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}</div>
         </a></li>`).join('')}</ul>
     <div class="table-wrap"><table class="runs">
       <thead><tr><th>Date</th><th>Route</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>Effort</th><th>Temp</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
       <tbody>${rows.map(r => {
-        if (r.sport) return `<tr class="sport-row">
+        if (r.sportDay) return `<tr class="sport-row">
           <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">sport day</div></td>
           <td style="text-align:right"><span class="badge sport">Sport</span></td>
           <td colspan="11" class="r-sub">${refLabel(r.date) || 'Games or a big day on your feet'}. Not counted as a run.</td>
@@ -2887,7 +2909,7 @@ function renderRunsList(){
         const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
         return `<tr data-run="${r.id}" tabindex="0">
           <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">${r.source === 'fit' ? fmtTime(r.start) + ' · FIT' : 'from notes'}</div></td>
-          <td style="text-align:right">${isTest(r) ? '<span class="badge test">Test</span>' : '<span class="badge">Other</span>'}</td>
+          <td style="text-align:right">${isTest(r) ? '<span class="badge test">Test</span>' : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : '<span class="badge">Other</span>'}</td>
           <td>${fmtMi(r.distMi)}</td>
           <td>${fmtDur(r.runSec)} / ${fmtDur(r.walkSec)}</td>
           <td>${fmtDur(r.avgPaceSec)}</td>
@@ -2917,10 +2939,12 @@ async function renderRunDetail(id){
   const checks = doc.checkins.filter(c => c.runId === r.id);
 
   let routeCtl;
-  if (isTest(r)) routeCtl = `<span class="badge test">Test route</span> <button class="btn small" data-action="not-test">Not the test route</button>`;
+  if (isTreadmill(r)) routeCtl = `<span class="badge tread">Treadmill</span> <button class="btn small" data-action="not-indoor">It was outside</button>`;
+  else if (isTest(r)) routeCtl = `<span class="badge test">Test route</span> <button class="btn small" data-action="not-test">Not the test route</button>`;
   else if (r.startLL && !tr) routeCtl = `<button class="btn small primary" data-action="make-test">Make this the test route</button>`;
   else if (r.startLL && tr) routeCtl = `<button class="btn small" data-action="count-test">Count as test route</button> <button class="btn small" data-action="make-test">Replace the test route with this one</button>`;
   else routeCtl = `<button class="btn small" data-action="count-test">Count as test route</button>`;
+  if (!isTreadmill(r)) routeCtl += ` <button class="btn small" data-action="is-indoor">It was on a treadmill</button>`;
 
   page.innerHTML = band({
     eyebrow: `<button class="link-btn" data-action="back" style="color:inherit;opacity:.8">← All runs</button> &nbsp;·&nbsp; ${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''}`,
@@ -2937,7 +2961,7 @@ async function renderRunDetail(id){
       ${stat('Jog HR', r.jogHr != null ? Math.round(r.jogHr) : '—', 'bpm', 'the fitness signal')}
       ${stat('Max HR', num(r.maxHr), 'bpm')}
       <div class="stat"><div class="s-l">Recovery HR</div><input type="number" inputmode="numeric" min="0" max="120" id="rec-in" value="${r.recoveryHr ?? ''}" placeholder="—" aria-label="Recovery HR, bpm dropped in 2 minutes"><div class="s-n">${r.recoveryHr == null ? 'Type it in from Garmin Connect' : 'bpm dropped in 2 min'}</div></div>
-      <div class="stat"><div class="s-l">Temperature</div><input type="number" inputmode="numeric" min="-20" max="125" id="temp-in" value="${r.tempF ?? ''}" placeholder="—" aria-label="Temperature, °F"><div class="s-n">${r.tempF == null ? 'Type it in, °F' : r.tempSrc === 'manual' ? '°F · typed in' : '°F · local weather'}</div></div>
+      <div class="stat"><div class="s-l">Temperature</div><input type="number" inputmode="numeric" min="-20" max="125" id="temp-in" value="${r.tempF ?? ''}" placeholder="—" aria-label="Temperature, °F"><div class="s-n">${r.tempF == null ? (isTreadmill(r) ? 'Indoors' : 'Type it in, °F') : r.tempSrc === 'manual' ? '°F · typed in' : '°F · local weather'}</div></div>
       ${stat(`Above ${p.lthr}`, fmtDur(r.aboveLtSec))}
       ${stat('Anaerobic TE', num(r.anaerobicTE, 1), '', r.anaerobicTE > 1 ? 'too hard' : r.anaerobicTE != null ? 'easy' : '')}
       ${stat('Aerobic TE', num(r.aerobicTE, 1))}
@@ -4099,7 +4123,7 @@ async function enrichRuns(){
         if (s){ r.best = bestEfforts(s); changed = true; }
       }
       // undefined = never tried; null = the weather service had nothing for it.
-      if (weatherOk && r.tempF === undefined && r.startLL){
+      if (weatherOk && r.tempF === undefined && r.startLL && !isTreadmill(r)){
         try { r.tempF = await fetchTemp(r); r.tempSrc = 'weather'; changed = true; }
         catch { weatherOk = false; }   // offline or blocked: try again next open
       }
@@ -4249,6 +4273,8 @@ document.addEventListener('click', async e => {
     case 'make-test': if (r){ makeTestRoute(r); await save(); toast('Test route set'); render(); } break;
     case 'not-test': if (r){ r.testOverride = false; await save(); render(); } break;
     case 'count-test': if (r){ r.testOverride = true; await save(); render(); } break;
+    case 'is-indoor': if (r){ r.indoorOverride = true; await save(); toast('Marked as a treadmill run'); render(); } break;
+    case 'not-indoor': if (r){ r.indoorOverride = false; await save(); toast('Marked as an outdoor run'); render(); } break;
     case 'delete-ask': $('#del-confirm').classList.add('show'); break;
     case 'delete-no': $('#del-confirm').classList.remove('show'); break;
     case 'delete-yes':
