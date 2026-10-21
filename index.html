@@ -739,6 +739,12 @@ body.moment-on{overflow:hidden}
 .m-cp span{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
 .m-cp b{font-size:15px}
 .moment .m-cp span{color:#8a9088}
+.moment.signin .m-head em{font-style:inherit; color:#d4ff3a}
+.moment.signin .card-sub{color:#aab0a8; font-size:14px}
+.moment.signin .card-sub b{color:#eef0ea}
+.moment.signin .field label{color:#8a9088}
+.moment.signin .field input{background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.14); color:#eef0ea; font-size:16px}
+.moment.signin .link-btn{color:#aab0a8}
 .m-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px}
 .moment .btn:not(.primary){background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.12); color:#eef0ea}
 @media (prefers-reduced-motion: no-preference){
@@ -1543,9 +1549,9 @@ function paintSync(){
 /* sign-in, done inline on the Upload page so it works on phones too */
 const authUi = { stage:'email', email:'', busy:false };
 async function sendLink(){
-  const email = $('#si-email')?.value.trim() || authUi.email;
+  const email = authField('si-email')?.value.trim() || authUi.email;
   if (!/^\S+@\S+\.\S+$/.test(email || '')){ toast('Enter your email'); return; }
-  authUi.email = email; authUi.busy = true; renderSetup();
+  authUi.email = email; authUi.busy = true; paintAuth();
   try {
     const back = encodeURIComponent(location.origin + location.pathname);
     const r = await sb('/auth/v1/otp?redirect_to=' + back, { method:'POST', body:JSON.stringify({ email, create_user:true }) }, false);
@@ -1553,12 +1559,12 @@ async function sendLink(){
     else if (!r.ok) toast('Couldn’t send — ' + r.status);
     else { authUi.stage = 'code'; toast('Check your email'); }
   } catch { toast('Network error'); }
-  authUi.busy = false; renderSetup();
+  authUi.busy = false; paintAuth();
 }
 // Takes the code or the whole sign-in link. Pasting the link matters on an
 // iPhone home-screen app: tapping it opens Safari, which has separate storage.
 async function verifyCode(){
-  const raw = $('#si-code')?.value.trim() ?? '';
+  const raw = authField('si-code')?.value.trim() ?? '';
   let body;
   if (/^\d{6,10}$/.test(raw.replace(/\s/g, ''))) body = { email:authUi.email, token:raw.replace(/\s/g, ''), type:'email' };
   else {
@@ -1571,7 +1577,7 @@ async function verifyCode(){
     const r = await sb('/auth/v1/verify', { method:'POST', body:JSON.stringify(body) }, false);
     if (!r.ok){ toast(body.token_hash ? 'That link didn’t work — it may have expired or been used' : 'That code didn’t work'); return; }
     setSession(await r.json()); await fetchUser();
-    authUi.stage = 'email'; paintSync(); render(); toast('Signed in');
+    authUi.stage = 'email'; if (momentOpen) closeMoment(); paintSync(); render(); toast('Signed in');
     await firstSync();
   } catch { toast('Network error'); }
 }
@@ -3224,7 +3230,7 @@ async function crewLoad(force = false){
 function crewCard(){
   const head = sub => `<div class="card-head"><h2>Crew</h2><span class="card-sub">${sub}</span></div>`;
   if (!syncOn()) return '';
-  if (!signedIn()) return `<div class="card" id="crew-card">${head('run with friends')}<p class="card-sub" style="margin:0">Sign in under <a href="#setup">Setup</a> to share weekly totals with friends on a private board.</p></div>`;
+  if (!signedIn()) return `<div class="card" id="crew-card">${head('run with friends')}<p class="card-sub" style="margin:0"><button class="link-btn" data-action="goto-signin">Sign in</button> to share weekly totals with friends on a private board.</p></div>`;
   if (!doc.crew?.code) return `<div class="card" id="crew-card">${head('run with friends')}
     <p class="card-sub" style="margin:0 0 12px">A private board for you and your friends: each person’s runs, minutes and miles this week, and their streak. Nothing else is shared — no heart rate, no weight, no routes.</p>
     <div class="field-row"><div class="field"><label for="crew-name">Your name on the board</label><input id="crew-name" maxlength="40" placeholder="e.g. Neil"></div>
@@ -4124,7 +4130,7 @@ function renderWelcome(){
       <div class="filter-row">${opts.map(([d, l]) => `<button class="pill" data-pick-start="${d}" aria-pressed="${welcomeUi.start === d}">${esc(l)}</button>`).join('')}</div>` : ''}
     <div class="btn-row" style="margin-top:22px">
       <button class="btn primary" data-action="welcome-go"${welcomeUi.plan ? '' : ' disabled'}>${first ? 'Let’s go' : 'Switch'}</button>
-      ${first && syncOn() && !SESSION ? `<span class="card-sub">Already use Stride on another device? <a href="#setup">Sign in first</a> and your plan comes with you.</span>` : ''}
+      ${first && syncOn() && !SESSION ? `<span class="card-sub">Already use Stride on another device? <button class="link-btn" data-action="goto-signin">Sign in first</button> and your plan comes with you.</span>` : ''}
       ${first ? '' : '<a class="link-btn" href="#plan">Cancel</a>'}
     </div>
   </div>`;
@@ -4228,9 +4234,12 @@ function accountCard(){
     <div data-sync-line class="sync-line sync-${SYNC.status}"><span class="dot"></span>${esc(syncLine())}</div>
     <p class="card-sub" style="margin:10px 0 12px">Sign in with the same email on your phone or another computer and your runs follow you.</p>
     <div class="btn-row"><button class="btn small" data-action="sync-now">Sync now</button><button class="btn small" data-action="signout">Sign out</button></div></div>`;
+  return `<div class="card" id="signin"><div class="card-head"><h2>Sign in</h2><span class="card-sub">keeps your runs on every device</span></div>${signinBody()}</div>`;
+}
+// The email-then-link form, shared by the Setup card and the pop-up from the top bar.
+function signinBody(){
   const code = authUi.stage === 'code';
-  return `<div class="card" id="signin"><div class="card-head"><h2>Sign in</h2><span class="card-sub">keeps your runs on every device</span></div>
-    <p class="card-sub" style="margin:0 0 12px">${code
+  return `<p class="card-sub" style="margin:0 0 12px">${code
       ? installed() && isIos()
         ? `We emailed <b>${esc(authUi.email)}</b>. In the email, <b>press and hold</b> the sign-in link, tap <b>Copy</b>, then paste it below. (Tapping it would open Safari instead of this app.)`
         : `We emailed <b>${esc(authUi.email)}</b>. Open it on this device and tap <b>Sign in</b>. It can take a minute — check spam if it doesn’t show.`
@@ -4240,8 +4249,23 @@ function accountCard(){
       : `<div class="field"><label for="si-email">Email</label><input id="si-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(authUi.email)}"></div>`}</div>
     <div class="btn-row" style="margin-top:14px">${code
       ? `<button class="btn small primary" data-action="verify-code">Sign in</button><button class="link-btn" data-action="change-email">Use a different email</button><button class="link-btn" data-action="send-link">Resend</button>`
-      : `<button class="btn small primary" data-action="send-link"${authUi.busy ? ' disabled' : ''}>${authUi.busy ? 'Sending…' : 'Email me a link'}</button>`}</div></div>`;
+      : `<button class="btn small primary" data-action="send-link"${authUi.busy ? ' disabled' : ''}>${authUi.busy ? 'Sending…' : 'Email me a link'}</button>`}</div>`;
 }
+// The top bar's Sign in opens this wherever you are: on a phone the Setup card is
+// below the fold, and a page can't scroll a phone to a field it focuses for you.
+function openSignin(){
+  showMoment('signin', `<button class="moment-x" data-moment-close aria-label="Close">✕</button>
+    <div class="m-eyebrow">Sign in</div>
+    <h2 class="m-head display">Your runs, <em>everywhere</em></h2>
+    <div id="signin-sheet">${signinBody()}</div>`);
+}
+// Repaint wherever the form is showing.
+function paintAuth(){
+  if (location.hash.startsWith('#setup')) renderSetup();
+  const sh = $('#signin-sheet'); if (sh) sh.innerHTML = signinBody();
+}
+// The pop-up's field wins over the (hidden) Setup page's copy of it.
+const authField = id => $(`#moment:not([hidden]) #${id}`) ?? $('#' + id);
 function logItem(it){
   return `<li>${statusIcon(it.status)}<span style="flex:1"><div class="s-main">${it.title}</div><div class="s-sub">${it.sub}</div>
     ${it.makeTest ? `<div class="btn-row" style="margin-top:8px"><button class="btn small primary" data-make-test="${it.makeTest}">Yes — this is my flat test route</button></div>` : ''}
@@ -4775,10 +4799,10 @@ document.addEventListener('click', async e => {
       { const { sync } = doc; doc = freshDoc(); if (sync) doc.sync = sync; }
       memSamples.clear(); importLog.length = 0; setUnsent([]);
       await idb.clear('samples').catch(() => {}); dropSamples(); await save(); toast('Reset to the starting data'); render(); break;
-    case 'goto-signin': location.hash = 'setup'; setTimeout(() => $('#si-email, #si-code')?.focus(), 50); break;
+    case 'goto-signin': openSignin(); break;
     case 'send-link': sendLink(); break;
     case 'verify-code': verifyCode(); break;
-    case 'change-email': authUi.stage = 'email'; renderSetup(); break;
+    case 'change-email': authUi.stage = 'email'; paintAuth(); break;
     case 'signout': signOut(); break;
     case 'sync-now': if (doc.sync?.dirty) pushRow().catch(e => setSync('error', e.message)); else { await refreshFromRemote(); setSync(SYNC.status === 'off' ? 'ok' : SYNC.status); toast('Up to date'); } break;
   }
