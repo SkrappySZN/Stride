@@ -87,7 +87,7 @@ data runs through it, so treat changes to data handling with care.
   frames, not just the end poses. and `ROUTINES` (before/after a run, desk break, strength). The player
   (`RP`, `#routine/<id>`) times from the clock, keeps the screen awake and beeps on changes.
   Finishing ticks the matching Today tasks and appends to `doc.routines`.
-- **Lifting** (Body tab, `LIFTS`, `LIFT_PROGS`): `doc.lifts` is one entry per exercise per
+- **Lifting** (its own Lift tab, `renderLift()`, `LIFTS`, `LIFT_PROGS`): `doc.lifts` is one entry per exercise per
   session (`{ date, ex, sets:[{lb, reps}], day? }`), custom exercises in `doc.liftEx`, the
   optional program in `doc.liftProg`, your own workouts (Push/Pull/Legs presets, in rotation
   order) in `doc.workouts`; entries logged from one carry `wo`. `LIFTS` ids are stored in logs,

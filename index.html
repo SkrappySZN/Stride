@@ -160,6 +160,7 @@ main{min-width:0; padding-bottom:80px}
 #page-progress .band-bg{background-image:url(img/bg/progress.webp); background-position-y:72%}
 #page-runs .band-bg{background-image:url(img/bg/runs.webp); background-position-y:62%}
 #page-body .band-bg{background-image:url(img/bg/body.webp); background-position-y:76%}
+#page-lift .band-bg{background-image:url(img/bg/body.webp); background-position-y:40%}
 #page-plan .band-bg{background-image:url(img/bg/plan.webp); background-position-y:50%}
 #page-setup .band-bg{background-image:url(img/bg/setup.webp); background-position-y:72%}
 #page-routine .band-bg{background-image:url(img/bg/routine.webp); background-position-y:78%}
@@ -937,6 +938,7 @@ table.runs td, .kv b, .stat .s-v, .rc-nums, .te-cell b, .wx-h span, .num:not(.di
       <button class="tab" data-page="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 16l4-5 4 3 6-8"/></svg><span>Progress</span></button>
       <button class="tab" data-page="runs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Runs</span></button>
       <button class="tab" data-page="body"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg><span>Body</span></button>
+      <button class="tab" data-page="lift"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6v12M18 6v12M3 9v6M21 9v6M6 12h12"/></svg><span>Lift</span></button>
       <button class="tab" data-page="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Plan</span></button>
       <button class="tab" data-page="setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Setup</span></button>
     </nav>
@@ -952,6 +954,7 @@ table.runs td, .kv b, .stat .s-v, .rc-nums, .te-cell b, .wx-h span, .num:not(.di
   <section class="page" id="page-progress"></section>
   <section class="page" id="page-runs"></section>
   <section class="page" id="page-body"></section>
+  <section class="page" id="page-lift"></section>
   <section class="page" id="page-plan"></section>
   <section class="page" id="page-setup"></section>
   <section class="page" id="page-welcome"></section>
@@ -4172,6 +4175,20 @@ function liftRunTips(){
     <ul class="lift-tips">${tips.map(t => `<li>${t}</li>`).join('')}</ul></div>`;
 }
 
+function renderLift(){
+  const today = todayYmd(), ws = weekStart(today), wk = doc.lifts.filter(l => l.date >= ws && l.date <= today);
+  const prs = [...new Set(doc.lifts.map(l => l.ex))].filter(ex => { const h = liftHist(ex), b = liftBest(ex).best; return b.date > h[0].date && diffDays(b.date, today) <= 30; }).length;
+  $('#page-lift').innerHTML = band({
+    eyebrow: 'Lift · strength alongside your running',
+    title: 'Lift',
+    stats: [['Lifts · week', new Set(wk.map(l => l.date)).size, ''], ['Sets · week', wk.reduce((n, l) => n + l.sets.length, 0), ''], ['PRs · 30 days', prs, '']],
+  }) + `<div class="wrap">
+    <div class="grid two">${liftWorkoutsCard()}${liftLogCard()}</div>
+    <div class="grid two" style="margin-top:16px">${liftPRCard()}${liftRunTips()}</div>
+  </div>`;
+  drawLiftChart();
+}
+
 const BODY_RANGES = [[30, '30 days'], [90, '90 days'], [365, '1 year']];
 function renderBody(){
   const days = prefs.get('bodyRange', 90);
@@ -4198,9 +4215,6 @@ function renderBody(){
       ${chartCard('c-hrv', 'HRV', 'overnight · a sudden drop can mean run down', hrv)}
       ${chartCard('c-sleep', 'Sleep', 'hours per night', sleep)}
     </div>
-    <div class="section-label" id="lifting">Lifting</div>
-    <div class="grid two">${liftWorkoutsCard()}${liftLogCard()}</div>
-    <div class="grid two" style="margin-top:16px">${liftPRCard()}${liftRunTips()}</div>
     <div class="section-label">Fitness & composition</div>
     <div class="grid two">
       <div class="card"><div class="card-head"><h2>VO2 max</h2><span class="card-sub">${vo2.length ? 'Garmin’s estimate · moves slowly' : 'Garmin’s estimate'}</span></div>
@@ -4235,7 +4249,6 @@ function renderBody(){
   if (hrv.length) chartDaily($('#c-hrv'), hrv, { days, unit:'ms', step:10 });
   if (sleep.length) chartDaily($('#c-sleep'), sleep, { days, unit:'hrs', step:2, dec:1, bars:true });
   if (vo2.length > 1) chartDaily($('#c-vo2'), vo2, { days:Math.max(days, 90), unit:'', step:2, gapDays:60 });
-  drawLiftChart();
 }
 
 /* ═══ ROUTINES: follow-along stretching and strength ═════════════════
@@ -5309,12 +5322,12 @@ document.addEventListener('click', async e => {
     await save(); renderBody(); return;
   }
   const lp = e.target.closest('[data-lift-prog]');
-  if (lp){ liftUi.setup = lp.dataset.liftProg; readLiftForm(); renderBody(); return; }
+  if (lp){ liftUi.setup = lp.dataset.liftProg; readLiftForm(); renderLift(); return; }
   const ld = e.target.closest('[data-lift-did], [data-lift-edit]');
   if (ld){
     const { day } = progNext(), [ex, n, reps] = LIFT_PROGS[doc.liftProg.id].days[day][+(ld.dataset.liftDid ?? ld.dataset.liftEdit)];
     const sets = Array.from({ length:n }, () => ({ lb:progWeight(ex, n, reps), reps }));
-    if (ld.dataset.liftDid != null){ readLiftForm(); logLift({ date:todayYmd(), ex, sets, day }); liftUi.chart = ex; await save(); renderBody(); }
+    if (ld.dataset.liftDid != null){ readLiftForm(); logLift({ date:todayYmd(), ex, sets, day }); liftUi.chart = ex; await save(); renderLift(); }
     else { Object.assign(liftUi, { ex, date:todayYmd(), sets, day, wo:null, editId:null }); redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' }); }
     return;
   }
@@ -5330,7 +5343,7 @@ document.addEventListener('click', async e => {
     readLiftForm();
     const w = doc.workouts.find(x => x.id === liftUi.open), date = liftUi.date || todayYmd();
     const it = woPlan(w, date)[+(woItem.dataset.woSame ?? woItem.dataset.woLog)], last = liftHist(it.ex).filter(l => l.date < date).at(-1);
-    if (woItem.dataset.woSame != null){ logLift({ date, ex:it.ex, sets:last.sets.map(s => ({ ...s })), wo:w.id }); liftUi.chart = it.ex; await save(); renderBody(); }
+    if (woItem.dataset.woSame != null){ logLift({ date, ex:it.ex, sets:last.sets.map(s => ({ ...s })), wo:w.id }); liftUi.chart = it.ex; await save(); renderLift(); }
     else {
       const sets = last ? last.sets.map(s => ({ lb:s.lb || '', reps:s.reps })) : Array.from({ length:it.sets || 1 }, () => ({ lb:'', reps:it.reps || '' }));
       Object.assign(liftUi, { ex:it.ex, date, sets, wo:w.id, day:null, editId:null }); redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' });
@@ -5353,7 +5366,7 @@ document.addEventListener('click', async e => {
       for (const k in liftUi.swaps) if (liftUi.swaps[k] === ex) delete liftUi.swaps[k];
       liftUi.swapOpen = null; toast(`Won’t suggest ${liftDef(ex).name} again`);
     } else doc.gym = { ...doc.gym, skip:doc.gym.skip.filter(x => x !== gym.dataset.gymUnskip) };
-    await save(); renderBody(); return;
+    await save(); renderLift(); return;
   }
   const woMv = e.target.closest('[data-wo-move]');
   if (woMv){
@@ -5373,9 +5386,9 @@ document.addEventListener('click', async e => {
   const sdl = e.target.closest('[data-set-del]');
   if (sdl){ readLiftForm(); liftUi.sets.splice(+sdl.dataset.setDel, 1); redrawLiftLog(); return; }
   const lc = e.target.closest('[data-lift-chart]');
-  if (lc){ liftUi.chart = lc.dataset.liftChart; readLiftForm(); renderBody(); return; }
+  if (lc){ liftUi.chart = lc.dataset.liftChart; readLiftForm(); renderLift(); return; }
   const dl = e.target.closest('[data-del-lift]');
-  if (dl){ readLiftForm(); doc.lifts = doc.lifts.filter(l => l.id !== dl.dataset.delLift); await save(); renderBody(); toast('Removed'); return; }
+  if (dl){ readLiftForm(); doc.lifts = doc.lifts.filter(l => l.id !== dl.dataset.delLift); await save(); renderLift(); toast('Removed'); return; }
   const task = e.target.closest('[data-task]');
   if (task){
     const k = task.dataset.task;
@@ -5649,7 +5662,7 @@ document.addEventListener('click', async e => {
       if (u.editId){ doc.lifts = doc.lifts.map(l => l.id === u.editId ? { ...l, date:u.date, ex, sets } : l); toast('Updated'); }
       else logLift({ date:u.date, ex, sets, ...(u.day ? { day:u.day } : {}), ...(u.wo ? { wo:u.wo } : {}) });
       Object.assign(liftUi, { ex, day:null, wo:null, editId:null, date:u.editId ? null : u.date, name:'', chart:ex, sets:[{ lb:'', reps:'' }] });
-      await save(); renderBody(); break;
+      await save(); renderLift(); break;
     }
     case 'lift-edit-cancel': Object.assign(liftUi, { editId:null, date:null, sets:[{ lb:'', reps:'' }] }); redrawLiftLog(); break;
     case 'wo-new': readLiftForm(); liftUi.edit = { id:null, name:'', items:[{ ex:'bench', sets:3, reps:8 }] }; redrawWo(); break;
@@ -5673,25 +5686,25 @@ document.addEventListener('click', async e => {
         // Saved from a day's lifts: those count as this workout, so the rotation knows it's done.
         if (w.from) doc.lifts = doc.lifts.map(l => l.date === w.from && !l.wo && !l.day && items.some(it => it.ex === l.ex) ? { ...l, wo:id } : l);
       }
-      liftUi.edit = null; readLiftForm(); await save(); renderBody(); toast('Workout saved'); break;
+      liftUi.edit = null; readLiftForm(); await save(); renderLift(); toast('Workout saved'); break;
     }
     case 'wo-suggest-start': {
       readLiftForm();
       const s = suggestWorkout(nextGroup().g), id = 'wo' + Date.now().toString(36);
       doc.workouts = [...doc.workouts, { id, ...s }];
-      liftUi.open = id; await save(); renderBody(); toast(`Saved as your ${s.name} workout`); break;
+      liftUi.open = id; await save(); renderLift(); toast(`Saved as your ${s.name} workout`); break;
     }
     case 'wo-cancel': liftUi.edit = null; redrawWo(); break;
-    case 'wo-delete': doc.workouts = doc.workouts.filter(x => x.id !== liftUi.edit.id); liftUi.edit = null; readLiftForm(); await save(); renderBody(); toast('Workout deleted. Its lifts stay logged'); break;
+    case 'wo-delete': doc.workouts = doc.workouts.filter(x => x.id !== liftUi.edit.id); liftUi.edit = null; readLiftForm(); await save(); renderLift(); toast('Workout deleted. Its lifts stay logged'); break;
     case 'wo-close': liftUi.open = null; liftUi.swaps = {}; liftUi.swapOpen = null; redrawWo(); break;
-    case 'lift-prog-cancel': liftUi.setup = null; readLiftForm(); renderBody(); break;
+    case 'lift-prog-cancel': liftUi.setup = null; readLiftForm(); renderLift(); break;
     case 'lift-prog-start': {
       const id = liftUi.setup, exs = progExercises(id), miss = exs.find(ex => !(+$(`#lp-${ex}`).value > 0));
       if (miss){ toast(`Enter a starting weight for ${liftDef(miss).name}`); break; }
       doc.liftProg = { id, since:todayYmd(), start:Object.fromEntries(exs.map(ex => [ex, +$(`#lp-${ex}`).value])) };
-      liftUi.setup = null; readLiftForm(); await save(); renderBody(); break;
+      liftUi.setup = null; readLiftForm(); await save(); renderLift(); break;
     }
-    case 'lift-prog-stop': doc.liftProg = null; readLiftForm(); await save(); renderBody(); toast('Program stopped. Your lifts stay logged'); break;
+    case 'lift-prog-stop': doc.liftProg = null; readLiftForm(); await save(); renderLift(); toast('Program stopped. Your lifts stay logged'); break;
     case 'export': exportBackup(); break;
     case 'install-app': if (installPrompt){ installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; installPrompt = null; if (outcome !== 'accepted') renderSetup(); } break;
     case 'icu-connect': connectIntervals(); break;
@@ -5720,7 +5733,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.matches('tr[data-run]')) location.hash = 'runs/' + e.target.dataset.run;
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-pain-zone]')){ e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles:true })); return; }
   if (e.target.closest('input,textarea') || e.metaKey || e.ctrlKey) return;
-  const pages = { 1:'today', 2:'progress', 3:'runs', 4:'body', 5:'plan', 6:'setup' };
+  const pages = { 1:'today', 2:'progress', 3:'runs', 4:'body', 5:'lift', 6:'plan', 7:'setup' };
   if (pages[e.key]) location.hash = pages[e.key];
 });
 
@@ -5754,7 +5767,8 @@ document.querySelectorAll('.tab[data-page]').forEach(b => b.addEventListener('cl
 function render(){
   let [page, arg] = (location.hash.slice(1) || 'today').split('/');
   if (page === 'upload') page = 'setup';   // older links
-  let pg = ['today', 'progress', 'runs', 'body', 'plan', 'setup', 'welcome', 'routine', 'intake'].includes(page) ? page : 'today';
+  if (page === 'body' && arg === 'lifting') page = 'lift';   // older links
+  let pg = ['today', 'progress', 'runs', 'body', 'lift', 'plan', 'setup', 'welcome', 'routine', 'intake'].includes(page) ? page : 'today';
   // Leaving the player mid-routine pauses it rather than letting it run on unseen.
   if (pg !== 'routine') pauseRoutine(true);
   // No plan chosen yet: everything but Setup (where you can sign in) waits on the welcome screen.
@@ -5767,7 +5781,8 @@ function render(){
   if (pg === 'today') renderToday();
   if (pg === 'progress') renderProgress();
   if (pg === 'runs'){ $('#page-runs').dataset.run = ''; arg ? renderRunDetail(arg) : renderRunsList(); }
-  if (pg === 'body'){ renderBody(); if (arg === 'pain' || arg === 'lifting') setTimeout(() => $(arg === 'pain' ? '#pain-map' : '#lifting')?.scrollIntoView({ block:'start' }), 50); }
+  if (pg === 'body'){ renderBody(); if (arg === 'pain') setTimeout(() => $('#pain-map')?.scrollIntoView({ block:'start' }), 50); }
+  if (pg === 'lift') renderLift();
   if (pg === 'plan') renderPlan();
   if (pg === 'setup') renderSetup();
   if (pg === 'routine') renderRoutine(arg);
