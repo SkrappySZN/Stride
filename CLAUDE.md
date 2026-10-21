@@ -97,6 +97,11 @@ data runs through it, so treat changes to data handling with care.
   lifting day, and `SPLIT_TEMPLATES` builds a workout when they have none for that group. PRs use estimated 1-rep max (Epley); `progWeight()`
   adds a step after every rep is hit and drops ~10% after two misses. Lifting never changes
   the run plan: `liftRunTips()` and one coach note only suggest.
+  “Start” on a workout or program day opens the live workout (`LV`, `renderLive()`): one exercise at
+  a time with its `HOWTO` (equipment, setup, cues, what to watch for), sets prefilled by `liveItem()`,
+  a ✓ per set that writes to `doc.lifts` at once (`liveCommit`), and a timestamp-based rest timer. Where
+  you are lives in `prefs` ('liftLive'), so it resumes after a reload. Give every new exercise a `HOWTO`
+  entry. Lift opens without a run plan.
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.
