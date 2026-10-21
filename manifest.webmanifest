@@ -1,6 +1,6 @@
 {
-  "name": "Vela",
-  "short_name": "Vela",
+  "name": "Stride",
+  "short_name": "Stride",
   "description": "Running tracker: automatic Garmin import, heart-rate trends, stretching routines and a plan that adapts week to week.",
   "start_url": "./#today",
   "scope": "./",

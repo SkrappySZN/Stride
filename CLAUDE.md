@@ -1,9 +1,6 @@
-# Vela (formerly Stride)
+# Stride
 
 A running tracker used by Neil and a few friends: https://skrappyszn.github.io/Stride/
-The app is called **Vela** everywhere a user sees it. The repo, the URL path, the IndexedDB
-name (`stride`), localStorage keys (`stride:`/`stride.`), the backup id and the database
-tables keep the old name: renaming those would orphan existing data.
 The whole app is one file, `index.html`. There's no framework and no bundler. The only
 libraries are Garmin's FIT SDK and JSZip, lazy-loaded from jsDelivr. Real people's training
 data runs through it, so treat changes to data handling with care.
