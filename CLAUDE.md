@@ -91,7 +91,10 @@ data runs through it, so treat changes to data handling with care.
   session (`{ date, ex, sets:[{lb, reps}], day? }`), custom exercises in `doc.liftEx`, the
   optional program in `doc.liftProg`, your own workouts (Push/Pull/Legs presets, in rotation
   order) in `doc.workouts`; entries logged from one carry `wo`. `LIFTS` ids are stored in logs,
-  so add exercises but never rename an id. PRs use estimated 1-rep max (Epley); `progWeight()`
+  so add exercises but never rename an id. Each exercise has a family (`f`); `woPlan()` resolves a
+  workout's slots through swaps, `vary` rotation (least recently done) and `doc.gym.skip`
+  (equipment the person's gym lacks). `nextGroup()` suggests push → pull → legs from the last
+  lifting day, and `SPLIT_TEMPLATES` builds a workout when they have none for that group. PRs use estimated 1-rep max (Epley); `progWeight()`
   adds a step after every rep is hit and drops ~10% after two misses. Lifting never changes
   the run plan: `liftRunTips()` and one coach note only suggest.
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
