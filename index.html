@@ -2844,22 +2844,30 @@ function crewCard(){
 }
 
 /* ── Shoes: mileage per pair ────────────────────────────────────────
-   New runs go on the default pair. Most trainers last 300–500 miles, and
+   New runs go on the active pair (doc.defaultShoe). Most trainers last 300–500 miles, and
    worn-out cushioning matters more the heavier the runner. */
 const SHOE_LIMIT = 400;
 const shoeMiles = sh => (sh.startMi ?? 0) + doc.runs.filter(r => r.shoeId === sh.id).reduce((a, r) => a + (r.distMi ?? 0), 0);
 const shoeOf = r => r.shoeId ? (doc.shoes ?? []).find(sh => sh.id === r.shoeId) ?? null : null;
 const activeShoes = () => (doc.shoes ?? []).filter(sh => !sh.retired);
+function shoeRow(sh){
+  const mi = shoeMiles(sh), pct = mi / sh.limit, active = sh.id === doc.defaultShoe;
+  return `<li${sh.retired ? ' style="opacity:.55"' : ''}><div class="goal-top"><b>${esc(sh.name)}${active ? ' <span class="badge test">Active</span>' : ''}${sh.retired ? ' <span class="badge">Retired</span>' : ''}</b>
+      <span class="btn-row">${!sh.retired && !active ? `<button class="link-btn" data-shoe-default="${sh.id}">make active</button>` : ''}<button class="link-btn" data-shoe-retire="${sh.id}">${sh.retired ? 'bring back' : 'retire'}</button></span></div>
+    <div class="pbar"><i style="width:${Math.min(100, Math.round(pct * 100))}%;${pct >= .9 ? 'background:var(--warn)' : ''}"></i></div>
+    <div class="card-sub">${mi.toFixed(1)} of ~${sh.limit} mi${pct >= 1 ? ' · past its life — your legs will thank you for a new pair' : pct >= .9 ? ' · nearly worn out' : ''}</div></li>`;
+}
+// Collapsed (the usual view) shows just the active pair — the one new runs go on.
 function shoesCard(){
-  const shoes = doc.shoes ?? [];
-  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Shoes</h2><span class="card-sub">most pairs last 300–500 mi</span></div>
-    ${shoes.length ? `<ul class="goal-list">${[...shoes].sort((a, b) => a.retired - b.retired).map(sh => { const mi = shoeMiles(sh), pct = mi / sh.limit;
-      return `<li${sh.retired ? ' style="opacity:.55"' : ''}><div class="goal-top"><b>${esc(sh.name)}${sh.id === doc.defaultShoe ? ' <span class="badge test">Default</span>' : ''}${sh.retired ? ' <span class="badge">Retired</span>' : ''}</b>
-          <span class="btn-row">${!sh.retired && sh.id !== doc.defaultShoe ? `<button class="link-btn" data-shoe-default="${sh.id}">make default</button>` : ''}<button class="link-btn" data-shoe-retire="${sh.id}">${sh.retired ? 'bring back' : 'retire'}</button></span></div>
-        <div class="pbar"><i style="width:${Math.min(100, Math.round(pct * 100))}%;${pct >= .9 ? 'background:var(--warn)' : ''}"></i></div>
-        <div class="card-sub">${mi.toFixed(1)} of ~${sh.limit} mi${pct >= 1 ? ' · past its life — your legs will thank you for a new pair' : pct >= .9 ? ' · nearly worn out' : ''}</div></li>`; }).join('')}</ul>`
-      : '<p class="card-sub" style="margin:0 0 4px">Add your running shoes and Stride counts the miles on each pair, then tells you when they’re worn out.</p>'}
-    <details class="shoe-add"${shoes.length ? '' : ' open'}><summary class="link-btn" style="display:inline-block;margin-top:12px">Add a pair</summary>
+  const shoes = doc.shoes ?? [], open = !shoes.length || prefs.get('shoesOpen', false);
+  const active = shoes.find(sh => sh.id === doc.defaultShoe && !sh.retired);
+  const list = open ? [...shoes].sort((a, b) => (b.id === doc.defaultShoe) - (a.id === doc.defaultShoe) || a.retired - b.retired) : active ? [active] : [];
+  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Shoes</h2>
+      ${shoes.length ? `<button class="link-btn" data-action="shoes-toggle" aria-expanded="${open}">${open ? 'Show less' : `All shoes (${shoes.length})`}</button>` : '<span class="card-sub">most pairs last 300–500 mi</span>'}</div>
+    ${!shoes.length ? '<p class="card-sub" style="margin:0 0 4px">Add your running shoes and Stride counts the miles on each pair, then tells you when they’re worn out.</p>'
+      : list.length ? `<ul class="goal-list">${list.map(shoeRow).join('')}</ul>`
+      : `<p class="card-sub" style="margin:0">No active pair, so new runs aren’t counted on any shoes. <button class="link-btn" data-action="shoes-toggle">Pick one</button></p>`}
+    ${open ? `<details class="shoe-add"${shoes.length ? '' : ' open'}><summary class="link-btn" style="display:inline-block;margin-top:12px">Add a pair</summary>
       <div class="field-row" style="margin-top:12px">
         <div class="field"><label for="sh-name">Name</label><input id="sh-name" placeholder="e.g. Brooks Ghost 16"></div>
         <div class="field"><label for="sh-since">First run in them</label><input id="sh-since" type="date" value="${todayYmd()}"></div>
@@ -2867,8 +2875,8 @@ function shoesCard(){
         <div class="field"><label for="sh-limit">Replace at (mi)</label><input id="sh-limit" type="number" inputmode="numeric" value="${SHOE_LIMIT}"></div>
       </div>
       <div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="add-shoe">Add shoes</button></div>
-      <p class="card-sub" style="margin:8px 0 0">Runs since that date that aren’t on another pair get counted, and new runs go on this pair from now on.</p>
-    </details>
+      <p class="card-sub" style="margin:8px 0 0">Runs since that date that aren’t on another pair get counted, and this becomes your active pair: new runs go on it from now on.</p>
+    </details>` : ''}
   </div>`;
 }
 
@@ -4221,7 +4229,7 @@ document.addEventListener('click', async e => {
   const shr = e.target.closest('[data-share-recap]');
   if (shr){ shareRecap(shr.dataset.shareRecap).catch(() => toast('Couldn’t make the image')); return; }
   const sd2 = e.target.closest('[data-shoe-default]');
-  if (sd2){ doc.defaultShoe = sd2.dataset.shoeDefault; await save(); toast('New runs will go on this pair'); render(); return; }
+  if (sd2){ doc.defaultShoe = sd2.dataset.shoeDefault; await save(); toast('Active pair set — new runs go on it'); render(); return; }
   const sr = e.target.closest('[data-shoe-retire]');
   if (sr){
     const sh = doc.shoes.find(x => x.id === sr.dataset.shoeRetire); sh.retired = !sh.retired;
@@ -4322,6 +4330,7 @@ document.addEventListener('click', async e => {
       Object.assign(painUi, { area:null, side:null, level:null, msg:painResponse(p) });
       await save(); render(); setTimeout(() => $('#pain-map')?.scrollIntoView({ block:'start' }), 50); break;
     }
+    case 'shoes-toggle': prefs.set('shoesOpen', !prefs.get('shoesOpen', false)); render(); break;
     case 'add-shoe': {
       const name = $('#sh-name').value.trim(), since = $('#sh-since').value, startMi = +$('#sh-start').value || 0, limit = Math.round(+$('#sh-limit').value) || SHOE_LIMIT;
       if (!name){ toast('Give the pair a name'); break; }
