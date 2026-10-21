@@ -11,6 +11,7 @@ data runs through it, so treat changes to data handling with care.
 |---|---|
 | `index.html` | The app. GitHub Pages serves it straight from `main`. |
 | `manifest.webmanifest`, `icons/` | Home-screen install (name, icons, colours). |
+| `img/bg/<page>.webp` | The photo behind each page's header (1600 px wide, ~30–80 KB). Set per page in the CSS as `#page-<page> .band-bg`, with `background-position-y` aimed at the subject. |
 | `sw.js` | Service worker: lets the installed app open offline. The page is network-first, so pushes still go live on the next open; data APIs are never cached. Bump `CACHE` if you change what it stores. |
 | `.githooks/pre-commit` | Refuses commits containing personal data (only active on Neil's machine). |
 | `supabase-setup.sql` | The database schema and row-level security. |

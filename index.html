@@ -135,9 +135,27 @@ main{min-width:0; padding-bottom:80px}
 .page.active{display:block}
 .wrap{max-width:1240px; margin:0 auto; padding:0 28px}
 
-.band{position:relative; overflow:hidden; background:var(--ink); color:var(--surface); margin-bottom:28px}
-:root[data-theme="dark"] .band{background:var(--surface); color:var(--ink); border-bottom:3px solid var(--accent)}
-@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .band{background:var(--surface); color:var(--ink); border-bottom:3px solid var(--accent)} }
+.band{--band-bg:var(--ink); position:relative; overflow:hidden; background:var(--band-bg); color:var(--surface); margin-bottom:28px}
+:root[data-theme="dark"] .band{--band-bg:var(--surface); color:var(--ink); border-bottom:3px solid var(--accent)}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .band{--band-bg:var(--surface); color:var(--ink); border-bottom:3px solid var(--accent)} }
+/* A photo per page behind the header, faded into the band's own colour on the left where the words sit. */
+.band-bg{position:absolute; inset:0; background-size:cover; background-position:right center; pointer-events:none}
+.band .eyebrow, .band-title, .band-sub, .bstat{text-shadow:0 1px 14px rgba(0,0,0,.55)}
+.band-bg::after{content:""; position:absolute; inset:0; background:
+  linear-gradient(90deg, var(--band-bg) 0%, color-mix(in srgb, var(--band-bg) 80%, transparent) 40%, color-mix(in srgb, var(--band-bg) 30%, transparent) 78%, color-mix(in srgb, var(--band-bg) 15%, transparent) 100%),
+  linear-gradient(0deg, color-mix(in srgb, var(--band-bg) 50%, transparent), transparent 50%)}
+#page-today .band-bg{background-image:url(img/bg/today.webp); background-position-y:60%}
+#page-progress .band-bg{background-image:url(img/bg/progress.webp); background-position-y:72%}
+#page-runs .band-bg{background-image:url(img/bg/runs.webp); background-position-y:62%}
+#page-body .band-bg{background-image:url(img/bg/body.webp); background-position-y:76%}
+#page-plan .band-bg{background-image:url(img/bg/plan.webp); background-position-y:50%}
+#page-setup .band-bg{background-image:url(img/bg/setup.webp); background-position-y:72%}
+#page-routine .band-bg{background-image:url(img/bg/routine.webp); background-position-y:78%}
+#page-welcome .band-bg{background-image:url(img/bg/welcome.webp); background-position-y:48%}
+@media (max-width:720px){
+  .band-bg{background-position-x:72%}
+  .band-bg::after{background:linear-gradient(0deg, var(--band-bg) 0%, color-mix(in srgb, var(--band-bg) 78%, transparent) 50%, color-mix(in srgb, var(--band-bg) 55%, transparent) 100%)}
+}
 .band-in{position:relative; z-index:1; max-width:1240px; margin:0 auto; padding:34px 28px 30px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:20px 40px; align-items:end}
 .band .eyebrow{color:var(--accent)}
 .band-title{font-size:clamp(56px, 9vw, 112px); margin:10px 0 0; line-height:.86}
@@ -2119,7 +2137,7 @@ const RUN_TERMS = [
 
 // Shared poster band at the top of every page.
 function band({ eyebrow, title, sub = '', stats = [], extra = '' }){
-  return `<section class="band"><div class="band-stripes"></div><div class="band-in">
+  return `<section class="band"><div class="band-bg"></div><div class="band-stripes"></div><div class="band-in">
     <div><div class="eyebrow">${eyebrow}</div><h1 class="band-title display">${title}</h1>${sub ? `<p class="band-sub">${sub}</p>` : ''}</div>
     ${stats.length ? `<div class="band-stats">${stats.map(([l, v, u]) => `<div class="bstat"><div class="bstat-v display num">${v}${u ? `<small>${u}</small>` : ''}</div><div class="bstat-l">${l}</div></div>`).join('')}</div>` : ''}
     ${extra ? `<div class="band-wide">${extra}</div>` : ''}
