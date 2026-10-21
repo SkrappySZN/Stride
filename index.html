@@ -296,7 +296,6 @@ main{min-width:0; padding-bottom:80px}
 .day .d-tag{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 0; border-radius:6px}
 .day.today{outline:2px solid var(--ink); outline-offset:-1px}
 .tag-run{background:var(--accent); color:var(--accent-ink)}
-.tag-ref{background:var(--ink); color:var(--surface)}
 .tag-rest{color:var(--muted)}
 .tag-done{color:var(--accent-text)}
 
@@ -471,10 +470,6 @@ table.runs tbody tr:hover td{background:var(--surface-2)}
 .badge.warn{color:var(--warn-text); border-color:color-mix(in srgb, var(--warn) 50%, transparent)}
 .badge.crit{color:var(--crit-text); border-color:color-mix(in srgb, var(--crit) 50%, transparent)}
 .badge.tread{color:var(--ink); border-color:var(--ink-2)}
-.badge.sport{background:var(--ink); color:var(--surface); border-color:transparent}
-table.runs tbody tr.sport-row{cursor:default}
-table.runs tbody tr.sport-row:hover td{background:none}
-table.runs tr.sport-row td[colspan]{text-align:left}
 .flags{display:inline-flex; gap:4px}
 .flag-dot{width:8px; height:8px; border-radius:50%}
 
@@ -678,7 +673,7 @@ table.crew td:nth-child(2){white-space:nowrap}
 .run-cards{display:none; list-style:none; margin:0; padding:0}
 .run-cards li{border-top:1px solid var(--line)}
 .run-cards li:first-child{border-top:0}
-.run-cards a, .run-cards .rc-sport{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; color:inherit; text-decoration:none}
+.run-cards a{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; color:inherit; text-decoration:none}
 .rc-main{font-weight:750; font-size:15px; font-variant-numeric:tabular-nums}
 .rc-nums{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
 .rc-right{grid-row:1 / span 2; grid-column:2; display:flex; align-items:center; gap:8px}
@@ -964,7 +959,6 @@ const TASKS = {
   calf:   ['Calf stretch — straight leg, then bent','30 sec each, against the wall','2× / side'],
   roll:   ['Foam roll or tennis ball the calves','','~5 min'],
   bridge: ['Glute bridges','Takes load off the hip flexors and knees','2–3 × 12–15'],
-  sporthip: ['Hip flexor stretch between sessions','Most sports work them hard','each break'],
 };
 
 // New browsers start empty; everyone's data lives in their own account (sync below).
@@ -1288,6 +1282,7 @@ function freshDoc(){
     profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, heightIn:null }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
+    // refDays/refInfo held sport days, a retired feature; kept so older docs stay valid.
     routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null,
   };
 }
@@ -1616,14 +1611,6 @@ function choose(title, body, [aLabel, aFn], [bLabel, bFn]){
 const sortedRuns = () => [...doc.runs].sort((a, b) => a.start < b.start ? -1 : 1);
 const runsOn = d => doc.runs.filter(r => r.date === d);
 const runById = id => doc.runs.find(r => r.id === id);
-const isRef = d => doc.refDays.includes(d);
-// Optional detail per sport day, kept beside refDays so older docs and devices stay valid.
-function refLabel(d){
-  const i = doc.refInfo[d] ?? {}, m = i.min;
-  return [i.games && `${i.games} game${i.games > 1 ? 's' : ''}`,
-    m && (m < 60 ? `${m} min` : `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ''}`)].filter(Boolean).join(' · ');
-}
-function dropRef(d){ doc.refDays = doc.refDays.filter(x => x !== d); delete doc.refInfo[d]; }
 const testRoute = () => doc.routes.find(r => r.isTest);
 // Indoors: the watch's sub-sport says so, or a FIT run came in with no GPS at all.
 // The SDK's enum spelling varies (treadmill / indoorRunning / indoor_running / 1 / 45).
@@ -1737,12 +1724,11 @@ function weightNear(date){
     .sort((a, b) => Math.abs(diffDays(a.date, date)) - Math.abs(diffDays(b.date, date)))[0];
   return near?.v ?? null;
 }
-// Runs plus logged sport minutes over the last 4 weeks, per week.
+// Running minutes over the last 4 weeks, per week.
 function activeMinPerWeek(){
   const today = todayYmd(), inWin = d => d <= today && diffDays(d, today) < 28;
   const run = doc.runs.filter(r => inWin(r.date)).reduce((a, r) => a + (r.timerSec ?? 0) / 60, 0);
-  const sport = doc.refDays.filter(inWin).reduce((a, d) => a + (doc.refInfo[d]?.min ?? 0), 0);
-  return (run + sport) / 4;
+  return run / 4;
 }
 
 function standardRows(){
@@ -1772,7 +1758,7 @@ function standardRows(){
   }
   const mins = activeMinPerWeek();
   rows.push([mins >= 150 ? 'good' : 'warn', 'Active minutes a week', Math.round(mins),
-    'WHO: 150–300 minutes of moderate activity a week, or 75–150 vigorous. Runs plus logged sport minutes, averaged over 4 weeks.']);
+    'WHO: 150–300 minutes of moderate activity a week, or 75–150 vigorous. Running minutes, averaged over 4 weeks.']);
   const rhr = windowAvg(bodySeries('rhr'), 14);
   if (rhr != null) rows.push([rhr < 60 ? 'good' : 'wait', 'Resting HR', Math.round(rhr),
     'Adults usually sit at 60–100 bpm; regular runners often drop into the 50s. Two-week average.']);
@@ -1865,7 +1851,6 @@ function marathonSchedule(from, n){
     const d = addDays(from, i), wi = diffDays(weekStart(doc.planStart), weekStart(d)) / 7;
     let kind = 'rest', note = '', slot = null;
     if (runsOn(d).length) kind = 'done';
-    else if (isRef(d)) kind = 'ref';
     else if (wi < 0 || wi >= weeks.length) note = wi < 0 ? 'Plan starts Monday' : 'After the race';
     else if (red) note = 'Paused';
     else { const k = maraRunDates(wi).indexOf(d); if (k >= 0){ kind = 'run'; slot = k + 1; } }
@@ -1976,7 +1961,7 @@ function planState(){
 }
 const planWeekObj = pw => activePlan().weeks[Math.min(pw, planLen()) - 1];
 
-// Next N days: rest between runs, three a week, rest before a sport day.
+// Next N days: rest between runs, three a week.
 function schedule(from, n){
   if (isMarathon()) return marathonSchedule(from, n);
   const out = [], red = redFlagActive(), counts = {};
@@ -1985,15 +1970,13 @@ function schedule(from, n){
     const d = addDays(from, i), ws = weekStart(d);
     count(ws);
     const prevD = addDays(d, -1);
-    const prev = i ? out[i-1] : { kind: runsOn(prevD).length ? 'done' : isRef(prevD) ? 'ref' : 'rest' };
+    const prev = i ? out[i-1] : { kind: runsOn(prevD).length ? 'done' : 'rest' };
     let kind, note = '';
     if (runsOn(d).length) kind = 'done';
-    else if (isRef(d)) kind = 'ref';
     else if (red){ kind = 'rest'; note = 'Paused'; }
     else if (prev.kind === 'done' || prev.kind === 'run'){ kind = 'rest'; note = 'After a run'; }
     else if (counts[ws] >= 3){ kind = 'rest'; note = 'Week’s runs are in'; }
-    else if (isRef(addDays(d, 1))){ kind = 'rest'; note = 'Sport tomorrow'; }
-    else { kind = 'run'; counts[ws]++; if (prev.kind === 'ref') note = 'Skip if legs are toast'; }
+    else { kind = 'run'; counts[ws]++; }
     out.push({ date:d, kind, note, slot: kind === 'run' ? counts[ws] : null });
   }
   return out;
@@ -2466,11 +2449,6 @@ function renderToday(){
   const days = schedule(today, 7), t = days[0];
   const pwo = planWeekObj(pw);
   let eyebrow = `${dateLine} · today’s assignment`, title, copy, tasks;
-  // Shown as text, not just the strip's hover tip, so it reads on a phone.
-  const yRef = addDays(today, -1);
-  const afterSport = isRef(yRef) && !todayRuns.length && !red
-    ? `<b>Sport day yesterday${refLabel(yRef) ? ` (${refLabel(yRef)})` : ''}.</b> Heavy legs? Go easy or skip. `
-    : '';
   if (red){
     eyebrow = `${dateLine} · plan paused`;
     title = 'Get it <em>checked</em>';
@@ -2481,20 +2459,15 @@ function renderToday(){
     title = 'Run <em>done</em>';
     copy = `${fmtMi(r.distMi)} mi · ${fmtDur(r.runSec)} jogging · ${r.jogHr != null ? `jogging HR ${Math.round(r.jogHr)}` : `avg HR ${r.avgHr}`}${r.recoveryHr != null ? ` · recovery ${r.recoveryHr}` : ''}. Stretch tonight. Soreness check tomorrow.`;
     tasks = tasksFor(today, ['calf', 'roll', 'hip']);
-  } else if (t.kind === 'ref'){
-    title = 'Sport <em>day</em>';
-    copy = 'Not a rest day. Stretch between sessions; skip the next run if your legs are done.';
-    tasks = tasksFor(today, ['sporthip', 'calf']);
   } else if (t.kind === 'run'){
     const s = sessionFor(pw, t.slot, today);
     eyebrow = `${dateLine} · week ${Math.min(pw, len)}, run ${t.slot}`;
     title = esc(s.title).replace(/^(\S+)/, '$1 <em>') + '</em>';
-    copy = `${afterSport}${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note && !afterSport ? ' ' + t.note + '.' : ''}`;
+    copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''}`;
     tasks = tasksFor(today, ['hip', 'calf']);
   } else {
     title = 'Rest <em>day</em>';
-    copy = afterSport + (isRef(addDays(today, 1)) ? 'Sport day tomorrow. Rest and go in fresh.'
-      : ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
+    copy = (ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
       : t.note === 'Week’s runs are in' ? 'This week’s runs are in. Walk, stretch, recover.'
       : 'Mobility only today.');
     tasks = tasksFor(today, ranYesterday ? ['hip', 'calf', 'roll', 'bridge'] : ['hip', 'bridge']);
@@ -2504,7 +2477,7 @@ function renderToday(){
   const nr = days.find(d => d.kind === 'run');
   let next;
   if (red) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><div class="next-run-big display">On hold</div><p class="card-sub" style="margin:0">Resume at the week you were on once you’re cleared.</p></div>`;
-  else if (!nr) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><p class="card-sub" style="margin:0">Nothing scheduled in the next 7 days — tap a day in “Next 7 days” to change sport days.</p></div>`;
+  else if (!nr) next = `<div class="card"><div class="card-head"><h2>Next run</h2></div><p class="card-sub" style="margin:0">Nothing scheduled in the next 7 days.</p></div>`;
   else {
     const nwk = diffDays(cur.start, nr.date) >= 7 ? Math.min(cur.gate.auto === 'advance' ? pw + 1 : pw, len) : Math.min(pw, len);
     const s = sessionFor(nwk, nr.slot, nr.date);
@@ -2538,13 +2511,13 @@ function renderToday(){
     <div class="verdict">${statusIcon(g.verdict[0])}<span><strong>${g.verdict[1]}</strong> ${g.verdict[2]}</span></div>
   </div>`;
 
-  const TAG = { run:['run', 'Run'], done:['done', 'Done'], ref:['ref', 'Sport'], rest:['rest', 'Rest'] };
+  const TAG = { run:['run', 'Run'], done:['done', 'Done'], rest:['rest', 'Rest'] };
   const strip = `<div class="card">
-    <div class="card-head"><h2>Next 7 days</h2><span class="card-sub">tap a day with another sport</span></div>
+    <div class="card-head"><h2>Next 7 days</h2></div>
     <div class="days">${days.map((d, i) => {
       const dd = parseYmd(d.date), [k, l] = TAG[d.kind];
-      return `<button class="day${i === 0 ? ' today' : ''}" data-refday="${d.date}" ${d.kind === 'done' ? 'disabled' : ''} style="cursor:${d.kind === 'done' ? 'default' : 'pointer'};font:inherit;color:inherit" ${d.note ? `data-tip="${esc(d.note)}"` : ''}>
-        <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div><div class="d-tag tag-${k}">${l}${d.kind === 'run' && d.note ? '?' : ''}</div></button>`;
+      return `<div class="day${i === 0 ? ' today' : ''}" ${d.note ? `data-tip="${esc(d.note)}"` : ''}>
+        <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div><div class="d-tag tag-${k}">${l}</div></div>`;
     }).join('')}</div>
     <div class="plan-bar" style="grid-template-columns:repeat(${len},1fr);margin-top:18px">${activePlan().weeks.map((_, i) => `<div class="plan-seg${i + 1 < pw ? ' done' : i + 1 === pw ? ' now' : ''}"></div>`).join('')}</div>
     <p class="card-sub" style="margin:10px 0 0">${pw < len ? `Week ${pw + 1}: ${[planWeekObj(pw + 1).detail, planWeekObj(pw + 1).add].filter(Boolean).map(x => esc(x.charAt(0).toLowerCase() + x.slice(1))).join('. ')}.` : isMarathon() ? 'Race week. The work is done — rest, eat, sleep.' : 'Final week. After this, re-test on the flat route and pick what’s next on the Plan tab.'}</p>
@@ -3121,7 +3094,6 @@ function recap(ws){
   const we = addDays(ws, 6), inWk = d => d >= ws && d <= we;
   const runs = sortedRuns().filter(r => inWk(r.date));
   const mi = runs.reduce((a, r) => a + (r.distMi ?? 0), 0), min = runs.reduce((a, r) => a + (r.timerSec ?? 0), 0) / 60;
-  const sportMin = doc.refDays.filter(inWk).reduce((a, d) => a + (doc.refInfo[d]?.min ?? 0), 0);
   const rts = (doc.routines ?? []).filter(x => inWk(x.date));
   const clean = runs.filter(isClean), before = sortedRuns().filter(r => isClean(r) && r.date < ws && diffDays(r.date, ws) <= 28);
   const hr = clean.length ? avgOf(clean.map(hrMetric)) : null, hrBefore = before.length ? avgOf(before.map(hrMetric)) : null;
@@ -3133,12 +3105,12 @@ function recap(ws){
   const prevMi = [];
   if (first) for (let w = weekStart(first); w < ws; w = addDays(w, 7)) prevMi.push(sortedRuns().filter(r => r.date >= w && r.date <= addDays(w, 6)).reduce((a, r) => a + (r.distMi ?? 0), 0));
   const ms = milestones().filter(x => inWk(x.date));
-  const headline = !runs.length ? (sportMin ? 'A sport week — no runs logged.' : 'No runs this week.')
+  const headline = !runs.length ? 'No runs this week.'
     : hrDelta != null && hrDelta <= -2 ? `Heart rate down ${-hrDelta} bpm on the test route — that’s fitness.`
     : prevMi.length && mi > Math.max(...prevMi) + 0.05 ? 'Your biggest week yet.'
     : ms.length ? `New milestone: ${ms.at(-1).label}.`
     : runs.length >= 3 ? 'Three runs in. That’s the habit.' : `${runs.length} run${runs.length > 1 ? 's' : ''} in.`;
-  return { ws, we, runs, mi, min, sportMin, strength:rts.filter(x => x.id === 'strength').length, stretches:rts.filter(x => x.id !== 'strength').length,
+  return { ws, we, runs, mi, min, strength:rts.filter(x => x.id === 'strength').length, stretches:rts.filter(x => x.id !== 'strength').length,
     longest:runs.reduce((a, r) => Math.max(a, r.distMi ?? 0), 0), hr, hrBefore, hrDelta, effort:eff.length ? avgOf(eff.map(r => r.effort)) : null, ms, headline };
 }
 let recapWs = null;   // the week shown on Progress; null = last week
@@ -3157,7 +3129,6 @@ function recapCard({ compact = false } = {}){
     <div class="card-sub" style="margin-top:12px">${[
       R.hr != null && `Test-route HR ${Math.round(R.hr)}${R.hrDelta != null ? ` (${R.hrDelta > 0 ? '+' : ''}${R.hrDelta} vs the 4 weeks before)` : ''}`,
       R.effort != null && `effort ${R.effort.toFixed(1)}/10 on average`,
-      R.sportMin && `${R.sportMin} sport minutes`,
       R.strength && `${R.strength} strength session${R.strength > 1 ? 's' : ''}`,
       R.stretches && `${R.stretches} stretch routine${R.stretches > 1 ? 's' : ''}`,
     ].filter(Boolean).join(' · ') || 'Nothing else logged.'}</div>
@@ -3311,10 +3282,8 @@ function shoesCard(){
 function renderRunsList(){
   const runs = sortedRuns().reverse();
   const page = $('#page-runs');
-  // Past sport days sit among the runs so the week reads as it happened; they never count as runs.
-  const sport = doc.refDays.filter(d => d <= todayYmd());
-  const rows = [...runs, ...sport.map(date => ({ date, sportDay:true }))].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
-  if (!runs.length && !sport.length){
+  const rows = runs;
+  if (!runs.length){
     page.innerHTML = band({ eyebrow:'No runs yet', title:'Runs' }) + `<div class="wrap">
       <div class="empty"><b>No runs yet.</b><br>They appear once your watch syncs — <a href="#setup">set that up</a>, or upload a FIT file.</div></div>`;
     return;
@@ -3322,15 +3291,13 @@ function renderRunsList(){
   const dotColor = { crit:'var(--crit)', warn:'var(--warn)', wait:'var(--axis)' };
   const last30 = runs.filter(r => diffDays(r.date, todayYmd()) < 30);
   page.innerHTML = band({
-    eyebrow: `${runs.length} run${runs.length === 1 ? '' : 's'} · ${runs.filter(isClean).length} clean on the test route${sport.length ? ` · ${sport.length} sport day${sport.length > 1 ? 's' : ''}` : ''}`,
+    eyebrow: `${runs.length} run${runs.length === 1 ? '' : 's'} · ${runs.filter(isClean).length} clean on the test route`,
     title: 'Runs',
     stats: [['Last 30 days', last30.length, 'runs'], ['Miles · 30 days', last30.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)], ['All-time miles', runs.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)]],
   }) + `<div class="wrap">
     ${shoesCard()}
     <div class="card runs-table-card">
-    <ul class="run-cards">${rows.map(r => r.sportDay
-      ? `<li><div class="rc-sport"><div class="rc-main">${fmtDate(r.date)}</div><div class="rc-right"><span class="badge sport">Sport</span></div><div class="rc-nums">${refLabel(r.date) || 'Sport day'} · not counted as a run</div></div></li>`
-      : `<li><a href="#runs/${r.id}">
+    <ul class="run-cards">${rows.map(r => `<li><a href="#runs/${r.id}">
           <div class="rc-main">${fmtDate(r.date)} · ${fmtMi(r.distMi)} mi</div>
           <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? '<span class="badge test">Test</span>' : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
           <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}${shoeOf(r) ? ` · ${esc(shoeOf(r).name)}` : ''}</div>
@@ -3338,11 +3305,6 @@ function renderRunsList(){
     <div class="table-wrap"><table class="runs">
       <thead><tr><th>Date</th><th>Route</th><th style="text-align:left">Shoes</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>Effort</th><th>Temp</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
       <tbody>${rows.map(r => {
-        if (r.sportDay) return `<tr class="sport-row">
-          <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">sport day</div></td>
-          <td style="text-align:right"><span class="badge sport">Sport</span></td>
-          <td colspan="12" class="r-sub">${refLabel(r.date) || 'Games or a big day on your feet'}. Not counted as a run.</td>
-        </tr>`;
         const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
         return `<tr data-run="${r.id}" tabindex="0">
           <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">${r.source === 'fit' ? fmtTime(r.start) + ' · FIT' : 'from notes'}</div></td>
@@ -4066,7 +4028,6 @@ function renderPlan(){
               ${i === 0 && !mara ? `· <button class="link-btn" data-decide="${w.start}" data-val="${w.decision === 'advance' ? 'repeat' : 'advance'}">${w.decision === 'advance' ? 'Repeat instead' : 'Advance instead'}</button>${w.overridden ? ` · <button class="link-btn" data-decide="${w.start}" data-val="">Use gate</button>` : ''}` : ''}</span>
           </li>`).join('')}</ul>` : '<p class="card-sub" style="margin:0">First week in progress.</p>'}
         </div>
-        ${sportDaysCard()}
         ${mara ? `<div class="card"><div class="card-head"><h2>Rules that override the plan</h2></div>
           <ul class="rules">
             <li><b>Easy runs are easy.</b> Most of your miles should be under ${doc.profile.zones.easy} bpm. Going harder on easy days is the most common way to arrive at race day tired.</li>
@@ -4081,7 +4042,6 @@ function renderPlan(){
           <p class="card-sub" style="margin:0"><b>Easy</b> — you can talk in full sentences, HR under ${doc.profile.zones.easy}. <b>Marathon effort</b> — comfortably hard, short sentences only, roughly ${doc.profile.zones.easy}–${doc.profile.zones.mod}. In the race, the first half should feel too easy.</p>
         </div>` : `<div class="card"><div class="card-head"><h2>Rules that override the plan</h2></div>
           <ul class="rules">
-            <li><b>Sport day or big day on your feet:</b> rest the day before, and skip the run right after if the legs are toast.</li>
             <li><b>Soreness past 48 hours, or sharp pain:</b> repeat the week.</li>
             <li><b>Miss a week:</b> go back one week, don’t jump ahead.</li>
             <li><b>One calf much worse, shin-bone pain, or Achilles tightness out of bed:</b> stop and get it looked at.</li>
@@ -4094,20 +4054,6 @@ function renderPlan(){
         </div>`}
       </div>
     </div></div>`;
-}
-
-// The Today strip only reaches forward; this logs a sport day after the fact.
-function sportDaysCard(){
-  const list = [...doc.refDays].sort().reverse().slice(0, 8);
-  return `<div class="card"><div class="card-head"><h2>Sport days</h2><span class="card-sub">games or a big day on your feet</span></div>
-    <div class="field-row">
-      <div class="field"><label for="ref-date">Date</label><input id="ref-date" type="date" value="${addDays(todayYmd(), -1)}"></div>
-      <div class="field"><label for="ref-games">Games (optional)</label><input id="ref-games" type="number" min="1" max="20" step="1" inputmode="numeric"></div>
-      <div class="field"><label for="ref-min">Minutes on your feet (optional)</label><input id="ref-min" type="number" min="1" max="600" step="5" inputmode="numeric"></div>
-    </div>
-    <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="add-refday">Save sport day</button></div>
-    ${list.length ? `<ul class="hist" style="margin-top:12px">${list.map(d => `<li><span>${fmtDate(d)}${refLabel(d) ? ` · ${refLabel(d)}` : ''}</span><button class="link-btn" data-del-refday="${d}">remove</button></li>`).join('')}</ul>` : ''}
-  </div>`;
 }
 
 /* ═══ WELCOME / CHOOSE A PLAN ════════════════════════════════════════ */
@@ -4609,8 +4555,6 @@ document.addEventListener('click', async e => {
   if (ps){ welcomeUi.start = ps.dataset.pickStart; renderWelcome(); return; }
   const br = e.target.closest('[data-body-range]');
   if (br){ prefs.set('bodyRange', +br.dataset.bodyRange); renderBody(); return; }
-  const dr = e.target.closest('[data-del-refday]');
-  if (dr){ dropRef(dr.dataset.delRefday); await save(); render(); return; }
   const dm = e.target.closest('[data-del-measure]');
   if (dm){
     const [kind, date] = dm.dataset.delMeasure.split('|');
@@ -4637,12 +4581,6 @@ document.addEventListener('click', async e => {
     const c = { runId:ck.dataset.run, stage:ck.dataset.stage, value:ck.dataset.checkin, at:new Date().toISOString() };
     doc.checkins.push(c);
     lastResponse = { c, html: c.value === 'red' ? RESPONSES.red : RESPONSES[c.stage][c.value], alarm: c.value === 'red' || (c.stage === '48' && c.value !== 'none') };
-    await save(); render(); return;
-  }
-  const rd = e.target.closest('[data-refday]');
-  if (rd && !rd.disabled){
-    const d = rd.dataset.refday;
-    if (isRef(d)) dropRef(d); else doc.refDays = [...doc.refDays, d];
     await save(); render(); return;
   }
   const pz = e.target.closest('[data-pain-zone]');
@@ -4816,19 +4754,6 @@ document.addEventListener('click', async e => {
       }
       welcomeUi.plan = welcomeUi.start = welcomeUi.race = null;
       await save(); location.hash = 'today'; render(); break;
-    }
-    case 'add-refday': {
-      const d = $('#ref-date').value;
-      if (!d){ toast('Pick a date'); break; }
-      const games = +$('#ref-games').value, min = +$('#ref-min').value;
-      if (games && !(Number.isInteger(games) && games <= 20)){ toast('Games should be a whole number up to 20'); break; }
-      if (min && !(min <= 600)){ toast('That’s more than 10 hours'); break; }
-      const had = isRef(d);
-      if (!had) doc.refDays = [...doc.refDays, d];
-      // Saving an existing day again only adds detail; blank fields keep what was there.
-      const info = { ...(doc.refInfo[d] ?? {}), ...(games ? { games } : {}), ...(min ? { min } : {}) };
-      if (Object.keys(info).length) doc.refInfo[d] = info;
-      await save(); toast(had ? 'Sport day updated' : 'Sport day added'); render(); break;
     }
     case 'add-measure': {
       const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
