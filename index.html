@@ -658,6 +658,50 @@ table.lift-recent td:first-child{white-space:nowrap; padding-right:12px}
 .wo-next-foot{font-style:italic}
 .lift-list li.wo-row{flex-wrap:wrap}
 .wo-swap{flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px}
+.lv .wo-swap{margin-top:12px}
+/* Live workout */
+.wrap.lv{max-width:760px}
+.lv-strip{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 10px; margin:0 -2px 6px; scrollbar-width:none}
+.lv-chip{flex:none; display:flex; align-items:center; gap:8px; font:inherit; font-size:13px; font-weight:600; padding:7px 12px 7px 7px; border-radius:999px; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); cursor:pointer}
+.lv-chip .num{display:grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--surface-2); font-family:var(--mono); font-size:11px}
+.lv-chip.some .num{background:color-mix(in srgb, var(--accent) 35%, var(--surface-2))}
+.lv-chip.done{color:var(--muted)}
+.lv-chip.done .num{background:var(--accent); color:var(--accent-ink)}
+.lv-chip[aria-current]{border-color:var(--accent); color:var(--ink); box-shadow:var(--glow)}
+.lv-rest{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; padding:12px 16px; border-radius:var(--radius-sm); border:1px solid var(--accent); background:color-mix(in srgb, var(--accent) 10%, var(--surface))}
+.lv-rest > span:first-child{display:flex; align-items:baseline; gap:10px}
+.lv-rest small{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.lv-rest b{font-family:var(--mono); font-size:30px; line-height:1; color:var(--ink)}
+.lv-rest.go{background:var(--accent)}
+.lv-rest.go b, .lv-rest.go small{color:var(--accent-ink)}
+.lv-rest.go .btn{background:var(--accent-ink); color:var(--accent); border-color:var(--accent-ink)}
+.lv-eq{margin:0 0 6px; font-size:14px}
+.lv-why{margin:0 0 8px; font-size:13.5px; color:var(--muted); line-height:1.45}
+.lv-how-btn{font-size:13.5px}
+.lv-how{margin:10px 0 0; padding:12px 14px; border-radius:var(--radius-sm); background:var(--surface-2); font-size:14px; line-height:1.5}
+.lv-how p{margin:0}
+.lv-how ol{margin:8px 0; padding-left:20px}
+.lv-how li{margin:3px 0}
+.lv-avoid{color:var(--muted)}
+.lv-sets{display:flex; flex-direction:column; gap:8px; margin-top:16px}
+.lv-set{display:grid; grid-template-columns:22px 1fr 1fr 46px; align-items:center; gap:8px}
+.lv-set > .num{font-family:var(--mono); font-size:13px; color:var(--muted); text-align:center}
+.lv-head{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.lv-head span{text-align:center}
+.lv-step{display:flex; align-items:stretch; min-width:0; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); overflow:hidden}
+.lv-step button{flex:none; width:32px; font:inherit; font-size:18px; border:0; background:transparent; color:var(--ink-2); cursor:pointer}
+.lv-step button:active{background:var(--line)}
+.lv-step input{flex:1; min-width:0; width:100%; text-align:center; font-family:var(--mono); font-size:17px; font-weight:600; padding:10px 0; border:0; background:transparent; color:var(--ink); -moz-appearance:textfield}
+.lv-step input::-webkit-inner-spin-button, .lv-step input::-webkit-outer-spin-button{-webkit-appearance:none; margin:0}
+.lv-tick{height:44px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--muted); font-size:18px; font-weight:800; cursor:pointer}
+.lv-set.done .lv-tick{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); box-shadow:var(--glow)}
+.lv-set.done .lv-step{opacity:.7}
+.lv-foot{margin:12px 2px 0}
+.lv-done-stats{display:flex; gap:28px}
+.lv-done-stats span{display:flex; flex-direction:column}
+.lv-done-stats b{font-family:var(--mono); font-size:26px}
+.lv-done-stats small{color:var(--muted); font-size:12px}
+.lv-done{margin-bottom:16px; border-color:var(--accent)}
 .wo-swap small{color:var(--muted)}
 .wo-swap .link-btn{flex-basis:100%; text-align:left; font-size:13px; margin-top:2px}
 .wo-item select{flex:1 1 220px; min-width:0; font:inherit; font-size:15px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
@@ -2425,6 +2469,7 @@ const EXPLAIN = {
   treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the test-route trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
+  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is weight × reps added up over every set, a rough measure of how much work you did. For dumbbells, the weight is one dumbbell.',
   e1rm: () => 'The first number is your estimated one-rep max: the most you could likely lift once, worked out from a set of several reps (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. Tested a true max? Log it as one set of 1 rep: a single counts as exactly what you lifted. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
   standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
@@ -3940,9 +3985,10 @@ function liftBest(ex){
   }
   return { def, best, heavy };
 }
+const liftId = () => 'lf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 function logLift(e){
   const def = liftDef(e.ex), before = liftBest(e.ex).best?.v ?? 0;
-  doc.lifts = [...doc.lifts, { id:'lf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...e }];
+  doc.lifts = [...doc.lifts, { id:liftId(), ...e }];
   const after = liftBest(e.ex).best.v;
   toast(before && after > before ? `New PR · ${def.name}: ${def.bw ? `${after} reps` : `est. 1-rep max ${after} lb`}` : 'Saved');
 }
@@ -3966,7 +4012,7 @@ function progNext(){
   return { day: last ? keys[(keys.indexOf(last.day) + 1) % keys.length] : keys[0], today:false };
 }
 
-const liftUi = { swaps:{}, swapOpen:null, ex:'squat', date:null, sets:[{ lb:'', reps:'' }], day:null, wo:null, editId:null, name:'', legs:true, setup:null, chart:null, open:null, edit:null };
+const liftUi = { summary:null, ex:'squat', date:null, sets:[{ lb:'', reps:'' }], day:null, wo:null, editId:null, name:'', legs:true, setup:null, chart:null, edit:null };
 // Your own workouts (Push, Pull, Legs…): doc.workouts in rotation order,
 // { id, name, items:[{ ex, sets?, reps? }] }. Entries logged from one carry `wo`.
 const byDate = (a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
@@ -3996,14 +4042,14 @@ function pickVariation(f, used, date){
   const opts = LIFTS.filter(l => l.f === f && !doc.gym.skip.includes(l.id) && !used.has(l.id));
   return opts.sort((a, b) => lastDone(a.id) < lastDone(b.id) ? -1 : lastDone(a.id) > lastDone(b.id) ? 1 : 0)[0]?.id ?? null;
 }
-// A workout as it runs on `date`: swaps first, then rotation, then the gym.
+// A workout as it runs on `date`: rotation, then the gym.
 // Uses only history before `date`, so the picks hold still while you log.
 function woPlan(w, date){
   const used = new Set();
-  return w.items.map((it, i) => {
-    const f = liftDef(it.ex).f, sw = liftUi.swaps[`${w.id}|${i}`];
-    let ex = sw ?? it.ex;
-    if (!sw && f && (w.vary || doc.gym.skip.includes(it.ex))) ex = pickVariation(f, used, date) ?? it.ex;
+  return w.items.map(it => {
+    const f = liftDef(it.ex).f;
+    let ex = it.ex;
+    if (f && (w.vary || doc.gym.skip.includes(it.ex))) ex = pickVariation(f, used, date) ?? it.ex;
     used.add(ex);
     return { ...it, ex };
   });
@@ -4019,7 +4065,7 @@ function woNext(){
 function woList(){
   const next = woNext(), date = liftUi.date || todayYmd(), { g, after } = nextGroup();
   const loose = doc.lifts.some(l => l.date === date && !l.wo && !l.day);
-  const days = coached() ? schedule(todayYmd(), 2) : [];
+  const days = doc.planId && coached() ? schedule(todayYmd(), 2) : [];
   const legsWarn = g === 'Legs' && days[1]?.kind === 'run' ? ' You run tomorrow, so keep legs light today or do another day first.' : '';
   const why = after ? `You did ${after.g.toLowerCase()} ${after.date === todayYmd() ? 'today' : diffDays(after.date, todayYmd()) === 1 ? 'yesterday' : 'on ' + fmtDate(after.date).slice(4)}, so ${g.toLowerCase()} is next.` : 'Push, pull and legs, in turn.';
   const sug = !next && suggestWorkout(g);
@@ -4035,29 +4081,164 @@ function woList(){
     <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-new">+ New workout</button>${loose ? `<button class="btn small" data-action="wo-from-day">Save ${date === todayYmd() ? 'today' : fmtDate(date).slice(4)} as a workout</button>` : ''}</div>
     ${doc.gym.skip.length ? `<p class="card-sub" style="margin:12px 0 0">Not at your gym (tap to bring back): ${doc.gym.skip.map(ex => `<button class="link-btn" data-gym-unskip="${ex}">${esc(liftDef(ex).name)}</button>`).join(', ')}</p>` : ''}`;
 }
-// One workout's checklist: what you did last time, logged on the form's date.
-function woSession(w){
-  const date = liftUi.date || todayYmd(), plan = woPlan(w, date), todays = doc.lifts.filter(l => l.date === date && l.wo === w.id), claimed = new Set();
-  // Match what's logged to slots: the planned exercise first, then any variation from its family.
-  for (const pass of [0, 1]) for (const p of plan){
-    if (p.done) continue;
-    p.done = todays.find(l => !claimed.has(l.id) && (pass ? liftDef(l.ex).f && liftDef(l.ex).f === liftDef(p.ex).f : l.ex === p.ex));
-    if (p.done) claimed.add(p.done.id);
+/* ── Live workout ────────────────────────────────────────────────────
+   One exercise at a time: what to use and how, sets prefilled from last
+   time, a tick per set and a rest timer between. Every tick writes to
+   doc.lifts straight away, so closing the app mid-workout loses nothing;
+   where you are is per-device, in prefs ('liftLive'), so it picks up again. */
+// What to use and how: equipment, setup, three cues, the usual mistake.
+const HOWTO = {
+  squat:{ eq:'Barbell in a squat rack', set:'Bar at mid-chest height. Step under so it rests on your upper back, not your neck, and walk it out two steps.', cues:['Feet about shoulder-width, toes turned out a little.', 'Breathe in and brace, then sit down between your heels, knees over your toes.', 'Go until your hips are level with your knees, then drive up through the whole foot.'], avoid:'Knees caving in or heels lifting. Set the safety arms just below your lowest point.' },
+  fsquat:{ eq:'Barbell in a squat rack', set:'Bar rests on the front of your shoulders, fingertips under it, elbows pointing forward and high.', cues:['Keep your elbows up and chest tall the whole way.', 'Sit straight down between your heels.', 'Stand up leading with your chest.'], avoid:'Elbows dropping, which tips the bar forward off your shoulders.' },
+  deadlift:{ eq:'Barbell on the floor, plates loaded', set:'Bar over the middle of your feet, shins about an inch away. Grip just outside your legs.', cues:['Bend until your shins touch the bar: back flat, chest up.', 'Push the floor away, keeping the bar against your legs.', 'Stand tall and squeeze your glutes. Don’t lean back.'], avoid:'Rounding your lower back or yanking the bar off the floor.' },
+  rdl:{ eq:'Barbell (lift it from a rack at hip height)', set:'Hold the bar at your hips, hands just outside your thighs, knees softly bent.', cues:['Push your hips straight back and let the bar slide down your thighs.', 'Stop at a strong hamstring stretch, usually just below the knee.', 'Drive your hips forward to stand.'], avoid:'Turning it into a squat, or rounding your back to reach lower.' },
+  legpress:{ eq:'Leg press machine', set:'Back and hips flat on the pad, feet shoulder-width in the middle of the platform. Release the safety handles.', cues:['Lower until your knees are about at a right angle.', 'Press through your heels and mid-foot.', 'Stop just short of locking your knees.'], avoid:'Going so deep your lower back lifts off the pad. Lock the safeties before you get out.' },
+  goblet:{ eq:'One dumbbell or kettlebell', set:'Hold the dumbbell upright against your chest, both hands cupping the top end.', cues:['Feet a little wider than your hips, toes slightly out.', 'Sit down between your heels, elbows inside your knees.', 'Stand up tall, weight close to your chest.'], avoid:'Letting the weight drift away from your body.' },
+  split:{ eq:'Two dumbbells (the weight is per dumbbell)', set:'Long stance: one foot forward, back heel up, a dumbbell in each hand.', cues:['Drop your back knee straight down toward the floor.', 'Keep most of your weight on the front foot.', 'Push up through the front heel. All reps, then switch legs.'], avoid:'Too short a stance, which shoves the front knee far forward.' },
+  lunge:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, a dumbbell in each hand at your sides.', cues:['Take a long step forward and lower your back knee toward the floor.', 'Keep your body upright.', 'Push off the front foot to stand. Alternate legs.'], avoid:'The front knee falling inward.' },
+  stepup:{ eq:'A sturdy box or bench about knee height, two dumbbells (per dumbbell)', set:'Put your whole foot on the box.', cues:['Drive through the heel on the box to stand up on it.', 'Don’t push off the back foot.', 'Step down slowly. All reps on one leg, then the other.'], avoid:'A box so high your hips swing sideways.' },
+  hipthrust:{ eq:'Barbell with a bar pad and a flat bench (or the hip-thrust machine)', set:'Upper back against the edge of the bench, bar padded across your hips, feet flat about hip-width.', cues:['Tuck your chin and push your hips up until you’re straight from shoulders to knees.', 'Squeeze your glutes hard for a second at the top.', 'Lower slowly.'], avoid:'Arching your lower back to get higher.' },
+  dbrdl:{ eq:'Two dumbbells (per dumbbell)', set:'Dumbbells in front of your thighs, knees softly bent.', cues:['Push your hips back and let the dumbbells slide down your legs.', 'Stop at a strong hamstring stretch.', 'Drive your hips forward to stand.'], avoid:'Rounding your back to reach lower.' },
+  legcurl:{ eq:'Leg curl machine (lying or seated)', set:'Line your knees up with the machine’s pivot. The pad sits just above your heels.', cues:['Curl your heels toward your glutes.', 'Squeeze for a moment.', 'Lower slowly, about three seconds.'], avoid:'Lifting your hips to swing the weight.' },
+  nordic:{ eq:'Something to hook your heels under (a partner, a loaded bar or a nordic bench) and a knee pad', set:'Kneel tall on the pad with your heels anchored.', cues:['Keep a straight line from knees to head.', 'Lower yourself forward as slowly as you can.', 'Catch yourself with your hands and push back up.'], avoid:'Bending at the hips. It’s very hard: a few slow reps is plenty.' },
+  legext:{ eq:'Leg extension machine', set:'Knees line up with the pivot, the pad on your lower shins.', cues:['Straighten your legs fully.', 'Squeeze your thighs at the top.', 'Lower slowly.'], avoid:'Kicking the weight up with momentum.' },
+  calf:{ eq:'Calf-raise machine, or a step holding dumbbells', set:'Balls of your feet on the edge, heels hanging off.', cues:['Lower your heels as far as they go and pause.', 'Rise as high as you can onto your toes.', 'Come down slowly.'], avoid:'Bouncing. For runners this one protects the Achilles, so go slow.' },
+  bench:{ eq:'Barbell on a flat bench with uprights. Use safety arms or a spotter.', set:'Lie with your eyes under the bar. Grip a little wider than your shoulders, feet flat, shoulder blades pinched together.', cues:['Unrack and hold the bar over your shoulders.', 'Lower to your mid-chest, elbows about 45° from your body.', 'Press back up.'], avoid:'Bouncing the bar off your chest or flaring your elbows straight out.' },
+  incline:{ eq:'Barbell on an incline bench (30–45°) with uprights', set:'Back flat on the bench, grip a little wider than your shoulders, shoulder blades pinched.', cues:['Unrack and hold the bar over your shoulders.', 'Lower to your upper chest, just under the collarbone.', 'Press straight back up.'], avoid:'Arching your back to make it flatter.' },
+  dbbench:{ eq:'Two dumbbells and a flat bench (per dumbbell)', set:'Sit with the dumbbells on your knees, lie back and bring them up to your chest.', cues:['Press up until your arms are straight over your chest.', 'Lower to the sides of your chest, elbows about 45°.', 'Keep your shoulder blades pinched.'], avoid:'Dropping the dumbbells at the end. Bring them to your chest and sit up.' },
+  dbincline:{ eq:'Two dumbbells and an incline bench at 30–45° (per dumbbell)', set:'Sit back with the dumbbells on your knees and bring them up to your shoulders.', cues:['Press up over your upper chest.', 'Lower to the sides of your chest, elbows about 45°.', 'Keep your back on the bench.'], avoid:'Setting the bench so steep it becomes a shoulder press.' },
+  chestmachine:{ eq:'Chest press machine', set:'Set the seat so the handles line up with your mid-chest. Back flat on the pad.', cues:['Press forward until your arms are nearly straight.', 'Come back slowly to a stretch across your chest.', 'Keep your shoulders down, away from your ears.'], avoid:'Letting the weight stack slam between reps.' },
+  inclinemachine:{ eq:'Incline chest press machine', set:'Set the seat so the handles start at your upper chest. Back flat on the pad.', cues:['Press up and forward until your arms are nearly straight.', 'Come back slowly.', 'Keep your shoulders down.'], avoid:'Letting the weight stack slam between reps.' },
+  press:{ eq:'Barbell, standing, from a rack at shoulder height', set:'Bar on the front of your shoulders, hands just outside them, elbows slightly in front of the bar.', cues:['Squeeze your glutes and brace so you don’t lean back.', 'Press straight up, moving your head back, then through once the bar passes.', 'Finish with the bar over your mid-foot, arms locked.'], avoid:'Leaning back so it turns into an incline press.' },
+  dbpress:{ eq:'Two dumbbells and a bench set upright (per dumbbell)', set:'Sit tall, dumbbells at your shoulders, palms facing forward.', cues:['Press up until your arms are straight.', 'Lower back to your shoulders.', 'Keep your back against the pad.'], avoid:'Arching your back away from the pad.' },
+  shouldermachine:{ eq:'Shoulder press machine', set:'Set the seat so the handles start at shoulder height.', cues:['Press up until your arms are nearly straight.', 'Lower slowly to shoulder height.', 'Keep your back on the pad.'], avoid:'Letting the weight stack slam between reps.' },
+  fly:{ eq:'Pec deck (chest fly machine)', set:'Set the seat so the handles are at chest height. Keep a slight bend in your elbows.', cues:['Bring the handles together as if hugging a big tree.', 'Squeeze your chest for a moment.', 'Open slowly to a stretch.'], avoid:'Opening so far your shoulders strain.' },
+  dbfly:{ eq:'Two dumbbells and a flat bench (per dumbbell)', set:'Lie back, dumbbells over your chest, palms facing each other, elbows slightly bent.', cues:['Open your arms wide in an arc.', 'Stop at a stretch across your chest.', 'Hug them back together.'], avoid:'Going heavy. This is a stretch-and-squeeze move.' },
+  lateral:{ eq:'Two light dumbbells (or a cable)', set:'Stand tall, dumbbells at your sides, elbows slightly bent.', cues:['Raise your arms out to the sides up to shoulder height.', 'Lead with your elbows.', 'Lower slowly.'], avoid:'Shrugging or swinging. Light weight is normal here.' },
+  pushdown:{ eq:'Cable station with a rope or short bar set at the top', set:'Stand close, elbows tucked in at your sides.', cues:['Push down until your arms are straight.', 'Squeeze the back of your arms.', 'Let it rise until your forearms are level, elbows staying put.'], avoid:'Elbows drifting forward and leaning your body weight on it.' },
+  ohext:{ eq:'One dumbbell', set:'Sit or stand. Hold the dumbbell overhead with both hands under the top end.', cues:['Lower it behind your head by bending only your elbows.', 'Elbows point up and stay close to your head.', 'Straighten back up.'], avoid:'Elbows flaring out wide.' },
+  skull:{ eq:'EZ-bar (or two dumbbells) and a flat bench', set:'Lie back, bar held straight up over your shoulders, hands close together.', cues:['Bend only your elbows to lower the bar toward your forehead.', 'Keep your upper arms still.', 'Straighten your arms.'], avoid:'Adding weight fast. Elbows don’t like it.' },
+  dips:{ eq:'Parallel dip bars (or the assisted dip machine)', set:'Hold yourself up on straight arms, shoulders down.', cues:['Lower until your upper arms are about level with the floor.', 'Lean slightly forward.', 'Push back up to straight arms.'], avoid:'Going deep if your shoulders complain. Use the assisted machine until you can do a few.' },
+  pushup:{ eq:'The floor (hands on a bench makes it easier)', set:'Hands a little wider than your shoulders, body straight from head to heels.', cues:['Lower your chest to just above the floor, elbows about 45°.', 'Keep your hips in line.', 'Push back up.'], avoid:'Sagging hips.' },
+  pullup:{ eq:'Pull-up bar (or the assisted pull-up machine)', set:'Hang from the bar, hands just wider than your shoulders, palms facing away.', cues:['Pull your shoulder blades down first.', 'Pull until your chin clears the bar.', 'Lower all the way, slowly.'], avoid:'Swinging and half reps. Use the assisted machine or a band until you can do five.' },
+  chinup:{ eq:'Pull-up bar (or the assisted pull-up machine)', set:'Hang with your palms facing you, hands shoulder-width.', cues:['Pull your shoulder blades down first.', 'Pull until your chin clears the bar.', 'Lower all the way, slowly.'], avoid:'Swinging and half reps.' },
+  pulldown:{ eq:'Lat pulldown machine (cable)', set:'Thighs tucked under the pads, grip a little wider than your shoulders.', cues:['Lean back slightly and pull the bar to your upper chest.', 'Drive your elbows down toward your back pockets.', 'Let it rise slowly to straight arms.'], avoid:'Pulling behind your neck or swinging back.' },
+  row:{ eq:'Barbell', set:'Bend at the hips until your body is about 45° or lower, back flat, bar hanging at arm’s length.', cues:['Pull the bar to your lower ribs.', 'Squeeze your shoulder blades together.', 'Lower slowly.'], avoid:'Standing up as you pull.' },
+  dbrow:{ eq:'One dumbbell and a flat bench', set:'One knee and hand on the bench, back flat, dumbbell hanging from the other hand.', cues:['Pull it toward your hip.', 'Keep your elbow close to your side.', 'Lower to a full stretch. All reps, then switch arms.'], avoid:'Twisting your body to heave it up.' },
+  cablerow:{ eq:'Seated cable row machine with a V-handle', set:'Feet on the platform, knees soft, sit tall.', cues:['Pull the handle to your belly.', 'Squeeze your shoulder blades together.', 'Reach forward slowly without rounding.'], avoid:'Rocking back and forth to move the weight.' },
+  invrow:{ eq:'A bar set at waist height in a rack (or a Smith machine)', set:'Lie under the bar and grab it, heels on the floor, body straight.', cues:['Pull your chest up to the bar.', 'Hold a straight plank the whole time.', 'Lower to straight arms.'], avoid:'Hips sagging. Bend your knees to make it easier.' },
+  facepull:{ eq:'Cable station with a rope, set at head height', set:'Hold the rope ends, palms facing in, and step back until your arms are straight.', cues:['Pull the rope toward your face, hands splitting apart past your ears.', 'Keep your elbows high.', 'Return slowly.'], avoid:'Going heavy and leaning back.' },
+  reardelt:{ eq:'Rear delt machine (the pec deck facing the other way) or light dumbbells', set:'Face the pad, handles at shoulder height.', cues:['Sweep your arms back in a wide arc.', 'Squeeze between your shoulder blades.', 'Return slowly.'], avoid:'Shrugging your shoulders up.' },
+  curl:{ eq:'Barbell or EZ-bar', set:'Stand tall, palms up, hands shoulder-width, elbows at your sides.', cues:['Curl the bar up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
+  dbcurl:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, palms facing forward, elbows at your sides.', cues:['Curl both up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
+  hammer:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, palms facing each other, elbows at your sides.', cues:['Curl up, keeping your palms facing in.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
+  shrug:{ eq:'Barbell or two dumbbells', set:'Stand tall holding the weight at arm’s length.', cues:['Lift your shoulders straight up toward your ears.', 'Hold for a second.', 'Lower slowly.'], avoid:'Rolling your shoulders in circles.' },
+  legraise:{ eq:'Pull-up bar or a captain’s chair', set:'Hang from the bar, or rest your back against the chair’s pad.', cues:['Raise your knees toward your chest by curling your hips up.', 'Lower slowly.', 'No swinging between reps.'], avoid:'Swinging. Bent knees is the easier version, straight legs the harder one.' },
+  crunch:{ eq:'Cable station with a rope, set high', set:'Kneel facing the cable, holding the rope beside your head.', cues:['Curl your ribs down toward your hips, rounding your back.', 'Keep your hips still.', 'Return slowly.'], avoid:'Pulling with your arms or sitting back on your heels.' },
+  backext:{ eq:'Back extension bench (45° or flat)', set:'Hips on the edge of the pad, ankles hooked under the rollers.', cues:['Lower your body by bending at the hips.', 'Rise until you’re straight, squeezing your glutes.', 'Stop at straight.'], avoid:'Arching past straight at the top.' },
+};
+let LV = prefs.get('liftLive', null);
+const liveSave = () => prefs.set('liftLive', LV);
+// Big lifts need longer to recover between sets.
+const restFor = ex => ['squat', 'hinge', 'hpress', 'ipress', 'vpress', 'vpull', 'hpull', 'single'].includes(liftDef(ex).f) ? 120 : 75;
+const mmss = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+// Last time's weight, one step up when every set hit its reps.
+function liveItem(ex, sets, reps, day){
+  const def = liftDef(ex), last = liftHist(ex).filter(l => l.date < todayYmd()).at(-1);
+  let n = sets || last?.sets.length || 3, r = reps || last?.sets[0].reps || (def.bw ? 8 : 10), lb = def.bw ? 0 : '', why = 'First time: start light and find a weight you could lift a couple more reps with.';
+  if (day){ lb = progWeight(ex, sets, reps); why = 'Your program’s weight for today.'; }
+  else if (last){
+    const w = topLb(last), top = last.sets.filter(s => s.lb >= w);
+    lb = w;
+    if (top.length >= n && top.every(s => s.reps >= r)){
+      if (def.bw) { r += 1; why = `Every rep last time (${fmtSets(last.sets, true)}), so one more rep each set.`; }
+      else { lb = w + def.inc; why = `Every rep last time (${fmtSets(last.sets)}), so up ${def.inc} lb.`; }
+    } else why = `Last time: ${fmtSets(last.sets, def.bw)}. Same weight, aim for every rep.`;
   }
-  const rows = plan.map((p, i) => {
-    const ex = p.done?.ex ?? p.ex, def = liftDef(ex), last = liftHist(ex).filter(l => l.date < date).at(-1), key = `${w.id}|${i}`;
-    const alts = def.f ? LIFTS.filter(l => l.f === def.f && l.id !== ex && !doc.gym.skip.includes(l.id)) : [];
-    const sub = p.done ? `done ✓ · ${fmtSets(p.done.sets, def.bw)}` : last ? `last time: ${fmtSets(last.sets, def.bw)}` : `${p.sets ? `${p.sets} × ${p.reps || '?'} · ` : ''}first time`;
-    return `<li class="wo-row"><span><b>${esc(def.name)}</b><small>${sub}${p.done ? '' : ` · <button class="link-btn" data-wo-swap="${i}">${liftUi.swapOpen === key ? 'close' : 'swap'}</button>`}</small></span>
-      ${p.done ? '' : `<span class="btn-row">${last ? `<button class="btn small primary" data-wo-same="${i}">Same again</button>` : ''}<button class="btn small${last ? '' : ' primary'}" data-wo-log="${i}">${last ? 'Change' : 'Log'}</button></span>`}
-      ${liftUi.swapOpen === key && !p.done ? `<div class="wo-swap">${alts.length ? alts.map(l => `<button class="pill" data-wo-pick="${i}|${l.id}">${esc(l.name)}</button>`).join('') : '<small>No other variations listed for this one.</small>'}
-        <button class="link-btn" data-gym-skip="${ex}">${esc(def.name)} isn’t at my gym</button></div>` : ''}</li>`;
-  });
-  const left = plan.filter(p => !p.done).length;
-  return `<div class="card" id="lift-wo"><div class="card-head"><h2>${esc(w.name)}</h2><span class="card-sub">${date === todayYmd() ? 'today' : fmtDate(date)} · <button class="link-btn" data-action="wo-close">done</button></span></div>
-    <ul class="lift-list">${rows.join('')}</ul>
-    <p class="card-sub" style="margin:12px 0 0">${!left ? 'All done. Nice work.' : '“Same again” logs exactly what you did last time. Beat it? Tap “Change” and enter what you lifted. Equipment busy or missing? Tap “swap”.'}</p></div>`;
+  return { ex, why, entry:null, how:!last, sets:Array.from({ length:n }, () => ({ lb, reps:r, done:false })) };
 }
+function liveStart({ wo = null, day = null, name, items }){
+  try { audioCtx ??= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch {}
+  const date = todayYmd(), claimed = new Set();
+  LV = { wo, day, name, date, started:Date.now(), i:0, rest:null, swap:false, prs:[], items:items.map(it => liveItem(it.ex, it.sets, it.reps, day)) };
+  // Anything already logged today for this workout counts as done.
+  for (const it of LV.items){
+    const l = doc.lifts.find(l => l.date === date && l.ex === it.ex && !claimed.has(l.id) && (wo ? l.wo === wo : l.day === day));
+    if (!l) continue;
+    claimed.add(l.id); it.entry = l.id;
+    it.sets = [...l.sets.map(s => ({ ...s, done:true })), ...it.sets.slice(l.sets.length)];
+  }
+  LV.i = Math.max(0, LV.items.findIndex(it => it.sets.some(s => !s.done)));
+  liveSave(); keepAwake(true); scrollTo(0, 0); renderLift();
+}
+// Ticked sets are the entry in doc.lifts; unticking the last one removes it.
+function liveCommit(it){
+  const sets = it.sets.filter(s => s.done).map(s => ({ lb:+s.lb || 0, reps:Math.round(+s.reps) || 0 }));
+  if (!sets.length){ doc.lifts = doc.lifts.filter(l => l.id !== it.entry); it.entry = null; return; }
+  if (doc.lifts.some(l => l.id === it.entry)) doc.lifts = doc.lifts.map(l => l.id === it.entry ? { ...l, ex:it.ex, sets } : l);
+  else { it.entry = liftId(); doc.lifts = [...doc.lifts, { id:it.entry, date:LV.date, ex:it.ex, sets, ...(LV.wo ? { wo:LV.wo } : {}), ...(LV.day ? { day:LV.day } : {}) }]; }
+}
+const liveStats = () => {
+  const sets = LV.items.flatMap(it => it.sets.filter(s => s.done));
+  return { sets:sets.length, lbs:sets.reduce((n, s) => n + (+s.lb || 0) * (+s.reps || 0), 0), min:Math.round((Date.now() - LV.started) / 60000) };
+};
+function liveFinish(){
+  const st = liveStats(), done = LV.items.filter(it => it.sets.some(s => s.done));
+  liftUi.summary = st.sets ? { name:LV.name, ...st, exs:done.map(it => liftDef(it.ex).name), prs:LV.prs } : null;
+  LV = null; liveSave(); keepAwake(false); scrollTo(0, 0); renderLift();
+}
+function renderLive(){
+  const it = LV.items[LV.i], def = liftDef(it.ex), how = HOWTO[it.ex], st = liveStats(), n = LV.items.length;
+  const left = it.sets.filter(s => !s.done).length, nextI = LV.items.findIndex((x, j) => j !== LV.i && x.sets.some(s => !s.done));
+  const alts = def.f ? LIFTS.filter(l => l.f === def.f && l.id !== it.ex && !doc.gym.skip.includes(l.id)) : [];
+  const stepper = (i, k, v, ph) => `<span class="lv-step"><button type="button" data-lv-step="${i}|${k}|-1" aria-label="Less ${k === 'lb' ? 'weight' : 'reps'}">−</button><input type="number" inputmode="${k === 'lb' ? 'decimal' : 'numeric'}" data-lv-${k}="${i}" value="${v}" placeholder="${ph}" aria-label="Set ${i + 1} ${k === 'lb' ? 'weight' : 'reps'}"><button type="button" data-lv-step="${i}|${k}|1" aria-label="More ${k === 'lb' ? 'weight' : 'reps'}">+</button></span>`;
+  $('#page-lift').innerHTML = band({
+    eyebrow: `Live workout · exercise ${LV.i + 1} of ${n}`,
+    title: esc(LV.name),
+    stats: [['Time', `<span id="lv-clock">${mmss((Date.now() - LV.started) / 1000)}</span>`, ''], ['Sets done', st.sets, ''], ['Lbs moved', st.lbs.toLocaleString(), '']],
+  }) + `<div class="wrap lv">
+    <div class="lv-strip" role="list">${LV.items.map((x, j) => { const d = x.sets.every(s => s.done), some = x.sets.some(s => s.done);
+      return `<button class="lv-chip${d ? ' done' : some ? ' some' : ''}" role="listitem" data-lv-go="${j}"${j === LV.i ? ' aria-current="step"' : ''}><span class="num">${d ? '✓' : j + 1}</span>${esc(liftDef(x.ex).name.replace(/ \(.*\)$/, ''))}</button>`; }).join('')}</div>
+    <div id="lv-rest">${liveRest()}</div>
+    <div class="card lv-card">
+      <div class="card-head"><h2>${esc(def.name)}${infoBtn}</h2><span class="card-sub">${left ? `${left} set${left > 1 ? 's' : ''} to go` : 'done ✓'}</span></div>${explain('liftLive')}
+      ${how ? `<p class="lv-eq"><b>Use:</b> ${how.eq}</p>` : ''}
+      <p class="lv-why">${it.why}</p>
+      ${how ? `<button class="link-btn lv-how-btn" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how to do it' : 'How to do it'}</button>
+        ${it.how ? `<div class="lv-how"><p><b>Set up:</b> ${how.set}</p><ol>${how.cues.map(c => `<li>${c}</li>`).join('')}</ol><p class="lv-avoid"><b>Watch for:</b> ${how.avoid}</p></div>` : ''}` : ''}
+      <div class="lv-sets">
+        <div class="lv-set lv-head" aria-hidden="true"><span>Set</span><span>${def.bw ? '+ lbs' : 'lbs'}</span><span>Reps</span><span></span></div>
+        ${it.sets.map((s, i) => `<div class="lv-set${s.done ? ' done' : ''}"><span class="num">${i + 1}</span>${stepper(i, 'lb', s.lb, def.bw ? 'body' : 'lbs')}${stepper(i, 'reps', s.reps, 'reps')}
+          <button class="lv-tick" data-lv-done="${i}" aria-pressed="${s.done}" aria-label="${s.done ? `Undo set ${i + 1}` : `Done set ${i + 1}`}">✓</button></div>`).join('')}
+      </div>
+      <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="lv-add-set">+ Set</button><button class="btn small" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button>
+        ${nextI >= 0 ? `<button class="btn small${left ? '' : ' primary'}" data-lv-go="${nextI}">${left ? 'Skip for now' : 'Next'}: ${esc(liftDef(LV.items[nextI].ex).name.replace(/ \(.*\)$/, ''))} →</button>` : `<button class="btn small primary" data-action="lv-finish">Finish workout</button>`}</div>
+      ${LV.swap ? `<div class="wo-swap">${alts.length ? alts.map(l => `<button class="pill" data-lv-pick="${l.id}">${esc(l.name)}</button>`).join('') : '<small>No other variations listed for this one.</small>'}
+        ${LIFTS.some(l => l.id === it.ex) ? `<button class="link-btn" data-gym-skip="${it.ex}">${esc(def.name)} isn’t at my gym</button>` : ''}</div>` : ''}
+    </div>
+    <p class="card-sub lv-foot">Each ticked set saves as you go. ${nextI >= 0 ? '<button class="link-btn" data-action="lv-finish">End workout here</button>' : ''}</p>
+  </div>`;
+}
+function liveRest(){
+  if (!LV?.rest) return '';
+  const sec = Math.max(0, (LV.rest.end - Date.now()) / 1000);
+  return `<div class="lv-rest${sec <= 0 ? ' go' : ''}"><span><small>${sec > 0 ? 'Rest' : 'Rest’s up'}</small><b class="num">${sec > 0 ? mmss(Math.ceil(sec)) : 'Go'}</b></span>
+    <span class="btn-row"><button class="btn small" data-action="lv-rest-add">+30 s</button><button class="btn small" data-action="lv-rest-skip">${sec > 0 ? 'Skip' : 'Hide'}</button></span></div>`;
+}
+// The clock and rest countdown come from timestamps, so a locked phone doesn't stretch them.
+setInterval(() => {
+  if (!LV) return;
+  const c = $('#lv-clock'); if (c) c.textContent = mmss((Date.now() - LV.started) / 1000);
+  if (!LV.rest) return;
+  const sec = Math.ceil((LV.rest.end - Date.now()) / 1000);
+  if (sec !== LV.rest.last){
+    if (sec > 0 && sec <= 3) beep(660, 90);
+    if (sec === 0) beep(990, 400);
+    LV.rest.last = sec;
+    const r = $('#lv-rest'); if (r) r.innerHTML = liveRest();
+  }
+}, 250);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && LV && location.hash.startsWith('#lift')){ wakeLock = null; keepAwake(true); } });
 function woEditor(){
   const e = liftUi.edit, n = e.items.length;
   return `<div class="card" id="lift-wo"><div class="card-head"><h2>${e.id ? 'Edit workout' : 'New workout'}</h2><span class="card-sub">exercises in order</span></div>
@@ -4081,8 +4262,6 @@ const redrawWo = () => { $('#lift-wo').outerHTML = liftWorkoutsCard(); };
 
 function liftWorkoutsCard(){
   if (liftUi.edit) return woEditor();
-  const open = doc.workouts.find(w => w.id === liftUi.open);
-  if (open) return woSession(open);
   const P = doc.liftProg;
   if (!P && liftUi.setup){
     const prog = LIFT_PROGS[liftUi.setup];
@@ -4107,7 +4286,8 @@ function liftWorkoutsCard(){
   const allDone = done.length >= prog.days[day].length;
   return `<div class="card" id="lift-wo"><div class="card-head"><h2>${today ? 'Today' : 'Next'}: workout ${day}${infoBtn}</h2><span class="card-sub">${prog.name} · <button class="link-btn" data-action="lift-prog-stop">stop</button></span></div>${explain('liftProg')}
     <ul class="lift-list">${rows.join('')}</ul>
-    <p class="card-sub" style="margin:12px 0 0">${allDone ? `All done. Next time: workout ${keys[(keys.indexOf(day) + 1) % keys.length]}.` : '“Did it” logs every set as written. Missed reps or a different weight? Tap “Change”.'}</p>
+    ${allDone ? '' : `<div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="lv-prog">Start workout ${day}</button></div>`}
+    <p class="card-sub" style="margin:12px 0 0">${allDone ? `All done. Next time: workout ${keys[(keys.indexOf(day) + 1) % keys.length]}.` : '“Start” walks you through it set by set. Already done it? “Did it” logs every set as written; “Change” if you missed reps.'}</p>
     <div class="wo-sub">Your workouts</div>${woList()}</div>`;
 }
 function liftLogCard(){
@@ -4161,9 +4341,19 @@ function drawLiftChart(){
     tipFmt:p => `<b>${fmtDate(p.r.date)}</b><br>${def.bw ? `${p.v} reps` : `est. 1-rep max ${p.v} lb`}` });
 }
 
+function liftSummary(){
+  const m = liftUi.summary; if (!m) return '';
+  return `<div class="card lv-done"><div class="card-head"><h2>${esc(m.name)} done</h2><button class="link-btn" data-action="lv-summary-close">close</button></div>
+    <div class="lv-done-stats"><span><b class="num">${m.min}</b><small>minute${m.min === 1 ? '' : 's'}</small></span><span><b class="num">${m.sets}</b><small>sets</small></span><span><b class="num">${m.lbs.toLocaleString()}</b><small>lbs moved</small></span></div>
+    <p class="card-sub" style="margin:12px 0 0">${m.exs.map(esc).join(' · ')}</p>
+    ${m.prs.length ? `<p style="margin:10px 0 0"><span class="badge test">new PR</span> ${m.prs.map(esc).join(', ')}</p>` : ''}</div>`;
+}
 // Suggestions only: lifting never moves or changes a run.
 function liftRunTips(){
   const today = todayYmd(), legsOn = d => doc.lifts.some(l => l.date === d && liftDef(l.ex).legs);
+  if (!doc.planId) return `<div class="card"><div class="card-head"><h2>Lifting around your runs</h2><span class="card-sub">when you start running</span></div>
+    <p class="card-sub" style="margin:0 0 12px">Pick a run plan and this card spaces your leg days around your runs. Lifting on its own works fine without one.</p>
+    <a class="btn small" href="#intake" style="text-decoration:none">Pick a run plan</a></div>`;
   const days = coached() ? schedule(today, 2) : [];
   const runToday = runsOn(today).length > 0 || days[0]?.kind === 'run', runTomorrow = days[1]?.kind === 'run', tips = [];
   if (legsOn(addDays(today, -1)) && runToday) tips.push('<b>Legs yesterday, run today:</b> keep it truly easy and skip any strides. Heart rate may sit a few beats higher than usual. That’s the lifting, not lost fitness.');
@@ -4176,13 +4366,16 @@ function liftRunTips(){
 }
 
 function renderLift(){
+  // A workout left open past midnight is over; its ticked sets are already saved.
+  if (LV && LV.date !== todayYmd()){ LV = null; liveSave(); }
+  if (LV) return renderLive();
   const today = todayYmd(), ws = weekStart(today), wk = doc.lifts.filter(l => l.date >= ws && l.date <= today);
   const prs = [...new Set(doc.lifts.map(l => l.ex))].filter(ex => { const h = liftHist(ex), b = liftBest(ex).best; return b.date > h[0].date && diffDays(b.date, today) <= 30; }).length;
   $('#page-lift').innerHTML = band({
     eyebrow: 'Lift · strength alongside your running',
     title: 'Lift',
     stats: [['Lifts · week', new Set(wk.map(l => l.date)).size, ''], ['Sets · week', wk.reduce((n, l) => n + l.sets.length, 0), ''], ['PRs · 30 days', prs, '']],
-  }) + `<div class="wrap">
+  }) + `<div class="wrap">${liftSummary()}
     <div class="grid two">${liftWorkoutsCard()}${liftLogCard()}</div>
     <div class="grid two" style="margin-top:16px">${liftPRCard()}${liftRunTips()}</div>
   </div>`;
@@ -5334,28 +5527,42 @@ document.addEventListener('click', async e => {
   const woBtn = e.target.closest('[data-wo-start], [data-wo-edit]');
   if (woBtn){
     readLiftForm();
-    if (woBtn.dataset.woStart) liftUi.open = woBtn.dataset.woStart;
-    else { const w = doc.workouts.find(x => x.id === woBtn.dataset.woEdit); liftUi.edit = { id:w.id, name:w.name, vary:!!w.vary, items:w.items.map(it => ({ ...it })) }; }
-    redrawWo(); return;
-  }
-  const woItem = e.target.closest('[data-wo-same], [data-wo-log]');
-  if (woItem){
-    readLiftForm();
-    const w = doc.workouts.find(x => x.id === liftUi.open), date = liftUi.date || todayYmd();
-    const it = woPlan(w, date)[+(woItem.dataset.woSame ?? woItem.dataset.woLog)], last = liftHist(it.ex).filter(l => l.date < date).at(-1);
-    if (woItem.dataset.woSame != null){ logLift({ date, ex:it.ex, sets:last.sets.map(s => ({ ...s })), wo:w.id }); liftUi.chart = it.ex; await save(); renderLift(); }
-    else {
-      const sets = last ? last.sets.map(s => ({ lb:s.lb || '', reps:s.reps })) : Array.from({ length:it.sets || 1 }, () => ({ lb:'', reps:it.reps || '' }));
-      Object.assign(liftUi, { ex:it.ex, date, sets, wo:w.id, day:null, editId:null }); redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' });
-    }
+    if (woBtn.dataset.woStart){ const w = doc.workouts.find(x => x.id === woBtn.dataset.woStart); liveStart({ wo:w.id, name:w.name, items:woPlan(w, todayYmd()) }); }
+    else { const w = doc.workouts.find(x => x.id === woBtn.dataset.woEdit); liftUi.edit = { id:w.id, name:w.name, vary:!!w.vary, items:w.items.map(it => ({ ...it })) }; redrawWo(); }
     return;
   }
-  const woSw = e.target.closest('[data-wo-swap], [data-wo-pick]');
-  if (woSw){
-    readLiftForm();
-    if (woSw.dataset.woSwap != null){ const k = `${liftUi.open}|${woSw.dataset.woSwap}`; liftUi.swapOpen = liftUi.swapOpen === k ? null : k; }
-    else { const [i, ex] = woSw.dataset.woPick.split('|'); liftUi.swaps[`${liftUi.open}|${i}`] = ex; liftUi.swapOpen = null; }
-    redrawWo(); return;
+  const lv = LV && e.target.closest('[data-lv-go], [data-lv-done], [data-lv-step], [data-lv-pick]');
+  if (lv){
+    const it = LV.items[LV.i];
+    if (lv.dataset.lvGo != null){ LV.i = +lv.dataset.lvGo; LV.swap = false; liveSave(); renderLive(); scrollTo(0, 0); return; }
+    if (lv.dataset.lvStep){
+      const [i, k, d] = lv.dataset.lvStep.split('|'), s = it.sets[+i];
+      s[k] = Math.max(0, (+s[k] || 0) + +d * (k === 'lb' ? 5 : 1));
+      // Later sets usually match: carry the change down to the ones not done yet.
+      it.sets.forEach((x, j) => { if (j > +i && !x.done) x[k] = s[k]; });
+      if (s.done){ liveCommit(it); save(); }
+      liveSave(); renderLive(); return;
+    }
+    if (lv.dataset.lvPick){
+      const ex = lv.dataset.lvPick, fresh = liveItem(ex, it.sets.length, +it.sets[0].reps || null, LV.day);
+      LV.items[LV.i] = { ...fresh, entry:it.entry, sets:it.sets.some(s => s.done) ? it.sets : fresh.sets };
+      if (it.entry) liveCommit(LV.items[LV.i]);
+      LV.swap = false; liveSave(); await save(); renderLive(); return;
+    }
+    const s = it.sets[+lv.dataset.lvDone], def = liftDef(it.ex);
+    if (s.done){ s.done = false; LV.rest = null; }
+    else {
+      if (!(+s.reps > 0) || (!def.bw && !(+s.lb > 0))){ toast(def.bw ? 'Enter your reps' : 'Enter the weight and reps'); return; }
+      const prior = Math.max(0, ...doc.lifts.filter(l => l.ex === it.ex && l.id !== it.entry).flatMap(l => l.sets.map(x => liftScore(def, x))));
+      const v = liftScore(def, { lb:+s.lb || 0, reps:+s.reps });
+      s.done = true;
+      if (prior && v > prior){ toast(`New PR · ${def.name}: ${def.bw ? `${v} reps` : `est. 1-rep max ${v} lb`}`); if (!LV.prs.includes(def.name)) LV.prs.push(def.name); }
+      const more = LV.items.some(x => x.sets.some(y => !y.done));
+      LV.rest = more ? { end:Date.now() + restFor(it.ex) * 1000 } : null;
+      // Last set of this one: move on to the next unfinished exercise.
+      if (!it.sets.some(y => !y.done) && more){ LV.i = LV.items.findIndex(x => x.sets.some(y => !y.done)); scrollTo(0, 0); }
+    }
+    liveCommit(it); liveSave(); await save(); renderLive(); return;
   }
   const gym = e.target.closest('[data-gym-skip], [data-gym-unskip]');
   if (gym){
@@ -5363,8 +5570,7 @@ document.addEventListener('click', async e => {
     if (gym.dataset.gymSkip){
       const ex = gym.dataset.gymSkip;
       doc.gym = { ...doc.gym, skip:[...new Set([...doc.gym.skip, ex])] };
-      for (const k in liftUi.swaps) if (liftUi.swaps[k] === ex) delete liftUi.swaps[k];
-      liftUi.swapOpen = null; toast(`Won’t suggest ${liftDef(ex).name} again`);
+      toast(`Won’t suggest ${liftDef(ex).name} again`);
     } else doc.gym = { ...doc.gym, skip:doc.gym.skip.filter(x => x !== gym.dataset.gymUnskip) };
     await save(); renderLift(); return;
   }
@@ -5692,11 +5898,22 @@ document.addEventListener('click', async e => {
       readLiftForm();
       const s = suggestWorkout(nextGroup().g), id = 'wo' + Date.now().toString(36);
       doc.workouts = [...doc.workouts, { id, ...s }];
-      liftUi.open = id; await save(); renderLift(); toast(`Saved as your ${s.name} workout`); break;
+      await save(); toast(`Saved as your ${s.name} workout`); liveStart({ wo:id, name:s.name, items:s.items }); break;
     }
     case 'wo-cancel': liftUi.edit = null; redrawWo(); break;
     case 'wo-delete': doc.workouts = doc.workouts.filter(x => x.id !== liftUi.edit.id); liftUi.edit = null; readLiftForm(); await save(); renderLift(); toast('Workout deleted. Its lifts stay logged'); break;
-    case 'wo-close': liftUi.open = null; liftUi.swaps = {}; liftUi.swapOpen = null; redrawWo(); break;
+    case 'lv-prog': {
+      readLiftForm();
+      const { day } = progNext();
+      liveStart({ day, name:`Workout ${day}`, items:LIFT_PROGS[doc.liftProg.id].days[day].map(([ex, sets, reps]) => ({ ex, sets, reps })) }); break;
+    }
+    case 'lv-how': LV.items[LV.i].how = !LV.items[LV.i].how; liveSave(); renderLive(); break;
+    case 'lv-swap': LV.swap = !LV.swap; liveSave(); renderLive(); break;
+    case 'lv-add-set': { const it = LV.items[LV.i], last = it.sets.at(-1); it.sets.push({ lb:last?.lb ?? '', reps:last?.reps ?? '', done:false }); liveSave(); renderLive(); break; }
+    case 'lv-rest-add': LV.rest = { end:Math.max(LV.rest?.end ?? 0, Date.now()) + 30000 }; liveSave(); $('#lv-rest').innerHTML = liveRest(); break;
+    case 'lv-rest-skip': LV.rest = null; liveSave(); $('#lv-rest').innerHTML = ''; break;
+    case 'lv-finish': liveFinish(); break;
+    case 'lv-summary-close': liftUi.summary = null; readLiftForm(); renderLift(); break;
     case 'lift-prog-cancel': liftUi.setup = null; readLiftForm(); renderLift(); break;
     case 'lift-prog-start': {
       const id = liftUi.setup, exs = progExercises(id), miss = exs.find(ex => !(+$(`#lp-${ex}`).value > 0));
@@ -5743,10 +5960,18 @@ document.addEventListener('change', e => {
   $('#g-unit').textContent = `(${t.unit})`; $('#g-val').placeholder = t.ph; $('#g-val').inputMode = t.unit === 'mi' ? 'decimal' : 'text';
 });
 document.addEventListener('change', e => {
-  if (e.target.id === 'lf-date' && liftUi.open){ readLiftForm(); redrawWo(); return; }
   if (e.target.id !== 'lf-ex') return;
   readLiftForm(); liftUi.day = null; liftUi.wo = null; redrawLiftLog();
 });
+// Typed weights and reps in the live workout; a ticked set saves the change.
+document.addEventListener('input', e => {
+  const i = e.target.dataset.lvLb ?? e.target.dataset.lvReps; if (i == null || !LV) return;
+  const it = LV.items[LV.i], s = it.sets[+i];
+  s[e.target.dataset.lvLb != null ? 'lb' : 'reps'] = e.target.value;
+  liveSave();
+  if (s.done){ liveCommit(it); clearTimeout(liveTyping); liveTyping = setTimeout(save, 800); }
+});
+let liveTyping;
 document.addEventListener('input', e => {
   if (!e.target.id?.startsWith('mr-') || !welcomeUi.race) return;
   const r = welcomeUi.race, v = e.target.value;
@@ -5772,8 +5997,8 @@ function render(){
   // Leaving the player mid-routine pauses it rather than letting it run on unseen.
   if (pg !== 'routine') pauseRoutine(true);
   // No plan chosen yet: everything but Setup (where you can sign in) waits on the welcome screen.
-  // No plan yet: the intake, unless they've chosen to pick a plan by hand.
-  if (!doc.planId && !['setup', 'routine', 'welcome', 'intake'].includes(pg)) pg = 'intake';
+  // No plan yet: the intake, unless they've chosen to pick a plan by hand. Lifting works without one.
+  if (!doc.planId && !['setup', 'routine', 'welcome', 'intake', 'lift'].includes(pg)) pg = 'intake';
   document.querySelectorAll('.tab[data-page]').forEach(b => b.dataset.page === pg ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + pg));
   tip.classList.remove('show');
