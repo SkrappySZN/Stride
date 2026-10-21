@@ -642,6 +642,11 @@ a.btn.primary{color:var(--accent-ink)}
 table.lift-prs td:nth-child(3), table.lift-recent td:nth-child(3){text-align:right}
 table.lift-recent td:nth-child(2){text-align:left; font-weight:600}
 table.lift-recent td:first-child{white-space:nowrap; padding-right:12px}
+.wo-sub{display:flex; align-items:center; gap:8px; margin:20px 0 10px; padding-top:16px; border-top:1px solid var(--line); font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+.wo-items{display:flex; flex-direction:column; gap:8px; margin-top:14px}
+.wo-item{display:flex; align-items:center; gap:6px}
+.wo-item select{flex:1; min-width:0; font:inherit; font-size:15px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
+.wo-item input{width:56px; font:inherit; font-size:16px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 .lift-tips{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.5}
 .mbadge{display:inline-flex; flex-direction:column; padding:8px 12px; border-radius:12px; background:var(--accent); color:var(--accent-ink)}
 .mbadge b{font-size:13.5px}
@@ -1355,12 +1360,12 @@ function freshDoc(){
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
     // refDays/refInfo held sport days, a retired feature; kept so older docs stay valid.
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], liftProg: null,
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], liftProg: null, workouts: [],
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], liftProg:null, ...d,
+  return { v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], liftProg:null, workouts:[], ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, zonesAuto:null, ...(d.profile ?? freshDoc().profile) } };
 }
 let doc;
@@ -3833,17 +3838,55 @@ function standardsCard(){
    sets:[{ lb, reps }], day? }. `day` ('A'/'B') marks entries logged for the
    program, which is how it knows what's next and what to progress from.
    Lifting never changes the run plan; liftRunTips() only suggests. */
+// Ids are stored in people's logs: add exercises, never rename an id.
 const LIFTS = [
-  { id:'squat', name:'Back squat', inc:10, legs:true },
-  { id:'deadlift', name:'Deadlift', inc:10, legs:true },
-  { id:'rdl', name:'Romanian deadlift', inc:10, legs:true },
-  { id:'split', name:'Split squat (per dumbbell)', inc:5, legs:true },
-  { id:'calf', name:'Calf raise', inc:10, legs:true },
-  { id:'bench', name:'Bench press', inc:5 },
-  { id:'press', name:'Overhead press', inc:5 },
-  { id:'row', name:'Barbell row', inc:5 },
-  { id:'pullup', name:'Pull-up', inc:5, bw:true },
+  { id:'squat', name:'Back squat', g:'Legs', inc:10, legs:true },
+  { id:'fsquat', name:'Front squat', g:'Legs', inc:10, legs:true },
+  { id:'deadlift', name:'Deadlift', g:'Legs', inc:10, legs:true },
+  { id:'rdl', name:'Romanian deadlift', g:'Legs', inc:10, legs:true },
+  { id:'legpress', name:'Leg press', g:'Legs', inc:10, legs:true },
+  { id:'goblet', name:'Goblet squat', g:'Legs', inc:5, legs:true },
+  { id:'split', name:'Split squat (per dumbbell)', g:'Legs', inc:5, legs:true },
+  { id:'lunge', name:'Lunge (per dumbbell)', g:'Legs', inc:5, legs:true },
+  { id:'stepup', name:'Step-up (per dumbbell)', g:'Legs', inc:5, legs:true },
+  { id:'hipthrust', name:'Hip thrust', g:'Legs', inc:10, legs:true },
+  { id:'legcurl', name:'Leg curl', g:'Legs', inc:5, legs:true },
+  { id:'legext', name:'Leg extension', g:'Legs', inc:5, legs:true },
+  { id:'calf', name:'Calf raise', g:'Legs', inc:10, legs:true },
+  { id:'bench', name:'Bench press', g:'Push', inc:5 },
+  { id:'incline', name:'Incline bench press', g:'Push', inc:5 },
+  { id:'dbbench', name:'Dumbbell bench press (per dumbbell)', g:'Push', inc:5 },
+  { id:'dbincline', name:'Incline dumbbell press (per dumbbell)', g:'Push', inc:5 },
+  { id:'press', name:'Overhead press', g:'Push', inc:5 },
+  { id:'dbpress', name:'Dumbbell shoulder press (per dumbbell)', g:'Push', inc:5 },
+  { id:'fly', name:'Chest fly', g:'Push', inc:5 },
+  { id:'lateral', name:'Lateral raise', g:'Push', inc:5 },
+  { id:'pushdown', name:'Triceps pushdown', g:'Push', inc:5 },
+  { id:'ohext', name:'Overhead triceps extension', g:'Push', inc:5 },
+  { id:'dips', name:'Dips', g:'Push', inc:5, bw:true },
+  { id:'pushup', name:'Push-up', g:'Push', inc:5, bw:true },
+  { id:'pullup', name:'Pull-up', g:'Pull', inc:5, bw:true },
+  { id:'chinup', name:'Chin-up', g:'Pull', inc:5, bw:true },
+  { id:'pulldown', name:'Lat pulldown', g:'Pull', inc:5 },
+  { id:'row', name:'Barbell row', g:'Pull', inc:5 },
+  { id:'dbrow', name:'Dumbbell row (per dumbbell)', g:'Pull', inc:5 },
+  { id:'cablerow', name:'Seated cable row', g:'Pull', inc:5 },
+  { id:'facepull', name:'Face pull', g:'Pull', inc:5 },
+  { id:'reardelt', name:'Rear delt fly', g:'Pull', inc:5 },
+  { id:'curl', name:'Barbell curl', g:'Pull', inc:5 },
+  { id:'dbcurl', name:'Dumbbell curl (per dumbbell)', g:'Pull', inc:5 },
+  { id:'hammer', name:'Hammer curl (per dumbbell)', g:'Pull', inc:5 },
+  { id:'shrug', name:'Shrug', g:'Pull', inc:10 },
+  { id:'legraise', name:'Hanging leg raise', g:'Core', inc:5, bw:true },
+  { id:'crunch', name:'Cable crunch', g:'Core', inc:5 },
+  { id:'backext', name:'Back extension', g:'Core', inc:5, bw:true },
 ];
+const exOptions = (sel, withNew) => {
+  const opt = l => `<option value="${l.id}"${l.id === sel ? ' selected' : ''}>${esc(l.name)}</option>`;
+  return ['Legs', 'Push', 'Pull', 'Core'].map(g => `<optgroup label="${g}">${LIFTS.filter(l => l.g === g).map(opt).join('')}</optgroup>`).join('')
+    + (doc.liftEx.length ? `<optgroup label="Yours">${doc.liftEx.map(opt).join('')}</optgroup>` : '')
+    + (withNew ? `<option value="_new"${sel === '_new' ? ' selected' : ''}>Something else…</option>` : '');
+};
 const LIFT_PROGS = {
   linear: { name:'Linear 3×5', who:'Classic beginner strength: three big lifts a session, alternating A and B, two or three times a week.',
     days:{ A:[['squat', 3, 5], ['bench', 3, 5], ['row', 3, 5]], B:[['squat', 3, 5], ['press', 3, 5], ['deadlift', 1, 5]] } },
@@ -3898,21 +3941,76 @@ function progNext(){
   return { day: last ? keys[(keys.indexOf(last.day) + 1) % keys.length] : keys[0], today:false };
 }
 
-const liftUi = { ex:'squat', date:null, sets:[{ lb:'', reps:'' }], day:null, name:'', legs:true, setup:null, chart:null };
-function liftProgCard(){
+const liftUi = { ex:'squat', date:null, sets:[{ lb:'', reps:'' }], day:null, wo:null, editId:null, name:'', legs:true, setup:null, chart:null, open:null, edit:null };
+// Your own workouts (Push, Pull, Legs…): doc.workouts in rotation order,
+// { id, name, items:[{ ex, sets?, reps? }] }. Entries logged from one carry `wo`.
+const byDate = (a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+function woNext(){
+  if (doc.workouts.length < 2) return null;
+  const last = doc.lifts.filter(l => doc.workouts.some(w => w.id === l.wo)).sort(byDate).at(-1);
+  if (!last) return doc.workouts[0].id;
+  return doc.workouts[(doc.workouts.findIndex(w => w.id === last.wo) + 1) % doc.workouts.length].id;
+}
+function woList(){
+  const next = woNext(), date = liftUi.date || todayYmd();
+  const loose = doc.lifts.some(l => l.date === date && !l.wo && !l.day);
+  return `${doc.workouts.length ? `<ul class="lift-list">${doc.workouts.map(w => {
+      const last = doc.lifts.filter(l => l.wo === w.id).sort(byDate).at(-1);
+      return `<li><span><b>${esc(w.name)}${w.id === next ? ' <span class="badge test">next</span>' : ''}</b>
+        <small>${w.items.map(it => esc(liftDef(it.ex).name)).join(', ')}${last ? ` · last ${fmtDate(last.date).slice(4)}` : ''}</small></span>
+        <span class="btn-row"><button class="btn small${w.id === next ? ' primary' : ''}" data-wo-start="${w.id}">Start</button><button class="btn small" data-wo-edit="${w.id}">Edit</button></span></li>`; }).join('')}</ul>`
+    : '<p class="card-sub" style="margin:0">Group the exercises you do together, like Push, Pull and Legs, and start them in one tap.</p>'}
+    <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-new">+ New workout</button>${loose ? `<button class="btn small" data-action="wo-from-day">Save ${date === todayYmd() ? 'today' : fmtDate(date).slice(4)} as a workout</button>` : ''}</div>`;
+}
+// One workout's checklist: what you did last time, logged on the form's date.
+function woSession(w){
+  const date = liftUi.date || todayYmd(), done = doc.lifts.filter(l => l.date === date && l.wo === w.id);
+  const rows = w.items.map((it, i) => {
+    const def = liftDef(it.ex), d = done.find(l => l.ex === it.ex), last = liftHist(it.ex).filter(l => l.date < date).at(-1);
+    const sub = d ? `done ✓ · ${fmtSets(d.sets, def.bw)}` : last ? `last time: ${fmtSets(last.sets, def.bw)}` : `${it.sets ? `${it.sets} × ${it.reps || '?'} · ` : ''}first time`;
+    return `<li><span><b>${esc(def.name)}</b><small>${sub}</small></span>${d ? '' : `<span class="btn-row">${last ? `<button class="btn small primary" data-wo-same="${i}">Same again</button>` : ''}<button class="btn small${last ? '' : ' primary'}" data-wo-log="${i}">${last ? 'Change' : 'Log'}</button></span>`}</li>`;
+  });
+  return `<div class="card" id="lift-wo"><div class="card-head"><h2>${esc(w.name)}</h2><span class="card-sub">${date === todayYmd() ? 'today' : fmtDate(date)} · <button class="link-btn" data-action="wo-close">done</button></span></div>
+    <ul class="lift-list">${rows.join('')}</ul>
+    <p class="card-sub" style="margin:12px 0 0">${done.length >= w.items.length ? 'All done. Nice work.' : '“Same again” logs exactly what you did last time. Beat it? Tap “Change” and enter what you lifted.'} Logging a different day? Change the date in “Log a lift”.</p></div>`;
+}
+function woEditor(){
+  const e = liftUi.edit;
+  return `<div class="card" id="lift-wo"><div class="card-head"><h2>${e.id ? 'Edit workout' : 'New workout'}</h2><span class="card-sub">exercises in order</span></div>
+    <div class="field"><label for="wo-name">Name</label><input id="wo-name" type="text" placeholder="e.g. Push, Pull, Legs" value="${esc(e.name)}"></div>
+    <div class="wo-items">${e.items.map((it, i) => `<div class="wo-item">
+      <select data-wo-ex="${i}" aria-label="Exercise ${i + 1}">${exOptions(it.ex)}</select>
+      <input type="number" inputmode="numeric" data-wo-sets="${i}" value="${it.sets ?? ''}" placeholder="sets" aria-label="Exercise ${i + 1} sets">
+      <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-wo-reps="${i}" value="${it.reps ?? ''}" placeholder="reps" aria-label="Exercise ${i + 1} reps">
+      <button class="link-btn" data-wo-del="${i}" aria-label="Remove exercise ${i + 1}">remove</button></div>`).join('')}</div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-add-ex">+ Exercise</button><button class="btn small primary" data-action="wo-save">Save</button><button class="btn small" data-action="wo-cancel">Cancel</button>${e.id ? '<button class="link-btn" data-action="wo-delete">delete workout</button>' : ''}</div>
+    <p class="card-sub" style="margin:12px 0 0">Sets × reps are optional targets. Workouts rotate in the order you make them, and the next one is marked. Missing an exercise? Log it once with “Something else…” and it appears here.</p></div>`;
+}
+function readWoForm(){
+  const e = liftUi.edit; if (!e || !$('#wo-name')) return;
+  e.name = $('#wo-name').value;
+  e.items = e.items.map((it, i) => ({ ex:$(`[data-wo-ex="${i}"]`).value, sets:+$(`[data-wo-sets="${i}"]`).value || null, reps:+$(`[data-wo-reps="${i}"]`).value || null }));
+}
+const redrawWo = () => { $('#lift-wo').outerHTML = liftWorkoutsCard(); };
+
+function liftWorkoutsCard(){
+  if (liftUi.edit) return woEditor();
+  const open = doc.workouts.find(w => w.id === liftUi.open);
+  if (open) return woSession(open);
   const P = doc.liftProg;
   if (!P && liftUi.setup){
     const prog = LIFT_PROGS[liftUi.setup];
-    return `<div class="card"><div class="card-head"><h2>Start ${prog.name}</h2><span class="card-sub">starting weights</span></div>
+    return `<div class="card" id="lift-wo"><div class="card-head"><h2>Start ${prog.name}</h2><span class="card-sub">starting weights</span></div>
       <p class="card-sub" style="margin:0 0 12px">Start lighter than you think: a weight you could lift a few more reps than the program asks. It goes up every session you hit every rep, so the first weeks move fast.</p>
       <div class="field-row">${progExercises(liftUi.setup).map(ex => {
         const b = liftBest(ex).best, sug = b ? round5(b.v * 0.75) : '';
         return `<div class="field"><label for="lp-${ex}">${esc(liftDef(ex).name)} (lbs)</label><input id="lp-${ex}" type="number" inputmode="decimal" step="5" value="${sug}"></div>`; }).join('')}</div>
       <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="lift-prog-start">Start</button><button class="btn small" data-action="lift-prog-cancel">Cancel</button></div></div>`;
   }
-  if (!P) return `<div class="card"><div class="card-head"><h2>Follow a program${infoBtn}</h2><span class="card-sub">optional</span></div>${explain('liftProg')}
-    <ul class="lift-list">${Object.entries(LIFT_PROGS).map(([id, p]) => `<li><span><b>${p.name}</b><small>${p.who}</small></span><button class="btn small" data-lift-prog="${id}">Choose</button></li>`).join('')}</ul>
-    <p class="card-sub" style="margin:12px 0 0">Or skip it and just log what you lift.</p></div>`;
+  if (!P) return `<div class="card" id="lift-wo"><div class="card-head"><h2>Workouts</h2><span class="card-sub">your presets</span></div>
+    ${woList()}
+    <div class="wo-sub">Or follow a program${infoBtn}</div>${explain('liftProg')}
+    <ul class="lift-list">${Object.entries(LIFT_PROGS).map(([id, p]) => `<li><span><b>${p.name}</b><small>${p.who}</small></span><button class="btn small" data-lift-prog="${id}">Choose</button></li>`).join('')}</ul></div>`;
   const prog = LIFT_PROGS[P.id], { day, today } = progNext(), keys = Object.keys(prog.days);
   const done = doc.lifts.filter(l => l.date === todayYmd() && l.day === day);
   const rows = prog.days[day].map(([ex, n, reps], i) => {
@@ -3921,17 +4019,18 @@ function liftProgCard(){
       ${d ? '' : `<span class="btn-row"><button class="btn small primary" data-lift-did="${i}">Did it</button><button class="btn small" data-lift-edit="${i}">Change</button></span>`}</li>`;
   });
   const allDone = done.length >= prog.days[day].length;
-  return `<div class="card"><div class="card-head"><h2>${today ? 'Today' : 'Next'}: workout ${day}${infoBtn}</h2><span class="card-sub">${prog.name} · <button class="link-btn" data-action="lift-prog-stop">stop</button></span></div>${explain('liftProg')}
+  return `<div class="card" id="lift-wo"><div class="card-head"><h2>${today ? 'Today' : 'Next'}: workout ${day}${infoBtn}</h2><span class="card-sub">${prog.name} · <button class="link-btn" data-action="lift-prog-stop">stop</button></span></div>${explain('liftProg')}
     <ul class="lift-list">${rows.join('')}</ul>
-    <p class="card-sub" style="margin:12px 0 0">${allDone ? `All done. Next time: workout ${keys[(keys.indexOf(day) + 1) % keys.length]}.` : '“Did it” logs every set as written. Missed reps or a different weight? Tap “Change”.'}</p></div>`;
+    <p class="card-sub" style="margin:12px 0 0">${allDone ? `All done. Next time: workout ${keys[(keys.indexOf(day) + 1) % keys.length]}.` : '“Did it” logs every set as written. Missed reps or a different weight? Tap “Change”.'}</p>
+    <div class="wo-sub">Your workouts</div>${woList()}</div>`;
 }
 function liftLogCard(){
   const u = liftUi, custom = u.ex === '_new', def = custom ? {} : liftDef(u.ex), last = custom ? null : liftHist(u.ex).at(-1);
   const recent = [...doc.lifts].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0).slice(0, 8);
-  return `<div class="card" id="lift-log"><div class="card-head"><h2>Log a lift</h2><span class="card-sub">${u.day ? `workout ${u.day} · ` : ''}${last ? `last time ${fmtDate(last.date).slice(4)}: ${fmtSets(last.sets, def.bw)}` : 'weight × reps for each set'}</span></div>
+  return `<div class="card" id="lift-log"><div class="card-head"><h2>${u.editId ? 'Edit lift' : 'Log a lift'}</h2><span class="card-sub">${u.editId ? '<button class="link-btn" data-action="lift-edit-cancel">cancel edit</button> · ' : ''}${u.day ? `workout ${u.day} · ` : ''}${u.wo ? `${esc(doc.workouts.find(w => w.id === u.wo)?.name ?? '')} · ` : ''}${last ? `last time ${fmtDate(last.date).slice(4)}: ${fmtSets(last.sets, def.bw)}` : 'weight × reps for each set'}</span></div>
     <div class="field-row">
       <div class="field"><label for="lf-date">Date</label><input id="lf-date" type="date" value="${u.date || todayYmd()}"></div>
-      <div class="field"><label for="lf-ex">Exercise</label><select id="lf-ex">${[...LIFTS, ...doc.liftEx].map(l => `<option value="${l.id}"${l.id === u.ex ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}<option value="_new"${custom ? ' selected' : ''}>Something else…</option></select></div>
+      <div class="field"><label for="lf-ex">Exercise</label><select id="lf-ex">${exOptions(u.ex, true)}</select></div>
       ${custom ? `<div class="field"><label for="lf-name">Name</label><input id="lf-name" type="text" placeholder="e.g. Hip thrust" value="${esc(u.name)}"></div>
       <div class="field"><label for="lf-legs">Works the legs?</label><select id="lf-legs"><option value="1"${u.legs ? ' selected' : ''}>Yes</option><option value=""${u.legs ? '' : ' selected'}>No</option></select></div>` : ''}
     </div>
@@ -3940,8 +4039,8 @@ function liftLogCard(){
       <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-set-reps="${i}" value="${s.reps}" placeholder="reps" aria-label="Set ${i + 1} reps">
       ${u.sets.length > 1 ? `<button class="link-btn" data-set-del="${i}" aria-label="Remove set ${i + 1}">remove</button>` : ''}</div>`).join('')}</div>
     ${def.bw ? '<p class="card-sub" style="margin:8px 0 0">Weight is anything added (a belt or vest). Leave it empty for body weight.</p>' : ''}
-    <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="lift-add-set">+ Set</button>${last ? '<button class="btn small" data-action="lift-same">Same as last time</button>' : ''}<button class="btn small primary" data-action="lift-save">Save</button></div>
-    ${recent.length ? `<table class="quiet lift-recent" style="margin-top:16px">${recent.map(l => `<tr><td>${fmtDate(l.date).slice(4)}</td><td>${esc(liftDef(l.ex).name)}</td><td>${fmtSets(l.sets, liftDef(l.ex).bw)} <button class="link-btn" data-del-lift="${l.id}">remove</button></td></tr>`).join('')}</table>` : ''}
+    <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="lift-add-set">+ Set</button>${last ? '<button class="btn small" data-action="lift-same">Same as last time</button>' : ''}<button class="btn small primary" data-action="lift-save">${u.editId ? 'Save changes' : 'Save'}</button></div>
+    ${recent.length ? `<table class="quiet lift-recent" style="margin-top:16px">${recent.map(l => `<tr><td>${fmtDate(l.date).slice(4)}</td><td>${esc(liftDef(l.ex).name)}</td><td>${fmtSets(l.sets, liftDef(l.ex).bw)} <button class="link-btn" data-edit-lift="${l.id}">edit</button> <button class="link-btn" data-del-lift="${l.id}">remove</button></td></tr>`).join('')}</table>` : ''}
   </div>`;
 }
 // Keeps what's typed when the card redraws (adding a set, switching exercise).
@@ -3950,6 +4049,7 @@ function readLiftForm(){
   liftUi.date = $('#lf-date').value; liftUi.ex = $('#lf-ex').value;
   if ($('#lf-name')){ liftUi.name = $('#lf-name').value; liftUi.legs = !!$('#lf-legs').value; }
   liftUi.sets = liftUi.sets.map((s, i) => ({ lb:$(`[data-set-lb="${i}"]`)?.value ?? s.lb, reps:$(`[data-set-reps="${i}"]`)?.value ?? s.reps }));
+  readWoForm();
 }
 const redrawLiftLog = () => { $('#lift-log').outerHTML = liftLogCard(); };
 function liftPRCard(){
@@ -4016,7 +4116,7 @@ function renderBody(){
       ${chartCard('c-sleep', 'Sleep', 'hours per night', sleep)}
     </div>
     <div class="section-label" id="lifting">Lifting</div>
-    <div class="grid two">${liftProgCard()}${liftLogCard()}</div>
+    <div class="grid two">${liftWorkoutsCard()}${liftLogCard()}</div>
     <div class="grid two" style="margin-top:16px">${liftPRCard()}${liftRunTips()}</div>
     <div class="section-label">Fitness & composition</div>
     <div class="grid two">
@@ -5132,8 +5232,35 @@ document.addEventListener('click', async e => {
     const { day } = progNext(), [ex, n, reps] = LIFT_PROGS[doc.liftProg.id].days[day][+(ld.dataset.liftDid ?? ld.dataset.liftEdit)];
     const sets = Array.from({ length:n }, () => ({ lb:progWeight(ex, n, reps), reps }));
     if (ld.dataset.liftDid != null){ readLiftForm(); logLift({ date:todayYmd(), ex, sets, day }); liftUi.chart = ex; await save(); renderBody(); }
-    else { Object.assign(liftUi, { ex, date:todayYmd(), sets, day }); redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' }); }
+    else { Object.assign(liftUi, { ex, date:todayYmd(), sets, day, wo:null, editId:null }); redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' }); }
     return;
+  }
+  const woBtn = e.target.closest('[data-wo-start], [data-wo-edit]');
+  if (woBtn){
+    readLiftForm();
+    if (woBtn.dataset.woStart) liftUi.open = woBtn.dataset.woStart;
+    else { const w = doc.workouts.find(x => x.id === woBtn.dataset.woEdit); liftUi.edit = { id:w.id, name:w.name, items:w.items.map(it => ({ ...it })) }; }
+    redrawWo(); return;
+  }
+  const woItem = e.target.closest('[data-wo-same], [data-wo-log]');
+  if (woItem){
+    readLiftForm();
+    const w = doc.workouts.find(x => x.id === liftUi.open), it = w.items[+(woItem.dataset.woSame ?? woItem.dataset.woLog)];
+    const date = liftUi.date || todayYmd(), last = liftHist(it.ex).filter(l => l.date < date).at(-1);
+    if (woItem.dataset.woSame != null){ logLift({ date, ex:it.ex, sets:last.sets.map(s => ({ ...s })), wo:w.id }); liftUi.chart = it.ex; await save(); renderBody(); }
+    else {
+      const sets = last ? last.sets.map(s => ({ lb:s.lb || '', reps:s.reps })) : Array.from({ length:it.sets || 1 }, () => ({ lb:'', reps:it.reps || '' }));
+      Object.assign(liftUi, { ex:it.ex, date, sets, wo:w.id, day:null, editId:null }); redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' });
+    }
+    return;
+  }
+  const woDel = e.target.closest('[data-wo-del]');
+  if (woDel){ readWoForm(); liftUi.edit.items.splice(+woDel.dataset.woDel, 1); redrawWo(); return; }
+  const editL = e.target.closest('[data-edit-lift]');
+  if (editL){
+    const l = doc.lifts.find(x => x.id === editL.dataset.editLift); if (!l) return;
+    Object.assign(liftUi, { editId:l.id, ex:l.ex, date:l.date, sets:l.sets.map(s => ({ lb:s.lb || '', reps:s.reps })), day:null, wo:null });
+    redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' }); return;
   }
   const sdl = e.target.closest('[data-set-del]');
   if (sdl){ readLiftForm(); liftUi.sets.splice(+sdl.dataset.setDel, 1); redrawLiftLog(); return; }
@@ -5411,10 +5538,38 @@ document.addEventListener('click', async e => {
         if (have) ex = have.id;
         else { ex = 'lx' + Date.now().toString(36); doc.liftEx = [...doc.liftEx, { id:ex, name, inc:5, ...(u.legs ? { legs:true } : {}) }]; }
       }
-      logLift({ date:u.date, ex, sets, ...(u.day ? { day:u.day } : {}) });
-      Object.assign(liftUi, { ex, day:null, name:'', chart:ex, sets:[{ lb:'', reps:'' }] });
+      if (u.editId){ doc.lifts = doc.lifts.map(l => l.id === u.editId ? { ...l, date:u.date, ex, sets } : l); toast('Updated'); }
+      else logLift({ date:u.date, ex, sets, ...(u.day ? { day:u.day } : {}), ...(u.wo ? { wo:u.wo } : {}) });
+      Object.assign(liftUi, { ex, day:null, wo:null, editId:null, date:u.editId ? null : u.date, name:'', chart:ex, sets:[{ lb:'', reps:'' }] });
       await save(); renderBody(); break;
     }
+    case 'lift-edit-cancel': Object.assign(liftUi, { editId:null, date:null, sets:[{ lb:'', reps:'' }] }); redrawLiftLog(); break;
+    case 'wo-new': readLiftForm(); liftUi.edit = { id:null, name:'', items:[{ ex:'bench', sets:3, reps:8 }] }; redrawWo(); break;
+    case 'wo-from-day': {
+      readLiftForm();
+      const date = liftUi.date || todayYmd(), ls = doc.lifts.filter(l => l.date === date && !l.wo && !l.day);
+      const items = [...new Map(ls.map(l => [l.ex, l])).values()].map(l => ({ ex:l.ex, sets:l.sets.length, reps:l.sets[0].reps }));
+      liftUi.edit = { id:null, name:'', items, from:date }; redrawWo(); break;
+    }
+    case 'wo-add-ex': { readWoForm(); const last = liftUi.edit.items.at(-1); liftUi.edit.items.push({ ex:'bench', sets:last?.sets ?? 3, reps:last?.reps ?? null }); redrawWo(); break; }
+    case 'wo-save': {
+      readWoForm();
+      const w = liftUi.edit, name = w.name.trim();
+      if (!name){ toast('Name the workout'); break; }
+      if (!w.items.length){ toast('Add at least one exercise'); break; }
+      const items = w.items.map(it => ({ ex:it.ex, ...(it.sets ? { sets:it.sets } : {}), ...(it.reps ? { reps:it.reps } : {}) }));
+      if (w.id) doc.workouts = doc.workouts.map(x => x.id === w.id ? { ...x, name, items } : x);
+      else {
+        const id = 'wo' + Date.now().toString(36);
+        doc.workouts = [...doc.workouts, { id, name, items }];
+        // Saved from a day's lifts: those count as this workout, so the rotation knows it's done.
+        if (w.from) doc.lifts = doc.lifts.map(l => l.date === w.from && !l.wo && !l.day && items.some(it => it.ex === l.ex) ? { ...l, wo:id } : l);
+      }
+      liftUi.edit = null; readLiftForm(); await save(); renderBody(); toast('Workout saved'); break;
+    }
+    case 'wo-cancel': liftUi.edit = null; redrawWo(); break;
+    case 'wo-delete': doc.workouts = doc.workouts.filter(x => x.id !== liftUi.edit.id); liftUi.edit = null; readLiftForm(); await save(); renderBody(); toast('Workout deleted. Its lifts stay logged'); break;
+    case 'wo-close': liftUi.open = null; redrawWo(); break;
     case 'lift-prog-cancel': liftUi.setup = null; readLiftForm(); renderBody(); break;
     case 'lift-prog-start': {
       const id = liftUi.setup, exs = progExercises(id), miss = exs.find(ex => !(+$(`#lp-${ex}`).value > 0));
@@ -5461,8 +5616,9 @@ document.addEventListener('change', e => {
   $('#g-unit').textContent = `(${t.unit})`; $('#g-val').placeholder = t.ph; $('#g-val').inputMode = t.unit === 'mi' ? 'decimal' : 'text';
 });
 document.addEventListener('change', e => {
+  if (e.target.id === 'lf-date' && liftUi.open){ readLiftForm(); redrawWo(); return; }
   if (e.target.id !== 'lf-ex') return;
-  readLiftForm(); liftUi.day = null; redrawLiftLog();
+  readLiftForm(); liftUi.day = null; liftUi.wo = null; redrawLiftLog();
 });
 document.addEventListener('input', e => {
   if (!e.target.id?.startsWith('mr-') || !welcomeUi.race) return;
