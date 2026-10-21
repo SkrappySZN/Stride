@@ -734,6 +734,8 @@ body.moment-on{overflow:hidden}
 .m-lines b{color:#eef0ea}
 .m-verdict{margin:16px 0 0; font-size:15px; color:#cfd3cc}
 .m-verdict b{color:#d4ff3a}
+.m-now{margin-top:8px; padding-top:12px; border-top:1px solid rgba(255,255,255,.08)}
+.m-now b{color:#eef0ea}
 .m-checkpoints{display:grid; gap:8px; margin-top:16px}
 .m-cp{display:grid; grid-template-columns:22px auto 1fr; gap:10px; align-items:center; padding:10px 12px; border-radius:10px; border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); background:color-mix(in srgb, var(--accent) 7%, transparent)}
 .m-cp i{width:12px; height:12px; transform:rotate(45deg); border:2px solid var(--accent-text); justify-self:center; box-shadow:0 0 10px rgba(212,255,58,.5)}
@@ -2796,7 +2798,9 @@ async function arrivalMoment(r){
 
 // Week complete: the week as a poster, and what it means for the plan.
 function weekMoment(ws){
-  const R = recap(ws), we = addDays(ws, 6);
+  const R = recap(ws), we = addDays(ws, 6), thisWk = weekStart(todayYmd());
+  // Shown Monday/Tuesday it's last week's, so say so, and show where this week stands.
+  const lastWeek = ws < thisWk, now = recap(thisWk);
   let chapter = '', verdict = '';
   if (coached()){
     const w = planState().find(x => x.start === ws);
@@ -2809,7 +2813,7 @@ function weekMoment(ws){
   }
   showMoment('week', `
     <button class="moment-x" data-moment-close aria-label="Close">✕</button>
-    <div class="m-eyebrow">Week complete · ${fmtDate(ws).slice(4)} – ${fmtDate(we).slice(4)}</div>
+    <div class="m-eyebrow">${lastWeek ? 'Last week' : 'This week'} · ${fmtDate(ws).slice(4)} – ${fmtDate(we).slice(4)}</div>
     ${chapter ? `<div class="m-chapter">${chapter}</div>` : ''}
     <h2 class="m-head display">${esc(R.headline.replace(/[.—\s]+$/, ''))}</h2>
     <div class="m-grid">
@@ -2819,6 +2823,7 @@ function weekMoment(ws){
       <div><b class="display">${R.longest ? mCount(R.longest, 2) : '—'}</b><span>longest</span></div>
     </div>
     ${verdict ? `<p class="m-verdict">${verdict}</p>` : ''}
+    ${lastWeek && now.runs.length ? `<p class="m-verdict m-now">This week so far: <b>${now.runs.length} run${now.runs.length > 1 ? 's' : ''} · ${now.mi.toFixed(1)} mi</b></p>` : ''}
     ${R.ms.length ? `<div class="m-checkpoints">${R.ms.map(x => `<div class="m-cp"><i></i><span>Checkpoint</span><b>${esc(x.label)}</b></div>`).join('')}</div>` : ''}
     <div class="m-actions">
       <button class="btn primary big" data-share-recap="${ws}">Share the week</button>
@@ -3170,7 +3175,7 @@ function recap(ws){
     : hrDelta != null && hrDelta <= -2 ? `Heart rate down ${-hrDelta} bpm on the test route — that’s fitness.`
     : prevMi.length && mi > Math.max(...prevMi) + 0.05 ? 'Your biggest week yet.'
     : ms.length ? `New milestone: ${ms.at(-1).label}.`
-    : runs.length >= 3 ? 'Three runs in. That’s the habit.' : `${runs.length} run${runs.length > 1 ? 's' : ''} in.`;
+    : runs.length >= 3 ? 'Three runs in. That’s the habit.' : `A lighter week: ${runs.length === 1 ? 'one run' : 'two runs'}.`;
   return { ws, we, runs, mi, min, strength:rts.filter(x => x.id === 'strength').length, stretches:rts.filter(x => x.id !== 'strength').length,
     longest:runs.reduce((a, r) => Math.max(a, r.distMi ?? 0), 0), hr, hrBefore, hrDelta, effort:eff.length ? avgOf(eff.map(r => r.effort)) : null, ms, headline };
 }
