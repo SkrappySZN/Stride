@@ -771,6 +771,8 @@ table.crew td:nth-child(2){white-space:nowrap}
 
 .coach .coach-line{font-size:14px; color:var(--ink-2); line-height:1.45}
 .coach .coach-line b{color:var(--ink)}
+.take .coach-line{margin:0 0 10px}
+.take .coach-line:last-child{margin:0}
 
 /* plain-language help */
 .info-btn{
@@ -2477,6 +2479,7 @@ const EXPLAIN = {
   gate: () => 'Each Sunday night the plan looks back at the week: did you get your runs in, were your legs fine at 48 hours, and did you stay under your heart-rate limits? All green moves you up a week; otherwise you repeat it. Repeating a week is normal and keeps you healthy.',
   zones: () => 'Your threshold is the heart rate where running stops feeling sustainable. Garmin estimates it after a few runs. Every zone, limit and chart in Stride is set from it, so it’s worth getting right.',
   treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the test-route trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
+  take: () => 'A read of this run the way a coach would give it, written by Stride from your own history (nothing leaves the app). It compares the run with your last few of a similar distance, indoors with indoors and outdoors with outdoors: faster for the same or lower heart rate means fitness is building. Then it looks inside the run (how much was easy, when it got hard, whether heart rate crept up) and ends with one thing to do next.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
   liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is weight × reps added up over every set, a rough measure of how much work you did. For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
@@ -3635,6 +3638,101 @@ function setTreadMi(r, mi){
   r.jogPaceSec = w.jogPaceSec != null && w.distMi > 0.05 ? w.jogPaceSec * w.distMi / mi : null;
 }
 
+// Stride's take: the run read against everything before it, in plain words.
+// Three short paragraphs: where it sits, how it went inside, what to do next.
+const nth = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
+const secs = s => { s = Math.round(Math.abs(s)); return s >= 60 ? `${Math.floor(s / 60)}:${pad(s % 60)}` : `${s} s`; };
+function runTake(r, s){
+  const p = doc.profile, runs = sortedRuns(), i = runs.indexOf(r), prior = runs.slice(0, i);
+  const pace = x => x.jogPaceSec ?? x.avgPaceSec, tread = isTreadmill(r);
+  const head = [], inside = [], next = [];
+
+  // Where it sits.
+  const wkN = runs.filter(x => weekStart(x.date) === weekStart(r.date) && x.start <= r.start).length;
+  const gap = prior.length ? diffDays(prior.at(-1).date, r.date) : null;
+  head.push(`Your ${nth(i + 1)} run${wkN > 1 ? `, ${nth(wkN)} this week` : ''}${gap == null ? '' : gap === 0 ? ', your second today' : gap === 1 ? ', on back-to-back days' : gap >= 5 ? `, after ${gap} days off` : ''}.`);
+  if (!prior.length) head.push('It’s the first one, so it’s the baseline everything after gets compared with.');
+  if (prior.length && r.distMi > Math.max(...prior.map(x => x.distMi ?? 0)) + .02) head.push('<b>Your longest run yet.</b>');
+  else if (prior.length && (r.timerSec ?? 0) > Math.max(...prior.map(x => x.timerSec ?? 0)) + 30) head.push('<b>Your longest time on your feet yet.</b>');
+  for (const [k, label] of [['mi', 'mile'], ['k5', '5K']]){
+    const was = prior.filter(x => x.best?.[k] && timedRun(x)).map(x => x.best[k]);
+    if (timedRun(r) && r.best?.[k] && was.length && r.best[k] < Math.min(...was)) head.push(`<b>New fastest ${label}: ${fmtDur(r.best[k])}</b>, ${secs(Math.min(...was) - r.best[k])} quicker than before.`);
+  }
+
+  // Against runs like it: same indoors/outdoors, similar distance, the last five.
+  const sims = prior.filter(x => isTreadmill(x) === tread && pace(x) && hrMetric(x) != null && x.distMi && r.distMi && Math.abs(x.distMi - r.distMi) / r.distMi <= .35).slice(-5);
+  if (sims.length >= 2 && pace(r) && hrMetric(r) != null){
+    const sp = avgOf(sims.map(pace)), sh = avgOf(sims.map(hrMetric)), dp = Math.round(pace(r) - sp), dh = Math.round(hrMetric(r) - sh);
+    const faster = dp <= -10, slower = dp >= 10, lower = dh <= -3, higher = dh >= 3;
+    const kind = `${sims.length} similar ${tread ? 'treadmill ' : ''}runs`;
+    let read;
+    if (faster && !higher) read = `<b>faster for ${lower ? 'less' : 'the same'} heart rate</b>, which is fitness showing up`;
+    else if (!slower && lower) read = `<b>the same pace for less heart rate</b>, which is fitness showing up`;
+    else if (faster && higher) read = 'faster, and the heart rate shows you paid for it, so this was a harder effort rather than a sign of new fitness';
+    else if (slower && lower) read = 'slower and easier, which is exactly what an easy day should look like';
+    else if (higher) read = 'a tougher day, with more heart rate for the pace';
+    else read = 'right in line with them';
+    const dpTxt = dp ? `${secs(dp)}/mi ${dp < 0 ? 'faster' : 'slower'}` : 'the same pace', dhTxt = dh ? `${Math.abs(dh)} bpm ${dh < 0 ? 'lower' : 'higher'}` : 'the same heart rate';
+    head.push(`Against your last ${kind} (${fmtDur(sp)}/mi at ${Math.round(sh)} bpm on average), this was ${dpTxt} at ${dhTxt}: ${read}.`);
+    // Explain a tough day before it reads as lost fitness.
+    if (higher && !faster){
+      const st = avgOf(sims.filter(x => x.tempF != null).map(x => x.tempF)), why = [];
+      if (r.tempF != null && st != null && r.tempF - st >= 8) why.push(`it was ${r.tempF}°F, ${Math.round(r.tempF - st)}° warmer than those runs`);
+      if (doc.lifts.some(l => l.date === addDays(r.date, -1) && liftDef(l.ex).legs)) why.push('you trained legs the day before');
+      if (gap === 0 || gap === 1) why.push('there was no rest day before it');
+      if (why.length) head.push(`Likely why: ${why.join(', and ')}. That’s circumstances, not lost fitness.`);
+    }
+  } else if (prior.length) head.push(`Not enough similar ${tread ? 'treadmill runs' : 'runs'} yet to compare like with like. A couple more at about this distance and Stride will.`);
+
+  // How it went inside the run.
+  const z = r.zoneSec, zt = z ? Object.values(z).reduce((a, b) => a + b, 0) : 0;
+  if (zt){
+    const easy = Math.round(((z.easy ?? 0) + (z.mod ?? 0)) / zt * 100);
+    inside.push(`${easy}% of it was easy or moderate heart rate${easy >= 80 ? ', which is the right mix for building a base' : ''}.`);
+  }
+  if ((r.aboveLtSec ?? 0) > 120){
+    // Where the hard part landed says more than how much there was.
+    let where = '';
+    if (s?.hr && s.t?.length){
+      const T = s.t.at(-1), over = s.t.filter((t, k) => s.hr[k] > p.lthr);
+      const late = over.filter(t => t >= T * 2 / 3).length / (over.length || 1);
+      where = late >= .6 ? ' Most of it came in the last third, so you either picked it up at the end or ran out of easy.' : late <= .25 ? ' It came early, the classic too-fast start.' : '';
+    }
+    inside.push(`<b>${fmtDur(r.aboveLtSec)} above your ${p.lthr} threshold.</b>${where}`);
+  }
+  if (r.drift != null && Math.abs(r.drift) >= 1){
+    const was = avgOf(prior.filter(x => x.drift != null).slice(-5).map(x => x.drift));
+    inside.push(r.drift >= 8 ? `Heart rate drifted up ${r.drift} bpm from the first half to the second${was != null ? ` (you usually see about +${Math.round(was)})` : ''}, a sign the distance or pace is at the edge of your base right now.`
+      : r.drift <= 4 ? `Heart rate held steady from start to finish (${r.drift > 0 ? '+' : ''}${r.drift} bpm), a sign the pace was well within you.`
+      : `Heart rate drifted ${r.drift > 0 ? '+' : ''}${r.drift} bpm through the run, normal for this kind of effort.`);
+  }
+  if ((r.walkSec ?? 0) >= 60 && r.runSec) inside.push(`You walked ${fmtDur(r.walkSec)} of it${(r.walkSec / (r.walkSec + r.runSec)) >= .25 ? ', a proper run/walk' : ''}.`);
+  const cads = prior.map(x => x.cadence).filter(Boolean).slice(-8);
+  if (r.cadence && cads.length >= 3){
+    const c = median(cads), d = Math.round(r.cadence - c);
+    if (Math.abs(d) >= 4) inside.push(`Cadence was ${r.cadence} steps a minute, ${Math.abs(d)} ${d > 0 ? 'quicker' : 'slower'} than your usual ${Math.round(c)}${d > 0 ? ' (shorter, quicker steps are easier on shins and calves)' : ''}.`);
+  }
+  if (r.recoveryHr != null){
+    const rec = prior.filter(x => x.recoveryHr != null).map(x => x.recoveryHr);
+    if (rec.length && r.recoveryHr > Math.max(...rec)) inside.push(`<b>Best recovery yet:</b> heart rate dropped ${r.recoveryHr} in two minutes.`);
+  }
+  if (r.effort && hrMetric(r) != null){
+    if (r.effort >= 7 && hrMetric(r) < p.zones.mod) inside.push(`It felt like ${r.effort === 8 ? 'an' : 'a'} ${r.effort} out of 10 but heart rate stayed easy, so the tiredness was in the legs or the head, not the heart.`);
+    else if (r.effort <= 4 && (r.aboveLtSec ?? 0) > 300) inside.push(`It felt like ${r.effort === 8 ? 'an' : 'a'} ${r.effort} out of 10, but heart rate says it was harder than that. Worth trusting the watch on this one.`);
+  }
+
+  // What to do next: the most important single thing.
+  const sore = doc.checkins.filter(c => c.runId === r.id && c.value !== 'none');
+  if (sore.some(c => c.value === 'red')) next.push('<b>You logged a red-flag ache after this one.</b> No running until it’s gone, and see someone if it’s sharp or in the bone.');
+  else if (sore.length) next.push('You logged some soreness after this one. Keep the next run short and easy and see how it answers.');
+  else if ((r.aboveLtSec ?? 0) > 300 || (r.anaerobicTE ?? 0) > 1) next.push(`Make the next one properly easy: walk when heart rate passes ${p.zones.mod}.`);
+  else if (r.effort >= 7 && hrMetric(r) != null && hrMetric(r) < p.zones.mod) next.push('Keep the next one gentle and check in on sleep and legs. If runs keep feeling harder than your heart rate says, take an extra rest day.');
+  else if (r.drift != null && r.drift >= 8) next.push('Hold this distance for now and go longer once the drift settles under about 5 bpm.');
+  else if (r.drift != null && r.drift <= 4 && (r.runSec ?? 0) >= 1200) next.push('You’ve got room to go a little longer next time, about 10% more.');
+  else if (prior.length) next.push('Nothing to change. Keep stacking runs like this one.');
+  return [head, inside, next].filter(x => x.length).map(x => x.join(' '));
+}
+
 async function renderRunDetail(id){
   const r = runById(id);
   const page = $('#page-runs');
@@ -3660,6 +3758,9 @@ async function renderRunDetail(id){
     stats: [['Time', fmtDur(r.timerSec)], [r.jogHr != null ? 'Jog HR' : 'Avg HR', r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr), 'bpm'], ['Pace', fmtDur(r.avgPaceSec), '/mi']],
     extra: `<div class="btn-row">${routeCtl}${(doc.shoes ?? []).length ? `<label class="shoe-pick">Shoes <select id="shoe-in"><option value="">None</option>${doc.shoes.filter(sh => !sh.retired || sh.id === r.shoeId).map(sh => `<option value="${sh.id}"${sh.id === r.shoeId ? ' selected' : ''}>${esc(sh.name)}</option>`).join('')}</select></label>` : ''}</div>`,
   }) + `<div class="wrap">
+    <div class="card coach take" style="margin-bottom:16px"><div class="card-head"><h2>Stride’s take${infoBtn}</h2><span class="card-sub">compared with your runs before it</span></div>
+      ${explain('take')}
+      ${runTake(r, s).map(t => `<p class="coach-line">${t}</p>`).join('')}</div>
     <div class="stat-grid">
       ${isTreadmill(r) || r.watch ? `<div class="stat"><div class="s-l">Treadmill said</div><input type="number" inputmode="decimal" min="0" max="100" step="0.01" id="tread-in" value="${r.watch ? r.distMi : ''}" placeholder="—" aria-label="Distance on the treadmill's screen, miles"><div class="s-n">${r.watch ? `mi · watch said ${fmtMi(r.watch.distMi)}` : 'Type in the miles from its screen'}</div></div>` : ''}
       ${stat('Timer', fmtDur(r.timerSec))}
