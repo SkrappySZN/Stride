@@ -4237,6 +4237,9 @@ const LIFTS = [
   { id:'curl', name:'Barbell curl', g:'Pull', f:'biceps', inc:5 },
   { id:'dbcurl', name:'Dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
   { id:'hammer', name:'Hammer curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
+  { id:'cablecurl', name:'Cable curl (straight bar)', g:'Pull', f:'biceps', inc:5 },
+  { id:'seatcurl', name:'Seated dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
+  { id:'twist', name:'Forearm twist (dumbbell)', g:'Pull', f:'forearm', inc:2.5 },
   { id:'shrug', name:'Shrug', g:'Pull', f:'shrug', inc:10 },
   { id:'legraise', name:'Hanging leg raise', g:'Core', f:'core', inc:5, bw:true },
   { id:'crunch', name:'Cable crunch', g:'Core', f:'core', inc:5 },
@@ -4430,6 +4433,9 @@ const HOWTO = {
   reardelt:{ eq:'Rear delt machine (the pec deck facing the other way) or light dumbbells', set:'Face the pad, handles at shoulder height.', cues:['Sweep your arms back in a wide arc.', 'Squeeze between your shoulder blades.', 'Return slowly.'], avoid:'Shrugging your shoulders up.' },
   curl:{ eq:'Barbell or EZ-bar', set:'Stand tall, palms up, hands shoulder-width, elbows at your sides.', cues:['Curl the bar up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
   dbcurl:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, palms facing forward, elbows at your sides.', cues:['Curl both up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
+  cablecurl:{ eq:'Cable station with a straight bar, set at the bottom', set:'Stand facing the cable, close enough that it pulls straight up. Palms up, hands shoulder-width, elbows at your sides.', cues:['Curl the bar up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly; the cable keeps pulling all the way down.'], avoid:'Leaning back to heave the weight.' },
+  seatcurl:{ eq:'Two dumbbells and a bench (per dumbbell)', set:'Sit tall at the end of a bench, feet flat, dumbbells hanging at your sides, palms forward.', cues:['Curl both up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly to straight arms.'], avoid:'Rocking your body. Sitting takes your legs out of it, so go a little lighter than standing.' },
+  twist:{ eq:'One light dumbbell (or one held by one end, for more)', set:'Sit tall, elbow tucked at your side and bent to a right angle, forearm pointing forward, dumbbell standing upright in your fist.', cues:['Turn your palm down, slowly, as far as it goes.', 'Turn it back up, palm to the ceiling.', 'Only the forearm turns: elbow and upper arm stay still.'], avoid:'Going heavy or fast. Holding nearer one end makes it harder without more weight.' },
   hammer:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, palms facing each other, elbows at your sides.', cues:['Curl up, keeping your palms facing in.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
   shrug:{ eq:'Barbell or two dumbbells', set:'Stand tall holding the weight at arm’s length.', cues:['Lift your shoulders straight up toward your ears.', 'Hold for a second.', 'Lower slowly.'], avoid:'Rolling your shoulders in circles.' },
   legraise:{ eq:'Pull-up bar or a captain’s chair', set:'Hang from the bar, or rest your back against the chair’s pad.', cues:['Raise your knees toward your chest by curling your hips up.', 'Lower slowly.', 'No swinging between reps.'], avoid:'Swinging. Bent knees is the easier version, straight legs the harder one.' },
@@ -5155,7 +5161,18 @@ const kneePad = P => `<rect x="${(P.k1[0] - 9).toFixed(1)}" y="${(P.k1[1] + 3).t
 // Exercises that move the same way share a figure.
 Object.assign(LMOVES, { dbrdl:{ ...LMOVES.rdl, gear:P => bell(P.w1) }, dbbench:{ ...LMOVES.bench, props:BENCH, gear:P => bell(P.w1) },
   dbincline:{ ...LMOVES.incline, gear:P => bell(P.w1) }, chinup:LMOVES.pullup, hammer:LMOVES.dbcurl,
-  apullup:{ ...LMOVES.pullup, gear:kneePad }, adips:{ ...LMOVES.dips, gear:kneePad } });
+  apullup:{ ...LMOVES.pullup, gear:kneePad }, adips:{ ...LMOVES.dips, gear:kneePad },
+  cablecurl:{ ...LMOVES.curl, props:STACK + pulley(104, 104), gear:P => cable([104, 104], P.w1) + `<rect x="${(P.w1[0] - 2).toFixed(1)}" y="${(P.w1[1] - 6).toFixed(1)}" width="4" height="12" rx="2" class="kit-solid"/>` },
+  seatcurl:{ dur:1.4, props:SEAT(34, 84),
+    a:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[3, 30], eb:1 }),
+    b:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[8, 3], eb:1 }),
+    gear:P => bell(P.w1) },
+  // The forearm stays put and the dumbbell turns; the faint far hand sets which way it points.
+  twist:{ dur:1.6, props:SEAT(34, 84),
+    // Upright, palm down, upright, palm up.
+    seq:[[15, 13], [11, 17], [15, 13], [19, 17]].map(w2r => lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[15, 17], w2r, eb:1 })),
+    gear:P => { const a = Math.atan2(P.w1[1] - P.w2[1], P.w1[0] - P.w2[0]) * 180 / Math.PI + 90;
+      return `<g transform="translate(${P.w1[0].toFixed(1)} ${P.w1[1].toFixed(1)}) rotate(${a.toFixed(1)})"><rect x="-1.5" y="-8" width="3" height="16" class="kit-solid"/><rect x="-4" y="-11" width="8" height="4" rx="1.5" class="kit-solid"/><rect x="-4" y="7" width="8" height="4" rx="1.5" class="kit-solid"/></g>`; } } });
 
 // The routine as timed steps. Sore spots from the last few days get longer holds.
 function routineSteps(rid){
