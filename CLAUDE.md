@@ -70,7 +70,13 @@ data runs through it, so treat changes to data handling with care.
   name, crew code, and this week's runs/minutes/miles/streak. Nothing else. RLS lets you
   read only your own crew (via `stride_my_crew()`) and write only your own row. The
   card shows "almost ready" until the SQL has been run.
-- **Also in the doc**: `goals`, `shoes`/`defaultShoe` (`run.shoeId`), `pains` (body
+- **Goals** (`GOAL_TYPES`, `goalState`, `goalPace`): `doc.goals` entries are `{ id, type, target, by, since }`, plus
+  `weeks` (weekly goals), `start` (weight, the 7-day average when set) or `ex` (lift, a `LIFTS` id). Types: distance,
+  total miles, number of runs, mile/5K time, runs or miles every week for N weeks in a row, weight, lift (est. 1-rep
+  max, reps for body-weight moves). Progress is always derived from the data, never stored. A date adds an on-track
+  line. Hits show as checkpoints (Today card, new-run moment). Unknown types are skipped (`myGoals()`), so add types
+  freely but never rename one. They show on Progress and, while any are active, on Today.
+- **Also in the doc**: `shoes`/`defaultShoe` (`run.shoeId`), `pains` (body
   map; shin/Achilles or a sharp knee adds a red check-in with `stage:'map'`),
   `routines`, `crew`. Per-device niceties (dismissed cards, sound) live in
   `prefs` (localStorage).

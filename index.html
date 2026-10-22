@@ -627,6 +627,13 @@ a.btn.primary{color:var(--accent-ink)}
 .pbar{height:8px; border-radius:4px; background:var(--line); overflow:hidden; margin:6px 0 4px}
 .pbar i{display:block; height:100%; background:var(--fig-hl); border-radius:4px}
 .badges{display:flex; flex-wrap:wrap; gap:8px}
+.goal-spark{display:block; width:100%; height:34px; margin:2px 0}
+.goal-spark .gs-line{fill:none; stroke:var(--series-1); stroke-width:2; stroke-linejoin:round; vector-effect:non-scaling-stroke}
+.goal-spark .gs-target{stroke:var(--muted); stroke-width:1; stroke-dasharray:4 4; vector-effect:non-scaling-stroke}
+.goal-grp{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase}
+.goal-pace{font-size:13px; margin-top:3px; color:var(--muted)}
+.goal-pace.good{color:var(--good-text)} .goal-pace.warn{color:var(--warn-text)} .goal-pace.crit{color:var(--crit-text)}
+.goal-mini{grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px 24px}
 /* Lifting */
 .lift-list{list-style:none; margin:0; padding:0}
 .lift-list li{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--line)}
@@ -2485,6 +2492,7 @@ const EXPLAIN = {
   liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is weight × reps added up over every set, a rough measure of how much work you did. For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
   e1rm: () => 'The first number is your estimated one-rep max: the most you could likely lift once, worked out from a set of several reps (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. Tested a true max? Log it as one set of 1 rep: a single counts as exactly what you lifted. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
+  goals: () => 'Targets you set yourself. Distance, time and lift goals count your best ever; total miles and number of runs count from the day you set them. Weekly goals need that many weeks in a row, Monday to Sunday, and the week you’re in can’t break a streak. Weight goals use your 7-day average, so one heavy or light morning doesn’t decide it. Lift goals use the estimated one-rep max from the Lift tab (reps, for body-weight moves). Add a date and Stride tells you whether you’re on track and what each week needs from here. The thin line under each bar is how you’ve moved over time; the dashed line is the target.',
   standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
 };
 const infoBtn = `<button class="info-btn" data-explain aria-expanded="false" aria-label="What does this mean?">?</button>`;
@@ -2657,7 +2665,7 @@ function renderToday(){
       stats: [['Runs this week', weekRuns.length], ['Miles', weekMi.toFixed(1)], ['Jogging', Math.round(weekRuns.reduce((a, r) => a + (r.runSec ?? 0), 0) / 60), 'min']],
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
     }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
-      ${doc.runs.length ? journeyCard('j-today') : ''}${coachCard()}
+      ${doc.runs.length ? journeyCard('j-today') : ''}${coachCard()}${goalsTodayCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid two" style="margin-top:16px">${routineCard()}${weatherCard()}</div>
       <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
@@ -2752,7 +2760,7 @@ function renderToday(){
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>${cta}`,
   }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
-    ${journeyCard('j-today')}${coachCard()}
+    ${journeyCard('j-today')}${coachCard()}${goalsTodayCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
     <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
@@ -2800,8 +2808,8 @@ function journeyChapters(start, horizon){
 function journeyFinish(){
   if (isMarathon()) return `Race day · ${doc.race?.name || 'marathon'}`;
   if (coached()) return activePlan().goal ? `Finish · ${activePlan().goal}` : 'Finish';
-  const g = (doc.goals ?? []).find(g => !goalState(g).hit);
-  if (g) return `Goal · ${GOAL_TYPES[g.type].fmt(g.target)}`;
+  const g = myGoals().find(g => !goalState(g).hit);
+  if (g) return `Goal · ${goalLabel(g)}`;
   const nx = nextMilestones(milestones())[0];
   return nx ? `Next · ${nx[0]}` : 'Keep going';
 }
@@ -2929,7 +2937,7 @@ async function arrivalMoment(r){
   if (prior.length && r.distMi > Math.max(...prior.map(x => x.distMi ?? 0)) + .02) lines.push('<b>Your longest run yet.</b>');
   if (r.recoveryHr != null && prior.some(x => x.recoveryHr != null) && r.recoveryHr > Math.max(...prior.filter(x => x.recoveryHr != null).map(x => x.recoveryHr))) lines.push(`<b>Best recovery yet</b> — HR dropped ${r.recoveryHr} in 2 minutes.`);
   if (r.anaerobicTE > 1) lines.push('That one got hard (hard-effort score above 1). Keep the next one easy.');
-  const ms = milestones().filter(x => x.date === r.date);
+  const ms = [...milestones(), ...goalHits()].filter(x => x.date === r.date);
   const s = r.hasSamples ? await getSamples(r.id).catch(() => null) : null;
   showMoment('arrival', `
     <button class="moment-x" data-moment-close aria-label="Close">✕</button>
@@ -2943,7 +2951,7 @@ async function arrivalMoment(r){
     </div>
     ${s?.path?.length > 1 && !isTreadmill(r) ? `<div class="m-route">${routeSvg(s.path)}</div>` : ''}
     ${lines.length ? `<ul class="m-lines">${lines.map(l => `<li>${l}</li>`).join('')}</ul>` : ''}
-    ${ms.length ? `<div class="m-checkpoints">${ms.map(x => `<div class="m-cp"><i></i><span>Checkpoint reached</span><b>${esc(x.label)}</b></div>`).join('')}</div>` : ''}
+    ${ms.length ? `<div class="m-checkpoints">${ms.map(x => `<div class="m-cp"><i></i><span>${x.goal ? 'Goal reached' : 'Checkpoint reached'}</span><b>${esc(x.label)}</b></div>`).join('')}</div>` : ''}
     <div class="m-actions">
       <a class="btn primary big" href="#runs/${r.id}" data-moment-close>Open the run</a>
       ${r.date === todayYmd() ? '<a class="btn big" href="#routine/post" data-moment-close>Cool down</a>' : ''}
@@ -3076,7 +3084,8 @@ function renderProgress(){
   const page = $('#page-progress');
   if (!runs.length){
     page.innerHTML = band({ eyebrow:'No runs yet', title:'Progress' }) + `<div class="wrap">
-      <div class="empty"><b>Nothing to chart yet.</b><br>Runs appear once your watch syncs, or upload a FIT file. <a href="#setup">Go to Setup</a></div></div>`;
+      <div class="empty"><b>Nothing to chart yet.</b><br>Runs appear once your watch syncs, or upload a FIT file. <a href="#setup">Go to Setup</a></div>
+      <div class="section-label">Goals</div>${goalsCard()}</div>`;
     return;
   }
   const clean = runs.filter(isClean);
@@ -3128,6 +3137,8 @@ function renderProgress(){
     stats: [['Runs', runs.length], ['Clean on test route', clean.length], ['Miles', totMi.toFixed(1)], ['Hours jogging', (totJog / 3600).toFixed(1)]],
   }) + `<div class="wrap">
     ${journeyCard('j-progress')}${coachCard()}
+    <div class="section-label">Goals & milestones</div>
+    ${goalsCard()}
     <div class="section-label">Getting fitter?</div>
     <div class="grid kpis">
       <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · test route${infoBtn}</div>${explain('jogHr')}${kpiHr}</div>
@@ -3162,8 +3173,6 @@ function renderProgress(){
         ${explain('effort')}${effRuns.length ? '<div class="chart" id="c-eff"></div>' : '<div class="pending-box">Answer the watch’s effort and feel prompts when you save a run,<br>or set them on the run’s page.</div>'}</div>
     </div>
     ${bestsCard(runs)}
-    <div class="section-label">Goals & milestones</div>
-    ${goalsCard()}
     <div class="section-label">More detail</div>
     <div class="grid two">
       <div class="card"><div class="card-head"><h2>Jogging vs walking${infoBtn}</h2><span class="card-sub">minutes per run</span></div>${explain('jogWalk')}
@@ -3316,76 +3325,224 @@ function nextMilestones(m){
   return nx;
 }
 
+// `target` is miles, seconds, runs, lbs or a lift's estimated 1-rep max (reps for body-weight moves).
+// Older goals are { id, type, target, by, since }; weekly ones add `weeks`, weight `start`, lift `ex`.
 const GOAL_TYPES = {
-  long:  { label:'Run a distance in one go', unit:'mi', ph:'2', fmt:v => `${v} mi in one go` },
-  total: { label:'Total miles', unit:'mi', ph:'50', fmt:v => `${v} miles total` },
-  mi:    { label:'Mile under a time', unit:'m:ss', ph:'10:00', fmt:v => `Mile under ${fmtDur(v)}` },
-  k5:    { label:'5K under a time', unit:'m:ss', ph:'35:00', fmt:v => `5K under ${fmtDur(v)}` },
+  long:   { group:'Running', label:'Run a distance in one go', unit:'mi', ph:'2', fmt:g => `${g.target} mi in one go` },
+  total:  { group:'Running', label:'Total miles', unit:'mi', ph:'50', fmt:g => `${g.target} miles total` },
+  runs:   { group:'Running', label:'Number of runs', unit:'runs', ph:'20', fmt:g => `${g.target} runs` },
+  mi:     { group:'Running', label:'Mile under a time', unit:'m:ss', ph:'10:00', fmt:g => `Mile under ${fmtDur(g.target)}` },
+  k5:     { group:'Running', label:'5K under a time', unit:'m:ss', ph:'35:00', fmt:g => `5K under ${fmtDur(g.target)}` },
+  wkruns: { group:'Every week', label:'Runs every week', unit:'runs a week', ph:'3', weeks:true, fmt:g => `${g.target} runs a week, ${g.weeks} weeks in a row` },
+  wkmi:   { group:'Every week', label:'Miles every week', unit:'mi a week', ph:'10', weeks:true, fmt:g => `${g.target} mi a week, ${g.weeks} weeks in a row` },
+  weight: { group:'Body', label:'Reach a weight', unit:'lbs', ph:'180', fmt:g => `Weigh ${g.target} lbs` },
+  lift:   { group:'Lifting', label:'Lift a weight', unit:'lb', ph:'225', lift:true,
+    fmt:g => { const d = liftDef(g.ex); return d.bw ? `${d.name}: ${g.target} reps in a set` : `${d.name}: ${g.target} lb max`; } },
 };
 const parseDur = s => { const m = String(s).trim().match(/^(\d+):([0-5]\d)$/); return m ? +m[1] * 60 + +m[2] : null; };
-// Where a goal stands: current value, 0–1 progress, and the date it was hit.
+const goalLabel = g => GOAL_TYPES[g.type].fmt(g);
+// Goals from a newer version of the app with a type this one doesn't know are left alone, not shown.
+const myGoals = () => (doc.goals ?? []).filter(g => GOAL_TYPES[g.type]);
+// Weight goals follow the 7-day average, so one salty dinner neither hits nor breaks them.
+const weightAvg = (ws, end) => { const v = windowAvg(ws, 7, end); return v == null ? null : Math.round(v * 10) / 10; };
+// Where a goal stands: current value, 0–1 progress, the date it was hit, and its history for the trend line.
 function goalState(g){
-  const runs = sortedRuns();
+  const runs = sortedRuns(), T = GOAL_TYPES[g.type];
   if (g.type === 'long'){
-    const hit = runs.find(r => r.distMi >= g.target - GPS_SLACK);
-    const cur = Math.max(0, ...runs.map(r => r.distMi ?? 0));
-    return { cur, pct:Math.min(1, cur / g.target), hit:hit?.date, txt:`longest ${fmtMi(cur)} of ${g.target} mi` };
+    let cur = 0, hit = null; const hist = [];
+    for (const r of runs){ cur = Math.max(cur, r.distMi ?? 0); hist.push({ date:r.date, v:cur }); if (!hit && cur >= g.target - GPS_SLACK) hit = r.date; }
+    return { cur, pct:Math.min(1, cur / g.target), hit, hist, txt:`longest ${fmtMi(cur)} of ${g.target} mi` };
   }
-  if (g.type === 'total'){
-    let sum = 0, hit = null;
-    for (const r of runs) if (r.date >= g.since && (!g.by || r.date <= g.by)){ sum += r.distMi ?? 0; if (!hit && sum >= g.target) hit = r.date; }
-    return { cur:sum, pct:Math.min(1, sum / g.target), hit, txt:`${sum.toFixed(1)} of ${g.target} mi since ${fmtDate(g.since).slice(4)}` };
+  if (g.type === 'total' || g.type === 'runs'){
+    let sum = 0, hit = null; const hist = [{ date:g.since, v:0 }];
+    for (const r of runs) if (r.date >= g.since && (!g.by || r.date <= g.by)){
+      sum += g.type === 'runs' ? 1 : r.distMi ?? 0; hist.push({ date:r.date, v:sum });
+      if (!hit && sum >= g.target) hit = r.date;
+    }
+    const since = `since ${fmtDate(g.since).slice(4)}`;
+    return { cur:sum, pct:Math.min(1, sum / g.target), hit, hist,
+      txt:g.type === 'runs' ? `${sum} of ${g.target} runs ${since}` : `${sum.toFixed(1)} of ${g.target} mi ${since}` };
   }
-  const k = g.type, withB = runs.filter(r => r.best?.[k] && timedRun(r));
-  const best = withB.length ? Math.min(...withB.map(r => r.best[k])) : null;
-  return { cur:best, pct:best ? Math.min(1, g.target / best) : 0, hit:withB.find(r => r.best[k] <= g.target)?.date,
-    txt:best ? `best ${fmtDur(best)}, ${best <= g.target ? 'done' : `${fmtDur(best - g.target)} to go`}` : 'no time yet' };
+  if (T.weeks){
+    // A week counts when it reaches the target; the week in progress can't break the streak.
+    const isMi = g.type === 'wkmi', need = g.target - (isMi ? GPS_SLACK : 0), thisWk = weekStart(todayYmd());
+    const last = g.by && weekStart(g.by) < thisWk ? weekStart(g.by) : thisWk;
+    let streak = 0, hit = null, curV = 0, curMet = false; const hist = [];
+    for (let w = weekStart(g.since); w <= last; w = addDays(w, 7)){
+      const rr = runs.filter(r => r.date >= w && r.date < addDays(w, 7));
+      let v = 0, metOn = null;
+      for (const r of rr){ v += isMi ? r.distMi ?? 0 : 1; if (!metOn && v >= need) metOn = r.date; }
+      hist.push({ date:w, v:Math.round(v * 10) / 10 });
+      if (metOn){ streak++; if (!hit && streak >= g.weeks) hit = metOn; }
+      else if (w < thisWk) streak = 0;
+      if (w === thisWk){ curV = v; curMet = !!metOn; }
+    }
+    const part = curMet ? 0 : Math.min(1, curV / g.target);
+    return { cur:streak, curMet, pct:Math.min(1, (streak + part) / g.weeks), hit, hist,
+      txt:`${streak} of ${g.weeks} weeks · this week ${isMi ? curV.toFixed(1) : curV} of ${g.target}${curMet ? ' ✓' : ''}` };
+  }
+  if (g.type === 'weight'){
+    const ws = weightSeries(), down = g.target < g.start, hist = [];
+    let hit = null;
+    for (const p of ws) if (p.date >= g.since){
+      const v = weightAvg(ws, p.date); hist.push({ date:p.date, v });
+      if (!hit && (down ? v <= g.target : v >= g.target)) hit = p.date;
+    }
+    const cur = ws.length ? weightAvg(ws, ws.at(-1).date) : null;
+    const pct = cur == null || g.start === g.target ? 0 : Math.max(0, Math.min(1, (g.start - cur) / (g.start - g.target)));
+    return { cur, pct, hit, hist:[{ date:g.since, v:g.start }, ...hist],
+      txt:cur == null ? 'no weigh-ins yet' : `${cur} lbs now (7-day average), from ${g.start} · ${Math.abs(cur - g.target).toFixed(1)} to go` };
+  }
+  if (g.type === 'lift'){
+    const def = liftDef(g.ex), hist = []; let cur = 0, hit = null;
+    for (const l of liftHist(g.ex)){
+      cur = Math.max(cur, ...l.sets.map(s => liftScore(def, s))); hist.push({ date:l.date, v:cur });
+      if (!hit && cur >= g.target) hit = l.date;
+    }
+    const u = def.bw ? ' reps' : ' lb';
+    return { cur, pct:Math.min(1, cur / g.target), hit, hist,
+      txt:cur ? `best ${cur}${u}${def.bw ? '' : ' (est. 1-rep max)'} · ${Math.max(0, g.target - cur)}${u} to go` : 'not logged yet' };
+  }
+  // Mile and 5K times: lower is better.
+  const k = g.type, hist = []; let cur = null, hit = null;
+  for (const r of runs) if (r.best?.[k] && timedRun(r)){
+    cur = cur == null ? r.best[k] : Math.min(cur, r.best[k]); hist.push({ date:r.date, v:cur });
+    if (!hit && cur <= g.target) hit = r.date;
+  }
+  return { cur, pct:cur ? Math.min(1, g.target / cur) : 0, hit, hist,
+    txt:cur ? `best ${fmtDur(cur)}, ${cur <= g.target ? 'done' : `${fmtDur(cur - g.target)} to go`}` : 'no time yet' };
+}
+// With a date set: is it on track, and what does each week need from here?
+function goalPace(g, st){
+  if (st.hit || !g.by) return null;
+  const today = todayYmd(), left = diffDays(today, g.by);
+  if (left < 0) return { tone:'crit', txt:'Deadline passed. Keep it, pick a new date, or remove it.' };
+  const wks = Math.max(1, left / 7), when = `by ${fmtDate(g.by)}, ${left} day${left === 1 ? '' : 's'} left`;
+  if (g.type === 'total' || g.type === 'runs'){
+    const span = Math.max(1, diffDays(g.since, g.by)), expect = g.target * Math.min(1, diffDays(g.since, today) / span);
+    const need = (g.target - st.cur) / wks, ok = st.cur >= expect * .9;
+    return { tone:ok ? 'good' : 'warn', txt:`${ok ? 'On track' : 'Behind'} · about ${need.toFixed(1)}${g.type === 'runs' ? ' runs' : ' mi'} a week ${when}` };
+  }
+  if (GOAL_TYPES[g.type].weeks){
+    const room = diffDays(weekStart(today), weekStart(g.by)) / 7 + (st.curMet ? 0 : 1);
+    const ok = room >= g.weeks - st.cur;
+    return { tone:ok ? 'good' : 'warn', txt:ok ? `Still fits ${when}` : `Not enough weeks left for ${g.weeks} in a row ${when}` };
+  }
+  if (g.type === 'weight' && st.cur != null){
+    const ws = weightSeries(), then = weightAvg(ws, addDays(today, -21)), need = (g.target - st.cur) / wks;
+    const trend = then != null ? (st.cur - then) / 3 : null;
+    const ok = trend != null && Math.sign(trend) === Math.sign(need) && Math.abs(trend) >= Math.abs(need) * .9;
+    const sgn = v => `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
+    return { tone:ok ? 'good' : 'warn', txt:`${ok ? 'On track' : 'Needs'} ${sgn(need)} lb a week ${when}${trend != null ? ` · last 3 weeks ${sgn(trend)} a week` : ''}${Math.abs(need) > 2 ? '. More than 2 lb a week is hard to keep up; a later date is kinder' : ''}` };
+  }
+  return { tone:null, txt:when.charAt(0).toUpperCase() + when.slice(1) };
+}
+// Each goal hit, as a checkpoint for Today's card and the new-run moment.
+const goalHits = () => myGoals().map(g => ({ id:'goal-' + g.id, label:goalLabel(g), date:goalState(g).hit, goal:true })).filter(x => x.date);
+// A small trend line with the target dashed. The text says the numbers; this shows the direction.
+function goalSpark(hist, target){
+  if (hist.length < 3) return '';
+  const W = 300, H = 34, pad = 4, vs = [...hist.map(p => p.v), target], lo = Math.min(...vs), hi = Math.max(...vs);
+  const t0 = parseYmd(hist[0].date).getTime(), span = parseYmd(hist.at(-1).date).getTime() - t0 || 1;
+  const x = p => ((parseYmd(p.date).getTime() - t0) / span * W).toFixed(1), y = v => (hi === lo ? H / 2 : pad + (hi - v) / (hi - lo) * (H - 2 * pad)).toFixed(1);
+  return `<svg class="goal-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <line class="gs-target" x1="0" x2="${W}" y1="${y(target)}" y2="${y(target)}"/>
+    <path class="gs-line" d="${hist.map((p, i) => `${i ? 'L' : 'M'}${x(p)},${y(p.v)}`).join('')}"/></svg>`;
 }
 
-// Goals worth suggesting from what someone has actually run: a bit further, a bit faster.
+// Goals worth suggesting from what someone has actually done: a bit further, a bit faster, a bit more often.
 function goalIdeas(){
-  const runs = sortedRuns(); if (!runs.length) return [];
-  const longest = Math.max(...runs.map(r => r.distMi ?? 0)), ideas = [];
-  const next = Math.max(1, Math.ceil((longest + .3) * 2) / 2);
-  ideas.push(['long', next, `${next} mi in one go`]);
-  const bests = runs.map(r => r.best?.mi).filter(Boolean);
-  if (bests.length){ const t = Math.floor((Math.min(...bests) - 20) / 15) * 15; if (t > 240) ideas.push(['mi', t, `Mile under ${fmtDur(t)}`]); }
-  if (longest < 3.1 && next !== 3.1) ideas.push(['long', 3.1, '5K distance (3.1 mi)']);
-  return ideas;
+  const runs = sortedRuns(), ideas = [];
+  if (runs.length){
+    const longest = Math.max(...runs.map(r => r.distMi ?? 0));
+    const next = Math.max(1, Math.ceil((longest + .3) * 2) / 2);
+    ideas.push(['long', next, `${next} mi in one go`]);
+    const bests = runs.map(r => r.best?.mi).filter(Boolean);
+    if (bests.length){ const t = Math.floor((Math.min(...bests) - 20) / 15) * 15; if (t > 240) ideas.push(['mi', t, `Mile under ${fmtDur(t)}`]); }
+    if (longest < 3.1 && next !== 3.1) ideas.push(['long', 3.1, '5K distance (3.1 mi)']);
+    ideas.push(['wkruns', 3, '3 runs a week, 4 weeks in a row']);
+  }
+  // The lift done most recently, about 5% past its best.
+  const ex = [...doc.lifts].sort((a, b) => a.date < b.date ? 1 : -1).map(l => l.ex).find(ex => !liftDef(ex).bw);
+  if (ex){ const b = liftBest(ex).best?.v; if (b) ideas.push(['lift', round5(b * 1.05) || 5, `${liftDef(ex).name}: ${round5(b * 1.05)} lb max`, ex]); }
+  const have = myGoals().filter(g => !goalState(g).hit);
+  return ideas.filter(([t, v, , ex]) => !have.some(g => g.type === t && (t === 'lift' ? g.ex === ex : true))).slice(0, 4);
+}
+function addGoal(g){
+  doc.goals = [...(doc.goals ?? []), { id:'gl' + Date.now().toString(36), since:todayYmd(), by:null, ...g }];
+}
+const goalBar = pct => `<div class="pbar"><i style="width:${Math.round(pct * 100)}%"></i></div>`;
+function goalRow(g, { mini = false } = {}){
+  const st = goalState(g), pace = goalPace(g, st), T = GOAL_TYPES[g.type];
+  return `<li><div class="goal-top"><b>${esc(goalLabel(g))}</b>${mini ? `<span class="card-sub num">${Math.round((st.hit ? 1 : st.pct) * 100)}%</span>` : `<button class="link-btn" data-del-goal="${g.id}" aria-label="Remove goal">remove</button>`}</div>
+    ${goalBar(st.hit ? 1 : st.pct)}${mini || T.weeks ? '' : goalSpark(st.hist, g.target)}
+    <div class="card-sub">${st.hit ? `<b style="color:var(--good-text)">✓ Done ${fmtDate(st.hit)}</b>` : `${mini ? '' : `<span class="goal-grp">${T.group}</span> · `}${esc(st.txt)}`}</div>
+    ${pace ? `<div class="goal-pace${pace.tone ? ' ' + pace.tone : ''}">${esc(pace.txt)}</div>` : ''}</li>`;
+}
+function goalForm(){
+  const groups = [...new Set(Object.values(GOAL_TYPES).map(t => t.group))];
+  const logged = [...new Set(doc.lifts.map(l => l.ex))], all = [...LIFTS, ...doc.liftEx];
+  const exOpt = d => `<option value="${d.id}">${esc(d.name)}</option>`;
+  return `<div class="goal-form">
+    <div class="field-row">
+      <div class="field"><label for="g-type">Goal</label><select id="g-type">${groups.map(gr => `<optgroup label="${gr}">${Object.entries(GOAL_TYPES).filter(([, t]) => t.group === gr).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join('')}</optgroup>`).join('')}</select></div>
+      <div class="field" id="g-ex-f" hidden><label for="g-ex">Exercise</label><select id="g-ex">
+        ${logged.length ? `<optgroup label="You’ve logged">${logged.map(id => exOpt(liftDef(id))).join('')}</optgroup>` : ''}
+        <optgroup label="All">${all.filter(d => !logged.includes(d.id)).map(exOpt).join('')}</optgroup></select></div>
+      <div class="field"><label for="g-val">Target <span id="g-unit">(mi)</span></label><input id="g-val" inputmode="decimal" placeholder="2"></div>
+      <div class="field" id="g-weeks-f" hidden><label for="g-weeks">Weeks in a row</label><input id="g-weeks" inputmode="numeric" value="4"></div>
+      <div class="field"><label for="g-by">By (optional)</label><input id="g-by" type="date"></div>
+    </div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="add-goal">Add goal</button></div>
+  </div>`;
+}
+// Keep the form's extra fields and units in step with the goal type (and, for lifts, the exercise).
+function syncGoalForm(){
+  const t = GOAL_TYPES[$('#g-type')?.value]; if (!t) return;
+  const def = t.lift ? liftDef($('#g-ex').value) : null, b = def ? liftBest(def.id).best?.v : null;
+  $('#g-ex-f').hidden = !t.lift; $('#g-weeks-f').hidden = !t.weeks;
+  $('#g-unit').textContent = `(${def?.bw ? 'reps' : t.unit})`;
+  $('#g-val').placeholder = def ? (b ? String(def.bw ? b + 2 : round5(b * 1.05)) : def.bw ? '10' : t.ph) : $('#g-type').value === 'weight' && currentWeight() ? String(Math.round(currentWeight() - 5)) : t.ph;
+  $('#g-val').inputMode = t.unit === 'm:ss' ? 'text' : 'decimal';
 }
 function goalsCard(){
-  const goals = doc.goals ?? [], today = todayYmd(), m = milestones();
+  const m = milestones(), goals = myGoals().map(g => ({ g, st:goalState(g) }));
+  const active = goals.filter(x => !x.st.hit), done = goals.filter(x => x.st.hit).sort((a, b) => a.st.hit < b.st.hit ? 1 : -1);
+  const ideas = active.length < 3 ? goalIdeas() : [];
   const earned = [...m].sort((a, b) => a.date < b.date ? 1 : -1);
-  const bar = pct => `<div class="pbar"><i style="width:${Math.round(pct * 100)}%"></i></div>`;
   return `<div class="grid two">
-    <div class="card"><div class="card-head"><h2>Your goals</h2><span class="card-sub">set your own targets</span></div>
-      ${goals.length ? `<ul class="goal-list">${goals.map(g => { const st = goalState(g), late = g.by && g.by < today && !st.hit;
-        return `<li><div class="goal-top"><b>${GOAL_TYPES[g.type].fmt(g.target)}</b><button class="link-btn" data-del-goal="${g.id}" aria-label="Remove goal">remove</button></div>
-          ${bar(st.hit ? 1 : st.pct)}
-          <div class="card-sub">${st.hit ? `<b style="color:var(--good-text)">✓ Done ${fmtDate(st.hit)}</b>` : esc(st.txt)}${g.by && !st.hit ? ` · ${late ? 'deadline passed' : `by ${fmtDate(g.by)} (${diffDays(today, g.by)} days)`}` : ''}</div></li>`; }).join('')}</ul>`
-        : `<p class="card-sub" style="margin:0 0 12px">Something to aim at makes the easy weeks easier.${goalIdeas().length ? ' A few, from your runs:' : ' Beat your longest run, hit a total, or chase a time.'}</p>
-          ${goalIdeas().length ? `<div class="pill-row" style="margin-bottom:6px">${goalIdeas().map(([t, v, l]) => `<button class="pill" data-goal-idea="${t}|${v}">+ ${esc(l)}</button>`).join('')}</div>` : ''}`}
-      <div class="field-row goal-form">
-        <div class="field"><label for="g-type">Goal</label><select id="g-type">${Object.entries(GOAL_TYPES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join('')}</select></div>
-        <div class="field"><label for="g-val">Target <span id="g-unit">(mi)</span></label><input id="g-val" inputmode="decimal" placeholder="2"></div>
-        <div class="field"><label for="g-by">By (optional)</label><input id="g-by" type="date"></div>
-      </div>
-      <div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="add-goal">Add goal</button></div>
+    <div class="card"><div class="card-head"><h2>Your goals${infoBtn}</h2><span class="card-sub">${active.length ? `${active.length} in progress` : 'set your own targets'}${done.length ? ` · ${done.length} done` : ''}</span></div>
+      ${explain('goals')}
+      ${active.length ? `<ul class="goal-list">${active.map(x => goalRow(x.g)).join('')}</ul>`
+        : `<p class="card-sub" style="margin:0 0 12px">Something to aim at makes the easy weeks easier. Go further, get faster, show up every week, or hit a weight or a lift.${ideas.length ? ' A few, from what you’ve done:' : ''}</p>`}
+      ${ideas.length ? `<div class="pill-row" style="margin:${active.length ? '14px' : '0'} 0 6px">${ideas.map(([t, v, l, ex]) => `<button class="pill" data-goal-idea="${t}|${v}|${ex ?? ''}">+ ${esc(l)}</button>`).join('')}</div>` : ''}
+      ${goalForm()}
+      ${done.length ? `<details style="margin-top:14px"><summary class="card-sub" style="cursor:pointer">Done (${done.length})</summary>
+        <ul class="goal-list" style="margin-top:10px">${done.map(x => `<li><div class="goal-top"><b>✓ ${esc(goalLabel(x.g))}</b><button class="link-btn" data-del-goal="${x.g.id}" aria-label="Remove goal">remove</button></div>
+          <div class="card-sub">Hit ${fmtDate(x.st.hit)}, ${Math.max(0, diffDays(x.g.since, x.st.hit))} days after you set it</div></li>`).join('')}</ul></details>` : ''}
     </div>
     <div class="card"><div class="card-head"><h2>Milestones</h2><span class="card-sub">${earned.length} earned</span></div>
       ${earned.length ? `<div class="badges">${earned.slice(0, 6).map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div>` : ''}
       <div class="eyebrow" style="margin:14px 0 8px">Up next</div>
-      <ul class="goal-list">${nextMilestones(m).map(([l, pct, txt]) => `<li><div class="goal-top"><b>${esc(l)}</b></div>${bar(pct)}<div class="card-sub">${esc(txt)}</div></li>`).join('')}</ul>
+      <ul class="goal-list">${nextMilestones(m).map(([l, pct, txt]) => `<li><div class="goal-top"><b>${esc(l)}</b></div>${goalBar(pct)}<div class="card-sub">${esc(txt)}</div></li>`).join('')}</ul>
       ${earned.length > 6 ? `<details style="margin-top:12px"><summary class="card-sub" style="cursor:pointer">All ${earned.length}</summary><div class="badges" style="margin-top:10px">${earned.slice(6).map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div></details>` : ''}
     </div>
   </div>`;
 }
+// Today: the goals in progress, deadlines first, then the closest to done.
+function goalsTodayCard(){
+  const act = myGoals().map(g => ({ g, st:goalState(g) })).filter(x => !x.st.hit)
+    .sort((a, b) => (a.g.by ?? '9') < (b.g.by ?? '9') ? -1 : (a.g.by ?? '9') > (b.g.by ?? '9') ? 1 : b.st.pct - a.st.pct);
+  if (!act.length) return '';
+  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Goals</h2><a class="card-sub" href="#progress">${act.length > 3 ? `all ${act.length} ›` : 'edit ›'}</a></div>
+    <ul class="goal-list goal-mini">${act.slice(0, 3).map(x => goalRow(x.g, { mini:true })).join('')}</ul></div>`;
+}
 // A milestone from the last couple of days gets a moment on Today, once per device.
 function milestoneCard(){
-  const seen = prefs.get('seenMilestones', []), fresh = milestones().filter(x => diffDays(x.date, todayYmd()) <= 2 && !seen.includes(x.id));
+  const seen = prefs.get('seenMilestones', []), fresh = [...milestones(), ...goalHits()].filter(x => diffDays(x.date, todayYmd()) <= 2 && !seen.includes(x.id));
   if (!fresh.length) return '';
   return `<div class="card milestone-new" style="margin-bottom:16px"><div class="card-head"><h2>Checkpoint${fresh.length > 1 ? 's' : ''} reached</h2><button class="link-btn" data-seen-milestones="${fresh.map(x => x.id).join(',')}">Hide</button></div>
-    <div class="m-checkpoints">${fresh.map(x => `<div class="m-cp"><i></i><span>${fmtDate(x.date)}</span><b>${esc(x.label)}</b></div>`).join('')}</div></div>`;
+    <div class="m-checkpoints">${fresh.map(x => `<div class="m-cp"><i></i><span>${x.goal ? 'Goal · ' : ''}${fmtDate(x.date)}</span><b>${esc(x.label)}</b></div>`).join('')}</div></div>`;
 }
 
 /* ── Week in review ───────────────────────────────────────────────── */
@@ -6020,8 +6177,8 @@ document.addEventListener('click', async e => {
   }
   const gi = e.target.closest('[data-goal-idea]');
   if (gi){
-    const [type, v] = gi.dataset.goalIdea.split('|');
-    doc.goals = [...(doc.goals ?? []), { id:'gl' + Date.now().toString(36), type, target:+v, by:null, since:todayYmd() }];
+    const [type, v, ex] = gi.dataset.goalIdea.split('|');
+    addGoal({ type, target:+v, ...(GOAL_TYPES[type].weeks ? { weeks:4 } : {}), ...(ex ? { ex } : {}) });
     await save(); toast('Goal added'); render(); return;
   }
   const dg = e.target.closest('[data-del-goal]');
@@ -6144,12 +6301,18 @@ document.addEventListener('click', async e => {
       await save(); toast(`Added${n ? ` · ${n} run${n > 1 ? 's' : ''} counted` : ''}`); render(); break;
     }
     case 'add-goal': {
-      const type = $('#g-type').value, raw = $('#g-val').value.trim(), by = $('#g-by').value || null;
-      const target = GOAL_TYPES[type].unit === 'mi' ? Math.round(+raw * 100) / 100 : parseDur(raw);
-      if (!(target > 0) || (GOAL_TYPES[type].unit === 'mi' && target > 1000)){ toast(GOAL_TYPES[type].unit === 'mi' ? 'Enter a number of miles' : 'Enter a time like 9:30'); break; }
+      const type = $('#g-type').value, T = GOAL_TYPES[type], raw = $('#g-val').value.trim(), by = $('#g-by').value || null;
+      const target = T.unit === 'm:ss' ? parseDur(raw) : Math.round(+raw * 100) / 100, g = { type, target, by };
+      if (!(target > 0) || target > 1000){ toast(T.unit === 'm:ss' ? 'Enter a time like 9:30' : 'Enter a number for the target'); break; }
       if (by && by <= todayYmd()){ toast('Pick a date in the future'); break; }
-      doc.goals = [...(doc.goals ?? []), { id:'gl' + Date.now().toString(36), type, target, by, since:todayYmd() }];
-      await save(); toast('Goal added'); render(); break;
+      if (T.weeks){ g.weeks = Math.round(+$('#g-weeks').value); if (!(g.weeks >= 1 && g.weeks <= 52)){ toast('Weeks in a row: 1 to 52'); break; } }
+      if (T.lift) g.ex = $('#g-ex').value;
+      if (type === 'weight'){
+        const ws = weightSeries(); g.start = ws.length ? weightAvg(ws, ws.at(-1).date) : null;
+        if (g.start == null){ toast('Add a weigh-in on the Body tab first'); break; }
+        if (Math.abs(g.start - target) < .5){ toast('You’re already there'); break; }
+      }
+      addGoal(g); await save(); toast('Goal added'); render(); break;
     }
     case 'save-about': {
       const sex = $('#s-sex').value || null, born = Math.round(+$('#s-born').value) || null;
@@ -6338,9 +6501,7 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('change', e => {
-  if (e.target.id !== 'g-type') return;
-  const t = GOAL_TYPES[e.target.value];
-  $('#g-unit').textContent = `(${t.unit})`; $('#g-val').placeholder = t.ph; $('#g-val').inputMode = t.unit === 'mi' ? 'decimal' : 'text';
+  if (e.target.id === 'g-type' || e.target.id === 'g-ex') syncGoalForm();
 });
 document.addEventListener('change', e => {
   if (e.target.id !== 'lf-ex') return;
