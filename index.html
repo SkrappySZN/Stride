@@ -6519,6 +6519,8 @@ document.addEventListener('change', e => {
   if (e.target.id === 'g-type' || e.target.id === 'g-ex') syncGoalForm();
 });
 document.addEventListener('change', e => {
+  // The workouts card offers to save the chosen day's lifts as a workout.
+  if (e.target.id === 'lf-date'){ readLiftForm(); if ($('#lift-wo') && !liftUi.edit) redrawWo(); return; }
   if (e.target.id !== 'lf-ex') return;
   readLiftForm(); liftUi.day = null; liftUi.wo = null; redrawLiftLog();
 });
