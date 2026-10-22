@@ -2489,6 +2489,7 @@ const explain = key => `<p class="explain" hidden>${EXPLAIN[key](doc.profile)}</
 
 // What each number on a run's page means, in one line each.
 const RUN_TERMS = [
+  ['Treadmill said', 'On a treadmill the watch guesses distance from your arm swing and can be 5–10% off. Type in the miles from the treadmill’s screen and Stride uses that for pace, weekly miles and shoes. The watch’s number is kept, and clearing the box puts it back.'],
   ['Jog HR / Jog pace', 'Heart rate and pace while jogging, with walk breaks left out. The fairest numbers to compare run to run.'],
   ['Recovery HR', 'How far your heart rate dropped in the 2 minutes after you stopped. Higher is fitter.'],
   ['Above threshold', 'Time spent at your hardest sustainable effort or beyond. Easy runs should show almost none.'],
@@ -3622,6 +3623,18 @@ function renderRunsList(){
     <p class="card-sub" style="margin-top:12px">An amber or red dot means something on that run is worth a look. Missing a run? <a href="#setup">Upload its FIT file</a>.</p></div>`;
 }
 
+// The treadmill's screen beats the wrist's guess. The watch's own numbers stay in
+// r.watch, so clearing the box puts them back.
+function setTreadMi(r, mi){
+  r.watch ??= { distMi:r.distMi, avgPaceSec:r.avgPaceSec, jogPaceSec:r.jogPaceSec };
+  const w = r.watch;
+  if (mi == null){ Object.assign(r, w); delete r.watch; return; }
+  r.distMi = mi;
+  r.avgPaceSec = r.timerSec / mi;
+  // Wrist error is roughly proportional, so the jog-only pace scales the same way.
+  r.jogPaceSec = w.jogPaceSec != null && w.distMi > 0.05 ? w.jogPaceSec * w.distMi / mi : null;
+}
+
 async function renderRunDetail(id){
   const r = runById(id);
   const page = $('#page-runs');
@@ -3648,6 +3661,7 @@ async function renderRunDetail(id){
     extra: `<div class="btn-row">${routeCtl}${(doc.shoes ?? []).length ? `<label class="shoe-pick">Shoes <select id="shoe-in"><option value="">None</option>${doc.shoes.filter(sh => !sh.retired || sh.id === r.shoeId).map(sh => `<option value="${sh.id}"${sh.id === r.shoeId ? ' selected' : ''}>${esc(sh.name)}</option>`).join('')}</select></label>` : ''}</div>`,
   }) + `<div class="wrap">
     <div class="stat-grid">
+      ${isTreadmill(r) || r.watch ? `<div class="stat"><div class="s-l">Treadmill said</div><input type="number" inputmode="decimal" min="0" max="100" step="0.01" id="tread-in" value="${r.watch ? r.distMi : ''}" placeholder="—" aria-label="Distance on the treadmill's screen, miles"><div class="s-n">${r.watch ? `mi · watch said ${fmtMi(r.watch.distMi)}` : 'Type in the miles from its screen'}</div></div>` : ''}
       ${stat('Timer', fmtDur(r.timerSec))}
       ${stat('Jog / walk', `${fmtDur(r.runSec)}`, `/ ${fmtDur(r.walkSec)}`)}
       ${stat('Avg pace', fmtDur(r.avgPaceSec), '/mi')}
@@ -3720,6 +3734,12 @@ async function renderRunDetail(id){
     const v = e.target.value.trim();
     r.recoveryHr = v === '' ? null : Math.max(0, Math.min(120, Math.round(+v)));
     await save(); toast('Recovery HR saved'); renderRunDetail(r.id);
+  });
+  $('#tread-in')?.addEventListener('change', async e => {
+    const v = e.target.value.trim(), mi = Math.round(+v * 100) / 100;
+    if (v !== '' && !(mi >= 0.1 && mi <= 100)){ toast('That distance doesn’t look right'); renderRunDetail(r.id); return; }
+    setTreadMi(r, v === '' ? null : mi);
+    await save(); toast(v === '' ? 'Back to the watch’s distance' : 'Treadmill distance saved'); renderRunDetail(r.id);
   });
   $('#shoe-in')?.addEventListener('change', async e => { r.shoeId = e.target.value || null; await save(); toast('Shoes updated'); });
   $('#temp-in').addEventListener('change', async e => {
