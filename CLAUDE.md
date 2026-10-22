@@ -113,6 +113,9 @@ data runs through it, so treat changes to data handling with care.
   the bar, dumbbells or cable that move with it, `props` the bench or machine. Same rule as routines:
   check every pose against its `HOWTO` cues on a contact sheet. Barbell lifts (`BARBELL`) show a plate
   calculator (`platesFor`, bar weight in `prefs` 'barLb').
+  Assisted machines (`assist:true`: `apullup`, `adips`) log the machine's help as `lb`, so less is
+  stronger: `liftScore()` uses body weight minus help (reps when no weight is on file, see `byReps()`),
+  the live workout suggests less help after every rep is hit, and rotation never picks them on its own.
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.
