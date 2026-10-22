@@ -116,6 +116,9 @@ data runs through it, so treat changes to data handling with care.
   Assisted machines (`assist:true`: `apullup`, `adips`) log the machine's help as `lb`, so less is
   stronger: `liftScore()` uses body weight minus help (reps when no weight is on file, see `byReps()`),
   the live workout suggests less help after every rep is hit, and rotation never picks them on its own.
+  Volume (`liftVolume`, `setLoad`) is weight × reps summed; `whole:true` moves (pull-up, chin-up, dips)
+  add body weight, assisted ones use body weight minus help, other body-weight moves count added weight only.
+  It's the "Volume · week" stat, the Volume card (by group, last 12 weeks) and the live workout's "Lbs moved".
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.

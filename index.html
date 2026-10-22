@@ -719,6 +719,8 @@ table.lift-recent td:first-child{white-space:nowrap; padding-right:12px}
 .lv-done-stats b{font-family:var(--mono); font-size:26px}
 .lv-done-stats small{color:var(--muted); font-size:12px}
 .lv-done{margin-bottom:16px; border-color:var(--accent)}
+table.lift-vol td:not(:first-child), table.lift-vol th{text-align:right}
+table.lift-vol td:first-child{font-weight:600}
 .wo-swap small{color:var(--muted)}
 .wo-swap .link-btn{flex-basis:100%; text-align:left; font-size:13px; margin-top:2px}
 .wo-item select{flex:1 1 220px; min-width:0; font:inherit; font-size:15px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
@@ -2489,7 +2491,8 @@ const EXPLAIN = {
   take: () => 'A read of this run the way a coach would give it, written by Stride from your own history (nothing leaves the app). It compares the run with your last few of a similar distance, indoors with indoors and outdoors with outdoors: faster for the same or lower heart rate means fitness is building. Then it looks inside the run (how much was easy, when it got hard, whether heart rate crept up) and ends with one thing to do next.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
-  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is weight × reps added up over every set, a rough measure of how much work you did. For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
+  liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
+  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
   e1rm: () => 'The first number is your estimated one-rep max: the most you could likely lift once, worked out from a set of several reps (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. Tested a true max? Log it as one set of 1 rep: a single counts as exactly what you lifted. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set. Assisted machines count your body weight minus the help (from your latest weight on the Body tab), so less help shows as a higher number; with no weight on file they count reps.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
   goals: () => 'Targets you set yourself. Distance, time and lift goals count your best ever; total miles and number of runs count from the day you set them. Weekly goals need that many weeks in a row, Monday to Sunday, and the week you’re in can’t break a streak. Weight goals use your 7-day average, so one heavy or light morning doesn’t decide it. Lift goals use the estimated one-rep max from the Lift tab (reps, for body-weight moves). Add a date and Stride tells you whether you’re on track and what each week needs from here. The thin line under each bar is how you’ve moved over time; the dashed line is the target.',
@@ -4220,12 +4223,12 @@ const LIFTS = [
   { id:'pushdown', name:'Triceps pushdown (cable)', g:'Push', f:'triceps', inc:5 },
   { id:'ohext', name:'Overhead triceps extension (dumbbell)', g:'Push', f:'triceps', inc:5 },
   { id:'skull', name:'Skull crusher', g:'Push', f:'triceps', inc:5 },
-  { id:'dips', name:'Dips', g:'Push', f:'triceps', inc:5, bw:true },
+  { id:'dips', name:'Dips', g:'Push', f:'triceps', inc:5, bw:true, whole:true },
   { id:'pushup', name:'Push-up', g:'Push', f:'hpress', inc:5, bw:true },
   // Assisted machines: the weight logged is the help, so less is stronger.
   { id:'adips', name:'Assisted dip (machine)', g:'Push', f:'triceps', inc:5, assist:true },
-  { id:'pullup', name:'Pull-up', g:'Pull', f:'vpull', inc:5, bw:true },
-  { id:'chinup', name:'Chin-up', g:'Pull', f:'vpull', inc:5, bw:true },
+  { id:'pullup', name:'Pull-up', g:'Pull', f:'vpull', inc:5, bw:true, whole:true },
+  { id:'chinup', name:'Chin-up', g:'Pull', f:'vpull', inc:5, bw:true, whole:true },
   { id:'apullup', name:'Assisted pull-up (machine)', g:'Pull', f:'vpull', inc:5, assist:true },
   { id:'pulldown', name:'Lat pulldown', g:'Pull', f:'vpull', inc:5 },
   { id:'row', name:'Barbell row', g:'Pull', f:'hpull', inc:5 },
@@ -4265,6 +4268,13 @@ const e1rm = s => s.reps <= 1 ? s.lb : Math.round(s.lb * (1 + s.reps / 30));
 const byReps = def => def.bw || (def.assist && !currentWeight());
 const liftScore = (def, s) => def.assist && currentWeight() ? e1rm({ lb:Math.max(0, Math.round(currentWeight() - s.lb)), reps:s.reps }) : byReps(def) ? s.reps : e1rm(s);
 const setMode = def => def.assist ? 'assist' : def.bw;
+// Volume is weight × reps, added up. Pull-ups, chin-ups and dips lift your whole body, so they
+// count your weight plus anything added; assisted machines your weight minus the help. Other
+// body-weight moves count only added weight. Dumbbells count as logged (one dumbbell).
+const setLoad = (def, s) => def.whole || def.assist ? Math.max(0, (currentWeight() ?? 0) + (def.assist ? -s.lb : +s.lb || 0)) : +s.lb || 0;
+const setsVolume = (def, sets) => sets.reduce((n, s) => n + setLoad(def, s) * (+s.reps || 0), 0);
+const liftVolume = ls => Math.round(ls.reduce((n, l) => n + setsVolume(liftDef(l.ex), l.sets), 0));
+const fmtK = v => v >= 1000 ? `${+(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k` : String(Math.round(v));
 const liftHist = ex => doc.lifts.filter(l => l.ex === ex).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 const topLb = l => Math.max(...l.sets.map(s => s.lb));
 const round5 = v => Math.round(v / 5) * 5;
@@ -4485,8 +4495,8 @@ function liveCommit(it){
   else { it.entry = liftId(); doc.lifts = [...doc.lifts, { id:it.entry, date:LV.date, ex:it.ex, sets, ...(LV.wo ? { wo:LV.wo } : {}), ...(LV.day ? { day:LV.day } : {}) }]; }
 }
 const liveStats = () => {
-  const sets = LV.items.flatMap(it => it.sets.filter(s => s.done));
-  return { sets:sets.length, lbs:sets.reduce((n, s) => n + (+s.lb || 0) * (+s.reps || 0), 0), min:Math.round((Date.now() - LV.started) / 60000) };
+  const done = LV.items.map(it => [liftDef(it.ex), it.sets.filter(s => s.done)]);
+  return { sets:done.reduce((n, [, ss]) => n + ss.length, 0), lbs:Math.round(done.reduce((n, [d, ss]) => n + setsVolume(d, ss), 0)), min:Math.round((Date.now() - LV.started) / 60000) };
 };
 function liveFinish(){
   const st = liveStats(), done = LV.items.filter(it => it.sets.some(s => s.done));
@@ -4659,6 +4669,34 @@ function liftPRCard(){
     <p class="card-sub" style="margin:16px 0 4px">${esc(sel.def.name)} · ${byReps(sel.def) ? 'most reps in a set' : 'estimated 1-rep max'}, best set each day</p>
     <div class="chart" id="c-lift" data-ex="${sel.ex}"></div></div>`;
 }
+const liftWeeks = n => { const ws = weekStart(todayYmd()); return Array.from({ length:n }, (_, i) => addDays(ws, -7 * (n - 1 - i))); };
+const liftsIn = (from, to) => doc.lifts.filter(l => l.date >= from && l.date <= to);
+function liftVolumeCard(){
+  const head = `<div class="card-head"><h2>Volume${infoBtn}</h2><span class="card-sub">weight × reps, added up</span></div>${explain('liftVolume')}`;
+  if (!doc.lifts.length) return `<div class="card">${head}<div class="pending-box">Log a lift and your weekly volume shows here.</div></div>`;
+  const today = todayYmd(), ws = weekStart(today), lws = addDays(ws, -7);
+  const now = liftsIn(ws, today), last = liftsIn(lws, addDays(ws, -1)), lastSoFar = liftsIn(lws, addDays(today, -7));
+  const v = liftVolume(now), lv = liftVolume(last), lsf = liftVolume(lastSoFar), sets = now.reduce((n, l) => n + l.sets.length, 0);
+  const groups = ['Push', 'Pull', 'Legs', 'Core', 'Other'].map(g => {
+    const of = ls => liftVolume(ls.filter(l => (liftDef(l.ex).g ?? 'Other') === g));
+    return [g, of(now), of(last)];
+  }).filter(([, a, b]) => a || b);
+  return `<div class="card">${head}
+    <div class="lv-done-stats"><span><b class="num">${v.toLocaleString()}</b><small>lb this week</small></span><span><b class="num">${sets}</b><small>sets</small></span><span><b class="num">${lv.toLocaleString()}</b><small>lb last week</small></span></div>
+    <p class="card-sub" style="margin:10px 0 0">${today === ws ? 'A new week starts today.' : `By this point last week you were at ${lsf.toLocaleString()} lb.`}</p>
+    ${groups.length ? `<table class="quiet lift-vol" style="margin-top:12px"><tr><th></th><th>This week</th><th>Last week</th></tr>${groups.map(([g, a, b]) => `<tr><td>${g}</td><td>${a.toLocaleString()}</td><td>${b.toLocaleString()}</td></tr>`).join('')}</table>` : ''}
+    <p class="card-sub" style="margin:16px 0 4px">Last 12 weeks</p>
+    <div class="chart" id="c-liftvol"></div></div>`;
+}
+function drawLiftVolume(){
+  const host = $('#c-liftvol'); if (!host) return;
+  const thisWk = weekStart(todayYmd());
+  const cats = liftWeeks(12).map(w => { const ls = liftsIn(w, addDays(w, 6)); return { date:w, v:liftVolume(ls), sets:ls.reduce((n, l) => n + l.sets.length, 0) }; });
+  const top = Math.max(1000, ...cats.map(c => c.v)), step = [1000, 2500, 5000, 10000, 25000, 50000].find(s => top / s <= 5) ?? 100000, max = Math.ceil(top / step) * step;
+  chartColumns(host, { cats, series:[{ key:'v', color:css('--series-1') }], max, ticks:niceTicks(0, max, step), fmt:fmtK,
+    labelFmt:c => c.v ? fmtK(c.v) : '',
+    tipFmt:c => `<b>Week of ${fmtDate(c.date)}</b><br>${c.v.toLocaleString()} lb · ${c.sets} set${c.sets === 1 ? '' : 's'}${c.date === thisWk ? ' · so far' : ''}` });
+}
 function drawLiftChart(){
   const host = $('#c-lift'); if (!host) return;
   const def = liftDef(host.dataset.ex), m = {};
@@ -4702,12 +4740,13 @@ function renderLift(){
   $('#page-lift').innerHTML = band({
     eyebrow: 'Lift · strength alongside your running',
     title: 'Lift',
-    stats: [['Lifts · week', new Set(wk.map(l => l.date)).size, ''], ['Sets · week', wk.reduce((n, l) => n + l.sets.length, 0), ''], ['PRs · 30 days', prs, '']],
+    stats: [['Lifts · week', new Set(wk.map(l => l.date)).size, ''], ['Volume · week', fmtK(liftVolume(wk)), 'lb'], ['PRs · 30 days', prs, '']],
   }) + `<div class="wrap">${liftSummary()}
     <div class="grid two">${liftWorkoutsCard()}${liftLogCard()}</div>
-    <div class="grid two" style="margin-top:16px">${liftPRCard()}${liftRunTips()}</div>
+    <div class="grid two" style="margin-top:16px">${liftVolumeCard()}${liftPRCard()}</div>
+    <div class="grid two" style="margin-top:16px">${liftRunTips()}</div>
   </div>`;
-  drawLiftChart();
+  drawLiftChart(); drawLiftVolume();
 }
 
 const BODY_RANGES = [[30, '30 days'], [90, '90 days'], [365, '1 year']];
