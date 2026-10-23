@@ -726,6 +726,30 @@ table.lift-vol td:first-child{font-weight:600}
 .wo-item select{flex:1 1 220px; min-width:0; font:inherit; font-size:15px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 .wo-item input{width:56px; font:inherit; font-size:16px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 .lift-tips{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.5}
+.bdg-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:10px}
+.bdg{border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--surface)}
+.bdg[open]{grid-column:1 / -1}
+.bdg summary{display:flex; gap:12px; align-items:center; padding:10px 12px; cursor:pointer; list-style:none}
+.bdg summary::-webkit-details-marker{display:none}
+.bdg summary > span{display:flex; flex-direction:column; gap:3px; min-width:0; flex:1}
+.bdg summary small{color:var(--muted); font-size:12px; line-height:1.35}
+.bdg .pbar{margin:3px 0 0}
+.bdg.locked b{color:var(--ink-2)}
+.bdg-tiers{list-style:none; margin:0; padding:4px 12px 12px; display:grid; gap:6px}
+.bdg-tiers li{display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:center; font-size:13.5px; color:var(--muted)}
+.bdg-tiers li.got{color:var(--ink)}
+.bdg-tiers small{font-family:var(--mono); font-size:11px}
+.medal{flex:none; overflow:visible}
+.medal text{font:800 13px/1 var(--mono); fill:var(--accent-ink)}
+.medal .md-rib{fill:var(--line)}
+.medal .md-ring{fill:none; stroke:rgba(255,255,255,.45); stroke-width:1.2}
+.m-bronze .md-disc{fill:#c27b45} .m-silver .md-disc{fill:#b9c1c8} .m-gold .md-disc{fill:#e6b93d}
+.m-volt .md-disc{fill:var(--accent); filter:drop-shadow(0 0 6px rgba(212,255,58,.45))}
+.m-bronze .md-rib, .m-silver .md-rib, .m-gold .md-rib, .m-volt .md-rib{fill:var(--ink-2)}
+.m-none .md-disc{fill:transparent; stroke:var(--line); stroke-width:2; stroke-dasharray:4 3}
+.m-none .md-ring{stroke:none}
+.m-none text{fill:var(--muted)}
+.m-cp .medal{width:22px; height:24px}
 .mbadge{display:inline-flex; flex-direction:column; padding:8px 12px; border-radius:12px; background:var(--accent); color:var(--accent-ink)}
 .mbadge b{font-size:13.5px}
 .mbadge small{font-size:11.5px; opacity:.75}
@@ -2493,6 +2517,7 @@ const EXPLAIN = {
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
   liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
+  badges: () => 'Badges come from what you’ve already done, so older runs and lifts count too. Each one has tiers, from bronze to silver, gold and volt: the more you do, the higher it goes. The bar shows how close you are to the next tier; tap a badge to see every tier and the day you earned it. Runs live on Progress (counts, miles, longest run, steady weeks, fastest mile and 5K, early, late, cold and hot runs); lifting on Lift (lifting days, volume, steady weeks, PRs, pull-ups, run-and-lift days, and bench, squat and deadlift against your body weight, which use your latest weight from the Body tab). New ones show on Today and in the new-run scene.',
   e1rm: () => 'The first number is your estimated one-rep max: the most you could likely lift once, worked out from a set of several reps (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. Tested a true max? Log it as one set of 1 rep: a single counts as exactly what you lifted. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set. Assisted machines count your body weight minus the help (from your latest weight on the Body tab), so less help shows as a higher number; with no weight on file they count reps.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
   goals: () => 'Targets you set yourself. Distance, time and lift goals count your best ever; total miles and number of runs count from the day you set them. Weekly goals need that many weeks in a row, Monday to Sunday, and the week you’re in can’t break a streak. Weight goals use your 7-day average, so one heavy or light morning doesn’t decide it. Lift goals use the estimated one-rep max from the Lift tab (reps, for body-weight moves). Add a date and Stride tells you whether you’re on track and what each week needs from here. The thin line under each bar is how you’ve moved over time; the dashed line is the target.',
@@ -2940,7 +2965,7 @@ async function arrivalMoment(r){
   if (prior.length && r.distMi > Math.max(...prior.map(x => x.distMi ?? 0)) + .02) lines.push('<b>Your longest run yet.</b>');
   if (r.recoveryHr != null && prior.some(x => x.recoveryHr != null) && r.recoveryHr > Math.max(...prior.filter(x => x.recoveryHr != null).map(x => x.recoveryHr))) lines.push(`<b>Best recovery yet</b> — HR dropped ${r.recoveryHr} in 2 minutes.`);
   if (r.anaerobicTE > 1) lines.push('That one got hard (hard-effort score above 1). Keep the next one easy.');
-  const ms = [...milestones(), ...goalHits()].filter(x => x.date === r.date);
+  const ms = [...badgeHits('run'), ...goalHits()].filter(x => x.date === r.date);
   const s = r.hasSamples ? await getSamples(r.id).catch(() => null) : null;
   showMoment('arrival', `
     <button class="moment-x" data-moment-close aria-label="Close">✕</button>
@@ -2954,7 +2979,7 @@ async function arrivalMoment(r){
     </div>
     ${s?.path?.length > 1 && !isTreadmill(r) ? `<div class="m-route">${routeSvg(s.path)}</div>` : ''}
     ${lines.length ? `<ul class="m-lines">${lines.map(l => `<li>${l}</li>`).join('')}</ul>` : ''}
-    ${ms.length ? `<div class="m-checkpoints">${ms.map(x => `<div class="m-cp"><i></i><span>${x.goal ? 'Goal reached' : 'Checkpoint reached'}</span><b>${esc(x.label)}</b></div>`).join('')}</div>` : ''}
+    ${ms.length ? `<div class="m-checkpoints">${ms.map(x => `<div class="m-cp">${x.badge ? medalSvg(x.medal, '', 22) : '<i></i>'}<span>${x.badge ? `${MEDALS[x.medal]} badge` : 'Goal reached'}</span><b>${esc(x.label)}</b></div>`).join('')}</div>` : ''}
     <div class="m-actions">
       <a class="btn primary big" href="#runs/${r.id}" data-moment-close>Open the run</a>
       ${r.date === todayYmd() ? '<a class="btn big" href="#routine/post" data-moment-close>Cool down</a>' : ''}
@@ -3508,11 +3533,166 @@ function syncGoalForm(){
   $('#g-val').placeholder = def ? (b ? String(def.bw ? b + 2 : round5(b * 1.05)) : def.bw ? '10' : t.ph) : $('#g-type').value === 'weight' && currentWeight() ? String(Math.round(currentWeight() - 5)) : t.ph;
   $('#g-val').inputMode = t.unit === 'm:ss' ? 'text' : 'decimal';
 }
+/* ═══ BADGES: a trophy case, run side on Progress, lift side on Lift ═══
+   Nothing is stored: each family turns your history into a running value
+   over time, and a tier is earned the first day that value reaches it, so
+   old runs earn their badges and nothing can drift out of sync. Seen ones
+   share prefs 'seenMilestones' with goals. Add families freely, but keep
+   ids stable: the seen list refers to them. */
+const MEDALS = ['Bronze', 'Silver', 'Gold', 'Volt'];
+const medalOf = (i, n) => Math.min(3, Math.floor(i / n * 4));
+const cum = (items, dateOf, step) => { let v = 0; return items.map(x => [dateOf(x), v = step(v, x)]); };
+const runHour = r => r.source === 'fit' && r.start ? new Date(r.start).getHours() : null;
+// Weeks in a row with at least `need` days, credited the day the week gets there.
+function weekStreak(dates, need){
+  const ds = [...new Set(dates)].sort(), out = [];
+  if (!ds.length) return out;
+  let streak = 0, best = 0;
+  for (let w = weekStart(ds[0]); w <= weekStart(todayYmd()); w = addDays(w, 7)){
+    const inWk = ds.filter(d => d >= w && d < addDays(w, 7));
+    if (inWk.length >= need){ streak++; if (streak > best) out.push([inWk[need - 1], best = streak]); }
+    else if (w < weekStart(todayYmd())) streak = 0;
+  }
+  return out;
+}
+// Best-so-far over time; `lower` for times.
+const bestSoFar = (pts, lower) => { let b = null; return pts.map(([d, v]) => [d, b = b == null ? v : lower ? Math.min(b, v) : Math.max(b, v)]); };
+function liftDays(){
+  const m = {};
+  for (const l of [...doc.lifts].sort(byDate)) (m[l.date] ??= []).push(l);
+  return Object.entries(m);
+}
+// Best estimated max of a barbell lift over your body weight.
+const ratioSeries = ex => { const w = currentWeight(); if (!w) return [];
+  return bestSoFar(liftHist(ex).map(l => [l.date, Math.max(...l.sets.map(e1rm)) / w])); };
+const fmtX = t => `${+t.toFixed(2)}×`;
+const BADGES = [
+  { id:'runs', side:'run', name:'Runs', tiers:[1, 10, 25, 50, 100, 200, 365, 500, 1000],
+    label:t => t === 1 ? 'First run' : `${t} runs`, short:t => t >= 1000 ? '1K' : t, prog:(v, t) => `${v} of ${t} runs`,
+    series:() => sortedRuns().map((r, i) => [r.date, i + 1]) },
+  { id:'miles', side:'run', name:'Total miles', tiers:[10, 25, 50, 100, 250, 500, 1000, 2500],
+    label:t => `${t.toLocaleString()} miles`, short:t => t >= 1000 ? `${t / 1000}K` : t, prog:(v, t) => `${Math.floor(v)} of ${t.toLocaleString()} mi`,
+    series:() => cum(sortedRuns(), r => r.date, (v, r) => v + (r.distMi ?? 0)) },
+  { id:'long', side:'run', name:'Longest run', tiers:LONG_MARKS.map(([t]) => t),
+    label:t => LONG_MARKS.find(([x]) => x === t)[1], short:t => t, prog:(v, t) => `longest ${fmtMi(v - GPS_SLACK)} of ${t} mi`,
+    series:() => bestSoFar(sortedRuns().map(r => [r.date, (r.distMi ?? 0) + GPS_SLACK])) },
+  { id:'streak', side:'run', name:'Steady weeks', tiers:[2, 4, 8, 12, 26, 52],
+    label:t => `${t} weeks in a row of 3+ runs`, short:t => t, prog:(v, t) => `best ${v} of ${t} weeks`,
+    series:() => weekStreak(sortedRuns().map(r => r.date), 3) },
+  { id:'mile', side:'run', name:'Fastest mile', lower:true, tiers:[900, 720, 600, 540, 480, 420],
+    label:t => `A mile under ${fmtDur(t)}`, short:t => Math.round(t / 60), prog:(v, t) => `best ${fmtDur(v)}, aiming under ${fmtDur(t)}`,
+    series:() => bestSoFar(sortedRuns().filter(r => r.best?.mi && timedRun(r)).map(r => [r.date, r.best.mi]), true) },
+  { id:'k5', side:'run', name:'Fastest 5K', lower:true, tiers:[2700, 2400, 2100, 1800, 1500, 1320, 1200],
+    label:t => `A 5K under ${fmtDur(t)}`, short:t => Math.round(t / 60), prog:(v, t) => `best ${fmtDur(v)}, aiming under ${fmtDur(t)}`,
+    series:() => bestSoFar(sortedRuns().filter(r => r.best?.k5 && timedRun(r)).map(r => [r.date, r.best.k5]), true) },
+  { id:'records', side:'run', name:'Records broken', tiers:[1, 3, 5, 10, 25],
+    label:t => t === 1 ? 'Beat your own mile or 5K record' : `Beat your own records ${t} times`, short:t => t, prog:(v, t) => `${v} of ${t} records`,
+    series:() => { const best = {}, out = []; let n = 0;
+      for (const r of sortedRuns()) if (timedRun(r)) for (const k of ['mi', 'k5']){
+        const v = r.best?.[k]; if (!v) continue;
+        if (best[k] != null && v < best[k]) out.push([r.date, ++n]);
+        best[k] = Math.min(best[k] ?? v, v);
+      }
+      return out; } },
+  { id:'early', side:'run', name:'Early bird', tiers:[1, 5, 10, 25, 50],
+    label:t => t === 1 ? 'A run before 6am' : `${t} runs before 6am`, short:t => t, prog:(v, t) => `${v} of ${t} before 6am`,
+    series:() => sortedRuns().filter(r => runHour(r) != null && runHour(r) < 6).map((r, i) => [r.date, i + 1]) },
+  { id:'night', side:'run', name:'Night owl', tiers:[1, 5, 10, 25, 50],
+    label:t => t === 1 ? 'A run after 9pm' : `${t} runs after 9pm`, short:t => t, prog:(v, t) => `${v} of ${t} after 9pm`,
+    series:() => sortedRuns().filter(r => runHour(r) >= 21).map((r, i) => [r.date, i + 1]) },
+  { id:'cold', side:'run', name:'Cold runs', tiers:[1, 5, 10, 25],
+    label:t => t === 1 ? 'A run under 40°F' : `${t} runs under 40°F`, short:t => t, prog:(v, t) => `${v} of ${t} under 40°F`,
+    series:() => sortedRuns().filter(r => r.tempF != null && r.tempF < 40).map((r, i) => [r.date, i + 1]) },
+  { id:'hot', side:'run', name:'Hot runs', tiers:[1, 5, 10, 25],
+    label:t => t === 1 ? 'A run over 85°F' : `${t} runs over 85°F`, short:t => t, prog:(v, t) => `${v} of ${t} over 85°F`,
+    series:() => sortedRuns().filter(r => r.tempF >= 85).map((r, i) => [r.date, i + 1]) },
+  { id:'lifts', side:'lift', name:'Lifting days', tiers:[1, 10, 25, 50, 100, 200, 365],
+    label:t => t === 1 ? 'First lifting day' : `${t} lifting days`, short:t => t, prog:(v, t) => `${v} of ${t} days`,
+    series:() => liftDays().map(([d], i) => [d, i + 1]) },
+  { id:'tonnage', side:'lift', name:'Lifetime volume', tiers:[10000, 100000, 250000, 500000, 1000000, 2500000],
+    label:t => `${fmtK(t)} lb lifted in all`, short:t => t >= 1e6 ? `${t / 1e6}M` : fmtK(t), prog:(v, t) => `${fmtK(v)} of ${fmtK(t)} lb`,
+    series:() => cum(liftDays(), ([d]) => d, (v, [, ls]) => v + liftVolume(ls)) },
+  { id:'bigweek', side:'lift', name:'Big week', tiers:[5000, 10000, 25000, 50000, 100000],
+    label:t => `${fmtK(t)} lb in one week`, short:t => fmtK(t), prog:(v, t) => `best week ${fmtK(v)} of ${fmtK(t)} lb`,
+    series:() => { let wk = null, sum = 0;
+      return bestSoFar(liftDays().map(([d, ls]) => { if (weekStart(d) !== wk){ wk = weekStart(d); sum = 0; } return [d, sum += liftVolume(ls)]; })); } },
+  { id:'liftweeks', side:'lift', name:'Steady lifting', tiers:[2, 4, 8, 12, 26, 52],
+    label:t => `${t} weeks in a row lifting twice`, short:t => t, prog:(v, t) => `best ${v} of ${t} weeks`,
+    series:() => weekStreak(liftDays().map(([d]) => d), 2) },
+  { id:'liftprs', side:'lift', name:'PRs', tiers:[1, 10, 25, 50, 100, 250],
+    label:t => t === 1 ? 'First PR' : `${t} PRs`, short:t => t, prog:(v, t) => `${v} of ${t} PRs`,
+    series:() => { const best = {}, out = []; let n = 0;
+      for (const l of [...doc.lifts].sort(byDate)){
+        const def = liftDef(l.ex), v = Math.max(...l.sets.map(x => liftScore(def, x)));
+        if (best[l.ex] != null && v > best[l.ex]) out.push([l.date, ++n]);
+        best[l.ex] = Math.max(best[l.ex] ?? v, v);
+      }
+      return out; } },
+  { id:'pullups', side:'lift', name:'Pull-ups', tiers:[1, 5, 10, 15, 20],
+    label:t => t === 1 ? 'First pull-up, no help' : `${t} pull-ups in a set`, short:t => t, prog:(v, t) => `best ${v} of ${t} in a set`,
+    series:() => bestSoFar(doc.lifts.filter(l => l.ex === 'pullup' || l.ex === 'chinup').sort(byDate).map(l => [l.date, Math.max(...l.sets.map(x => x.reps))])) },
+  { id:'benchx', side:'lift', name:'Bench press', needsWeight:true, tiers:[.5, .75, 1, 1.25, 1.5],
+    label:t => `Bench ${fmtX(t)} your body weight`, short:fmtX, prog:(v, t) => `${fmtX(v)} of ${fmtX(t)} body weight`, series:() => ratioSeries('bench') },
+  { id:'squatx', side:'lift', name:'Squat', needsWeight:true, tiers:[.75, 1, 1.25, 1.5, 2],
+    label:t => `Squat ${fmtX(t)} your body weight`, short:fmtX, prog:(v, t) => `${fmtX(v)} of ${fmtX(t)} body weight`, series:() => ratioSeries('squat') },
+  { id:'deadx', side:'lift', name:'Deadlift', needsWeight:true, tiers:[1, 1.25, 1.5, 2, 2.5],
+    label:t => `Deadlift ${fmtX(t)} your body weight`, short:fmtX, prog:(v, t) => `${fmtX(v)} of ${fmtX(t)} body weight`, series:() => ratioSeries('deadlift') },
+  { id:'hybrid', side:'lift', name:'Run and lift', tiers:[1, 10, 25, 50, 100],
+    label:t => t === 1 ? 'A run and a lift on the same day' : `${t} days with a run and a lift`, short:t => t, prog:(v, t) => `${v} of ${t} days`,
+    series:() => { const runDays = new Set(doc.runs.map(r => r.date)); return liftDays().filter(([d]) => runDays.has(d)).map(([d], i) => [d, i + 1]); } },
+];
+// Each family's state: its value now and every tier with the day it was earned.
+function badgeState(b){
+  const pts = b.series();
+  const tiers = b.tiers.map((t, i) => ({ t, i, medal:medalOf(i, b.tiers.length), date:pts.find(([, v]) => b.lower ? v <= t : v >= t)?.[0] ?? null }));
+  return { b, v:pts.at(-1)?.[1] ?? null, tiers, got:tiers.filter(x => x.date), next:tiers.find(x => !x.date) };
+}
+// Every tier earned, as checkpoints: the new-run scene, Today and the Lift page show recent ones.
+const badgeHits = side => BADGES.filter(b => !side || b.side === side).flatMap(b => badgeState(b).got.map(x =>
+  ({ id:`b-${b.id}-${x.t}`, label:b.label(x.t), date:x.date, medal:x.medal, badge:true })));
+const freshBadges = side => { const seen = prefs.get('seenMilestones', []); return badgeHits(side).filter(x => diffDays(x.date, todayYmd()) <= 3 && !seen.includes(x.id)); };
+function medalSvg(level, txt, size = 44){
+  const cls = level == null ? 'none' : MEDALS[level].toLowerCase();
+  return `<svg class="medal m-${cls}" viewBox="0 0 48 52" width="${size}" height="${Math.round(size * 52 / 48)}" aria-hidden="true">
+    <path d="M14 2h8l4 12h-8zM34 2h-8l-4 12h8z" class="md-rib"/><circle cx="24" cy="31" r="18" class="md-disc"/><circle cx="24" cy="31" r="13.5" class="md-ring"/>
+    <text x="24" y="35.5" text-anchor="middle">${esc(String(txt))}</text></svg>`;
+}
+function badgesCard(side){
+  const fams = BADGES.filter(b => b.side === side), states = fams.map(badgeState), fresh = new Set(freshBadges(side).map(x => x.id));
+  const n = states.reduce((a, s) => a + s.got.length, 0), total = states.reduce((a, s) => a + s.tiers.length, 0);
+  const noWeight = side === 'lift' && !currentWeight();
+  const tile = st => {
+    const { b } = st, top = st.got.at(-1), nx = st.next, isNew = st.got.some(x => fresh.has(`b-${b.id}-${x.t}`));
+    if (b.needsWeight && noWeight) return '';
+    const pct = nx && st.v != null ? Math.max(0, Math.min(1, b.lower ? nx.t / st.v : st.v / nx.t)) : 0;
+    return `<details class="bdg${top ? '' : ' locked'}"><summary>${medalSvg(top ? top.medal : null, b.short(top ? top.t : nx.t))}
+      <span><b>${b.name}${isNew ? ' <span class="badge test">new</span>' : ''}</b><small>${top ? `${esc(b.label(top.t))} · ${MEDALS[top.medal]}` : 'Not yet'}</small>
+      ${nx ? `${goalBar(pct)}<small>${st.v != null ? esc(b.prog(st.v, nx.t)) : `Next: ${esc(b.label(nx.t))}`}</small>` : '<small>Every tier earned</small>'}</span></summary>
+      <ol class="bdg-tiers">${st.tiers.map(x => `<li class="${x.date ? 'got' : ''}">${medalSvg(x.date ? x.medal : null, b.short(x.t), 26)}<span>${esc(b.label(x.t))}</span><small>${x.date ? fmtDate(x.date) : MEDALS[x.medal]}</small></li>`).join('')}</ol></details>`;
+  };
+  return `<div class="card"><div class="card-head"><h2>Badges${infoBtn}</h2><span class="card-sub">${n} of ${total} earned · tap one for its tiers</span></div>${explain('badges')}
+    <div class="bdg-grid">${states.map(tile).join('')}</div>
+    ${noWeight ? '<p class="card-sub" style="margin:12px 0 0">Add your weight on the Body tab to unlock the bench, squat and deadlift badges.</p>' : ''}</div>`;
+}
+// The first time a device opens with history, what's already earned goes quietly into the
+// case; only badges earned after that get announced.
+function badgesInit(){
+  if (prefs.get('badgesInit', false) || !(doc.runs.length || doc.lifts.length)) return;
+  prefs.set('seenMilestones', [...new Set([...prefs.get('seenMilestones', []), ...badgeHits().map(x => x.id)])].slice(-400));
+  prefs.set('badgesInit', true);
+}
+// Fresh badges on the Lift page, once per device.
+function freshBadgesCard(side){
+  const fresh = freshBadges(side);
+  if (!fresh.length) return '';
+  return `<div class="card milestone-new" style="margin-bottom:16px"><div class="card-head"><h2>Badge${fresh.length > 1 ? 's' : ''} earned</h2><button class="link-btn" data-seen-milestones="${fresh.map(x => x.id).join(',')}">Hide</button></div>
+    <div class="m-checkpoints">${fresh.map(cpRow).join('')}</div></div>`;
+}
+const cpRow = x => `<div class="m-cp">${x.badge ? medalSvg(x.medal, '', 22) : '<i></i>'}<span>${x.badge ? `${MEDALS[x.medal]} badge` : x.goal ? 'Goal' : 'Checkpoint'} · ${fmtDate(x.date)}</span><b>${esc(x.label)}</b></div>`;
 function goalsCard(){
-  const m = milestones(), goals = myGoals().map(g => ({ g, st:goalState(g) }));
+  const goals = myGoals().map(g => ({ g, st:goalState(g) }));
   const active = goals.filter(x => !x.st.hit), done = goals.filter(x => x.st.hit).sort((a, b) => a.st.hit < b.st.hit ? 1 : -1);
   const ideas = active.length < 3 ? goalIdeas() : [];
-  const earned = [...m].sort((a, b) => a.date < b.date ? 1 : -1);
   return `<div class="grid two">
     <div class="card"><div class="card-head"><h2>Your goals${infoBtn}</h2><span class="card-sub">${active.length ? `${active.length} in progress` : 'set your own targets'}${done.length ? ` · ${done.length} done` : ''}</span></div>
       ${explain('goals')}
@@ -3524,12 +3704,7 @@ function goalsCard(){
         <ul class="goal-list" style="margin-top:10px">${done.map(x => `<li><div class="goal-top"><b>✓ ${esc(goalLabel(x.g))}</b><button class="link-btn" data-del-goal="${x.g.id}" aria-label="Remove goal">remove</button></div>
           <div class="card-sub">Hit ${fmtDate(x.st.hit)}, ${Math.max(0, diffDays(x.g.since, x.st.hit))} days after you set it</div></li>`).join('')}</ul></details>` : ''}
     </div>
-    <div class="card"><div class="card-head"><h2>Milestones</h2><span class="card-sub">${earned.length} earned</span></div>
-      ${earned.length ? `<div class="badges">${earned.slice(0, 6).map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div>` : ''}
-      <div class="eyebrow" style="margin:14px 0 8px">Up next</div>
-      <ul class="goal-list">${nextMilestones(m).map(([l, pct, txt]) => `<li><div class="goal-top"><b>${esc(l)}</b></div>${goalBar(pct)}<div class="card-sub">${esc(txt)}</div></li>`).join('')}</ul>
-      ${earned.length > 6 ? `<details style="margin-top:12px"><summary class="card-sub" style="cursor:pointer">All ${earned.length}</summary><div class="badges" style="margin-top:10px">${earned.slice(6).map(x => `<span class="mbadge"><b>${esc(x.label)}</b><small>${fmtDate(x.date)}</small></span>`).join('')}</div></details>` : ''}
-    </div>
+    ${badgesCard('run')}
   </div>`;
 }
 // Today: the goals in progress, deadlines first, then the closest to done.
@@ -3542,10 +3717,10 @@ function goalsTodayCard(){
 }
 // A milestone from the last couple of days gets a moment on Today, once per device.
 function milestoneCard(){
-  const seen = prefs.get('seenMilestones', []), fresh = [...milestones(), ...goalHits()].filter(x => diffDays(x.date, todayYmd()) <= 2 && !seen.includes(x.id));
+  const seen = prefs.get('seenMilestones', []), fresh = [...badgeHits(), ...goalHits()].filter(x => diffDays(x.date, todayYmd()) <= 2 && !seen.includes(x.id));
   if (!fresh.length) return '';
-  return `<div class="card milestone-new" style="margin-bottom:16px"><div class="card-head"><h2>Checkpoint${fresh.length > 1 ? 's' : ''} reached</h2><button class="link-btn" data-seen-milestones="${fresh.map(x => x.id).join(',')}">Hide</button></div>
-    <div class="m-checkpoints">${fresh.map(x => `<div class="m-cp"><i></i><span>${x.goal ? 'Goal · ' : ''}${fmtDate(x.date)}</span><b>${esc(x.label)}</b></div>`).join('')}</div></div>`;
+  return `<div class="card milestone-new" style="margin-bottom:16px"><div class="card-head"><h2>${fresh.every(x => x.badge) ? `Badge${fresh.length > 1 ? 's' : ''} earned` : `Checkpoint${fresh.length > 1 ? 's' : ''} reached`}</h2><button class="link-btn" data-seen-milestones="${fresh.map(x => x.id).join(',')}">Hide</button></div>
+    <div class="m-checkpoints">${fresh.map(cpRow).join('')}</div></div>`;
 }
 
 /* ── Week in review ───────────────────────────────────────────────── */
@@ -4741,10 +4916,10 @@ function renderLift(){
     eyebrow: 'Lift · strength alongside your running',
     title: 'Lift',
     stats: [['Lifts · week', new Set(wk.map(l => l.date)).size, ''], ['Volume · week', fmtK(liftVolume(wk)), 'lb'], ['PRs · 30 days', prs, '']],
-  }) + `<div class="wrap">${liftSummary()}
+  }) + `<div class="wrap">${liftSummary()}${freshBadgesCard('lift')}
     <div class="grid two">${liftWorkoutsCard()}${liftLogCard()}</div>
     <div class="grid two" style="margin-top:16px">${liftVolumeCard()}${liftPRCard()}</div>
-    <div class="grid two" style="margin-top:16px">${liftRunTips()}</div>
+    <div class="grid two" style="margin-top:16px">${badgesCard('lift')}${liftRunTips()}</div>
   </div>`;
   drawLiftChart(); drawLiftVolume();
 }
@@ -6255,7 +6430,7 @@ document.addEventListener('click', async e => {
   const dg = e.target.closest('[data-del-goal]');
   if (dg){ doc.goals = doc.goals.filter(g => g.id !== dg.dataset.delGoal); await save(); render(); return; }
   const sm = e.target.closest('[data-seen-milestones]');
-  if (sm){ prefs.set('seenMilestones', [...prefs.get('seenMilestones', []), ...sm.dataset.seenMilestones.split(',')].slice(-200)); render(); return; }
+  if (sm){ prefs.set('seenMilestones', [...prefs.get('seenMilestones', []), ...sm.dataset.seenMilestones.split(',')].slice(-400)); render(); return; }
   const ia = e.target.closest('[data-intake]');
   if (ia){
     const [id, v] = ia.dataset.intake.split('|'), a = intakeAnswers();
@@ -6608,6 +6783,7 @@ document.addEventListener('submit', e => {
 /* ── Routing ─────────────────────────────────────────────────────── */
 document.querySelectorAll('.tab[data-page]').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.page; }));
 function render(){
+  badgesInit();
   let [page, arg] = (location.hash.slice(1) || 'today').split('/');
   if (page === 'upload') page = 'setup';   // older links
   if (page === 'body' && arg === 'lifting') page = 'lift';   // older links

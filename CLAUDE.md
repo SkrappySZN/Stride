@@ -76,6 +76,12 @@ data runs through it, so treat changes to data handling with care.
   max, reps for body-weight moves). Progress is always derived from the data, never stored. A date adds an on-track
   line. Hits show as checkpoints (Today card, new-run moment). Unknown types are skipped (`myGoals()`), so add types
   freely but never rename one. They show on Progress and, while any are active, on Today.
+- **Badges** (`BADGES`, `badgeState`, `badgesCard(side)`): a trophy case, run side on Progress (it replaced the
+  Milestones card), lift side on Lift. Each family's `series()` turns history into a running value over time; a tier
+  is earned the first day it reaches the threshold (`lower` for times), so nothing is stored. Tiers go Bronze → Silver
+  → Gold → Volt by position (`medalOf`). New ones show via `badgeHits()` in the new-run scene, Today's checkpoint card
+  and the top of Lift, sharing `prefs` 'seenMilestones' with goals; `badgesInit()` quietly marks what's already earned
+  the first time a device opens with data. Add families freely; keep `id`s and thresholds stable, since seen ids use them.
 - **Also in the doc**: `shoes`/`defaultShoe` (`run.shoeId`), `pains` (body
   map; shin/Achilles or a sharp knee adds a red check-in with `stage:'map'`),
   `routines`, `crew`. Per-device niceties (dismissed cards, sound) live in
