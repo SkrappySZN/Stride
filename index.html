@@ -648,6 +648,10 @@ a.btn.primary{color:var(--accent-ink)}
 .lift-prs tr{cursor:pointer}
 .lift-prs tr[aria-current] td:first-child{color:var(--accent-text); font-weight:700}
 table.lift-prs td:nth-child(3), table.lift-recent td:nth-child(3){text-align:right}
+table.lift-prs th{text-align:right; white-space:nowrap}
+table.lift-prs th:first-child{text-align:left}
+table.lift-prs td:nth-child(2){white-space:nowrap}
+table.lift-prs td small{display:block; margin-top:2px; font-size:11px; font-weight:400; color:var(--muted)}
 table.lift-recent td:nth-child(2){text-align:left; font-weight:600}
 table.lift-recent td:first-child{white-space:nowrap; padding-right:12px}
 .wo-sub{display:flex; align-items:center; gap:8px; margin:20px 0 10px; padding-top:16px; border-top:1px solid var(--line); font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
@@ -4839,10 +4843,10 @@ function liftPRCard(){
   if (!exs.length) return `<div class="card"><div class="card-head"><h2>PRs${infoBtn}</h2><span class="card-sub">your bests, per lift</span></div>${explain('e1rm')}<div class="pending-box">Log a lift and your bests show here.</div></div>`;
   const sel = exs.find(x => x.ex === liftUi.chart) ?? exs[0];
   return `<div class="card"><div class="card-head"><h2>PRs${infoBtn}</h2><span class="card-sub">tap a lift for its chart</span></div>${explain('e1rm')}
-    <table class="quiet lift-prs">${exs.map(x => `<tr data-lift-chart="${x.ex}"${x.ex === sel.ex ? ' aria-current="true"' : ''}>
+    <table class="quiet lift-prs"><tr><th>Lift</th><th>Your best</th><th>Actually lifted</th></tr>${exs.map(x => `<tr data-lift-chart="${x.ex}"${x.ex === sel.ex ? ' aria-current="true"' : ''}>
       <td>${esc(x.def.name)}${x.best.date > x.first && diffDays(x.best.date, todayYmd()) <= 14 ? ' <span class="badge test">new PR</span>' : ''}</td>
-      <td>${byReps(x.def) ? `${x.best.v} reps` : `${x.best.v} lb`}</td>
-      <td>${x.def.assist ? `least help ${x.heavy.s.lb} lb × ${x.heavy.s.reps}` : x.def.bw ? (x.heavy.s.lb ? `heaviest +${x.heavy.s.lb} lb` : 'body weight') : `heaviest ${x.heavy.s.lb} × ${x.heavy.s.reps}`}</td></tr>`).join('')}</table>
+      <td>${byReps(x.def) ? `<b>${x.best.v} reps</b><small>most in one set</small>` : `<b>~${x.best.v} lb</b><small>estimated max</small>`}</td>
+      <td>${x.def.assist ? `${x.heavy.s.lb} lb help × ${x.heavy.s.reps}<small>least help</small>` : x.def.bw ? `${x.heavy.s.lb ? `+${x.heavy.s.lb} lb` : 'body weight'} × ${x.heavy.s.reps}<small>heaviest set</small>` : `${x.heavy.s.lb} lb × ${x.heavy.s.reps}<small>heaviest set</small>`}</td></tr>`).join('')}</table>
     <p class="card-sub" style="margin:16px 0 4px">${esc(sel.def.name)} · ${byReps(sel.def) ? 'most reps in a set' : 'estimated 1-rep max'}, best set each day</p>
     <div class="chart" id="c-lift" data-ex="${sel.ex}"></div></div>`;
 }
