@@ -7,8 +7,7 @@
 <title>Stride</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="theme-color" content="#eef0ea" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0c0d0e" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0c0d0e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Stride">
@@ -21,6 +20,8 @@
   // Night is the default look; set before first paint so there's no flash of the light theme.
   try { document.documentElement.dataset.theme = JSON.parse(localStorage.getItem('stride:theme')) || 'dark'; }
   catch { document.documentElement.dataset.theme = 'dark'; }
+  // The phone's status bar and Safari's toolbar take the app's colour, not the phone's setting.
+  document.querySelector('meta[name="theme-color"]').content = document.documentElement.dataset.theme === 'light' ? '#eef0ea' : '#0c0d0e';
 </script>
 <style>
 /* ── Tokens ───────────────────────────────────────────────────────── */
@@ -106,6 +107,15 @@ button{font:inherit;color:inherit}
 }
 .num{font-variant-numeric:tabular-nums}
 
+/* ── App feel: no tap flash or double-tap zoom delay, a press you can feel ── */
+html{-webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%}
+button, a, summary, select, label, [data-action], [role="tab"]{touch-action:manipulation}
+.btn:active, .pill:active, .tab:active, .icon-btn:active, .gym-nav:active, .lv-tick:active, .lv-step button:active, .ex-row:active, .seg button:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){ .btn:active, .pill:active, .tab:active, .icon-btn:active, .gym-nav:active, .lv-tick:active, .lv-step button:active, .ex-row:active, .seg button:active{transform:none} }
+/* Small text buttons keep their look but get a thumb-sized touch area. */
+.link-btn, .info-btn, td a, .card-sub a, a.card-sub{position:relative}
+.link-btn::before, .info-btn::before, td a::before, .card-sub a::before, a.card-sub::before{content:""; position:absolute; inset:-11px -4px}
+details > summary{padding:6px 0; cursor:pointer}
 /* ── Shell: top bar + full-bleed poster bands ─────────────────────── */
 .topbar{position:sticky; top:0; z-index:30; background:color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid var(--line)}
 .topbar-in{max-width:1240px; margin:0 auto; padding:0 28px; height:62px; display:flex; align-items:center; gap:28px}
@@ -420,11 +430,16 @@ details.stored summary::-webkit-details-marker{display:none}
   .tab{flex-direction:column; gap:3px; font-size:10.5px; padding:6px 2px; border-radius:10px; flex:1; min-width:0}
   .tab span{overflow:hidden; text-overflow:ellipsis; max-width:100%}
   .wrap{padding:0 16px}
-  .band-in{padding:24px 16px 22px; grid-template-columns:minmax(0,1fr)}
-  .band-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px 12px}
+  .band-in{padding:18px 16px 16px; grid-template-columns:minmax(0,1fr); gap:14px}
+  .band-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 12px}
+  .bstat-v{font-size:34px}
+  .bstat-l{font-size:10px; margin-top:4px}
+  .band-sub{font-size:14px; margin-top:8px}
+  /* Phones zoom into any field under 16px; keep them at 16. */
+  input, select, textarea{font-size:16px !important}
   .bstat-v{font-size:32px}
   .bstat-l{font-size:10px; letter-spacing:.08em}
-  .band-title{font-size:58px}
+  .band-title{font-size:46px}
   main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
   .kpi .k-val{font-size:54px}
 }
@@ -734,10 +749,8 @@ body.gym main{padding-bottom:0}
 .seg{display:flex; gap:4px; padding:4px; margin:0 0 16px; border-radius:14px; background:var(--surface-2); border:1px solid var(--line)}
 .seg button{flex:1; min-height:42px; border:0; border-radius:10px; background:none; color:var(--muted); font:inherit; font-weight:700; font-size:14px; cursor:pointer}
 .seg button[aria-selected="true"]{background:color-mix(in srgb, var(--accent) 16%, var(--surface)); color:var(--ink); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent)}
-.fab{position:fixed; right:16px; bottom:calc(84px + env(safe-area-inset-bottom)); z-index:26; display:flex; align-items:center; gap:8px; min-height:52px; padding:0 20px; border-radius:26px; border:0; background:var(--accent); color:var(--accent-ink); font:inherit; font-weight:800; font-size:15px; box-shadow:0 6px 20px rgba(0,0,0,.35); cursor:pointer}
-.fab span{font-size:22px; line-height:1}
-@media (min-width:721px){ .fab{bottom:24px; right:24px} }
-#page-lift .wrap{padding-bottom:80px}
+.lift-hero-log{width:100%; margin-top:14px; min-height:46px}
+.wk-nav{min-width:40px; min-height:40px}
 /* Live workout */
 .wrap.lv{max-width:760px}
 .lv-strip{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 10px; margin:0 -2px 6px; scrollbar-width:none}
@@ -798,6 +811,10 @@ table.lift-vol td:first-child{font-weight:600}
 .wo-item select{flex:1 1 220px; min-width:0; font:inherit; font-size:15px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 .wo-item input{width:56px; font:inherit; font-size:16px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 .lift-tips{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.5}
+.goal-open{width:100%; margin-top:14px; min-height:46px}
+.bdg-more{margin-top:10px}
+.bdg-more > summary{font-weight:700; color:var(--ink-2); padding:10px 0}
+.bdg-more .bdg-grid{margin-top:6px}
 .bdg-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:10px}
 .bdg{border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--surface)}
 .bdg[open]{grid-column:1 / -1}
@@ -828,8 +845,8 @@ table.lift-vol td:first-child{font-weight:600}
 .goal-form{margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
 
 table.runs td.r-shoe{max-width:150px; overflow:hidden; text-overflow:ellipsis; text-align:left; font-size:13px}
-.shoe-pick{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:650}
-.shoe-pick select{font:inherit; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
+.shoe-pick{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:650; max-width:100%; min-width:0}
+.shoe-pick select{min-width:0; max-width:100%; flex:1; text-overflow:ellipsis; font:inherit; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 
 .recap-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:720px){ .recap-stats{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -1485,6 +1502,8 @@ const fmtDateLong = s => { const d = parseYmd(s); return `${DOW_LONG[d.getDay()]
 const fmtRel = s => { const k = diffDays(todayYmd(), s); return k === 0 ? 'Today' : k === 1 ? 'Tomorrow' : k === -1 ? 'Yesterday' : fmtDateLong(s); };
 const fmtTime = iso => new Date(iso).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
 const fmtMi = v => v == null ? '—' : v.toFixed(2);
+// Names people type can be long; lists show the start of them.
+const shortName = (t, n = 16) => t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t;
 const num = (v, d = 0) => v == null || !isFinite(v) ? '—' : Number(v).toFixed(d);
 const hoursSince = r => (Date.now() - Date.parse(r.start)) / 36e5;
 
@@ -2310,6 +2329,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(b => b.addEventListener
   const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const next = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.dataset.theme = next;
+  $('meta[name="theme-color"]').content = next === 'light' ? '#eef0ea' : '#0c0d0e';
   prefs.set('theme', next);
   render();
 }));
@@ -2968,11 +2988,11 @@ function drawJourney(host){
     }
     tipOn(el('circle', { cx:x, cy:y - 3, r:10, fill:'transparent' }, svg), `<b>Checkpoint</b><br>${esc(c.label)} · ${fmtDate(c.date)}`);
   });
-  // Every run, sized by distance.
-  const perDay = {};
+  // Every run, sized by distance, and smaller as they crowd together so the road stays readable.
+  const perDay = {}, cap = Math.max(2.2, Math.min(8, (W - m.l - m.r) / Math.max(1, runs.length) * .75));
   runs.forEach(r => {
     const k = perDay[r.date] = (perDay[r.date] ?? 0) + 1, x = X(r.date) + (k - 1) * 5, y = Y(x);
-    const rad = 3 + Math.min(5, (r.distMi ?? 0) * 1.6), tread = isTreadmill(r);
+    const rad = Math.min(cap, 3 + Math.min(5, (r.distMi ?? 0) * 1.6)), tread = isTreadmill(r);
     el('circle', { cx:x, cy:y, r:rad, fill:tread ? css('--surface') : isClean(r) ? lit : ink, stroke:tread ? css('--series-1') : css('--surface'), 'stroke-width':tread ? 2 : 1.5, class:'j-run' }, svg);
     const hit = el('circle', { cx:x, cy:y, r:Math.max(10, rad + 4), fill:'transparent', style:'cursor:pointer', 'data-goto':'runs/' + r.id }, svg);
     tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${fmtMi(r.distMi)} mi · ${fmtDur(r.timerSec)} · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${tread ? ' · treadmill' : isClean(r) ? ' · test route' : ''}`);
@@ -2989,7 +3009,7 @@ function drawJourney(host){
   // The finish words get whatever room the start label leaves, cut short if need be.
   const startTxt = `START · ${fmtDate(start).slice(4).toUpperCase()}`, room = Math.floor((W - m.l - m.r - startTxt.length * 6.2 - 20) / 6.4);
   const fin = journeyFinish();
-  el('text', { x:fx + 6, y:H - 8, 'text-anchor':'end', class:'j-finish' }, svg).textContent = fin.length > room ? fin.slice(0, Math.max(4, room - 1)).trimEnd() + '…' : fin;
+  el('text', { x:fx + 6, y:H - 8, 'text-anchor':'end', class:'j-finish' }, svg).textContent = fin.length > room ? fin.split(' · ')[0] : fin;   // a cut-off phrase reads worse than none
   el('text', { x:m.l, y:H - 8, class:'j-label' }, svg).textContent = startTxt;
 }
 
@@ -3593,7 +3613,7 @@ function goalForm(){
       <div class="field" id="g-weeks-f" hidden><label for="g-weeks">Weeks in a row</label><input id="g-weeks" inputmode="numeric" value="4"></div>
       <div class="field"><label for="g-by">By (optional)</label><input id="g-by" type="date"></div>
     </div>
-    <div class="btn-row" style="margin-top:12px"><button class="btn small primary" data-action="add-goal">Add goal</button></div>
+    <button class="btn primary big sheet-save" data-action="add-goal">Add goal</button>
   </div>`;
 }
 // Keep the form's extra fields and units in step with the goal type (and, for lifts, the exercise).
@@ -3742,8 +3762,12 @@ function badgesCard(side){
       ${nx ? `${goalBar(pct)}<small>${st.v != null ? esc(b.prog(st.v, nx.t)) : `Next: ${esc(b.label(nx.t))}`}</small>` : '<small>Every tier earned</small>'}</span></summary>
       <ol class="bdg-tiers">${st.tiers.map(x => `<li class="${x.date ? 'got' : ''}">${medalSvg(x.date ? x.medal : null, b.short(x.t), 26)}<span>${esc(b.label(x.t))}</span><small>${x.date ? fmtDate(x.date) : MEDALS[x.medal]}</small></li>`).join('')}</ol></details>`;
   };
+  // New ones first, then the closest to their next tier; finished families last.
+  const rank = st => st.got.some(x => fresh.has(`b-${st.b.id}-${x.t}`)) ? 2 : st.next ? (st.v != null ? Math.min(1, st.b.lower ? st.next.t / st.v : st.v / st.next.t) : 0) : -1;
+  const order = states.filter(st => !(st.b.needsWeight && noWeight)).sort((a, b) => rank(b) - rank(a)), rest = order.slice(4);
   return `<div class="card"><div class="card-head"><h2>Badges${infoBtn}</h2><span class="card-sub">${n} of ${total} earned · tap one for its tiers</span></div>${explain('badges')}
-    <div class="bdg-grid">${states.map(tile).join('')}</div>
+    <div class="bdg-grid">${order.slice(0, 4).map(tile).join('')}</div>
+    ${rest.length ? `<details class="bdg-more"><summary>See all ${order.length} badges</summary><div class="bdg-grid">${rest.map(tile).join('')}</div></details>` : ''}
     ${noWeight ? '<p class="card-sub" style="margin:12px 0 0">Add your weight on the Body tab to unlock the bench, squat and deadlift badges.</p>' : ''}</div>`;
 }
 // The first time a device opens with history, what's already earned goes quietly into the
@@ -3771,7 +3795,7 @@ function goalsCard(){
       ${active.length ? `<ul class="goal-list">${active.map(x => goalRow(x.g)).join('')}</ul>`
         : `<p class="card-sub" style="margin:0 0 12px">Something to aim at makes the easy weeks easier. Go further, get faster, show up every week, or hit a weight or a lift.${ideas.length ? ' A few, from what you’ve done:' : ''}</p>`}
       ${ideas.length ? `<div class="pill-row" style="margin:${active.length ? '14px' : '0'} 0 6px">${ideas.map(([t, v, l, ex]) => `<button class="pill" data-goal-idea="${t}|${v}|${ex ?? ''}">+ ${esc(l)}</button>`).join('')}</div>` : ''}
-      ${goalForm()}
+      <button class="btn goal-open" data-action="goal-open">+ Add your own goal</button>
       ${done.length ? `<details style="margin-top:14px"><summary class="card-sub" style="cursor:pointer">Done (${done.length})</summary>
         <ul class="goal-list" style="margin-top:10px">${done.map(x => `<li><div class="goal-top"><b>✓ ${esc(goalLabel(x.g))}</b><button class="link-btn" data-del-goal="${x.g.id}" aria-label="Remove goal">remove</button></div>
           <div class="card-sub">Hit ${fmtDate(x.st.hit)}, ${Math.max(0, diffDays(x.g.since, x.st.hit))} days after you set it</div></li>`).join('')}</ul></details>` : ''}
@@ -3826,8 +3850,8 @@ function recapCard({ compact = false } = {}){
   const stat = (l, v, u = '') => `<div><div class="ms-l">${l}</div><div class="ms-v display num">${v}<small>${u}</small></div></div>`;
   return `<div class="card"><div class="card-head"><h2>${compact ? 'Last week' : 'Week in review'}</h2>
       ${compact ? `<button class="link-btn" data-recap-seen="${ws}">hide</button>` : `<span class="btn-row">
-        <button class="btn small" data-recap-week="-7" aria-label="Previous week">‹</button><span class="card-sub" style="min-width:110px;text-align:center">${label}</span>
-        <button class="btn small" data-recap-week="7" aria-label="Next week" ${ws >= thisWk ? 'disabled' : ''}>›</button></span>`}</div>
+        <button class="btn small wk-nav" data-recap-week="-7" aria-label="Previous week">‹</button><span class="card-sub" style="min-width:110px;text-align:center">${label}</span>
+        <button class="btn small wk-nav" data-recap-week="7" aria-label="Next week" ${ws >= thisWk ? 'disabled' : ''}>›</button></span>`}</div>
     <p style="margin:0 0 14px;font-weight:700">${esc(R.headline)}</p>
     <div class="mini-stats recap-stats">
       ${stat('Runs', R.runs.length)}${stat('Miles', R.mi.toFixed(1))}${stat('Minutes', Math.round(R.min))}${stat('Longest', R.longest ? fmtMi(R.longest) : '—', R.longest ? 'mi' : '')}
@@ -4006,7 +4030,7 @@ function renderRunsList(){
     <ul class="run-cards">${rows.map(r => `<li><a href="#runs/${r.id}">
           <div class="rc-main">${fmtDate(r.date)} · ${fmtMi(r.distMi)} mi</div>
           <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? '<span class="badge test">Test</span>' : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
-          <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}${shoeOf(r) ? ` · ${esc(shoeOf(r).name)}` : ''}</div>
+          <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}${shoeOf(r) ? ` · ${esc(shortName(shoeOf(r).name))}` : ''}</div>
         </a></li>`).join('')}</ul>
     <div class="table-wrap"><table class="runs">
       <thead><tr><th>Date</th><th>Route</th><th style="text-align:left">Shoes</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>Effort</th><th>Temp</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
@@ -4278,7 +4302,9 @@ function chartDaily(host, pts, { days, unit = '', step, dec = 0, smooth = false,
   const f = v => Number(v).toFixed(dec);
   hGrid(svg, niceTicks(lo, hi, step), y, m.l, W - m.r, v => step < 1 ? f(v) : String(Math.round(v)));
   el('line', { x1:m.l, x2:W - m.r, y1:H - m.b, y2:H - m.b, stroke:css('--axis') }, svg);
-  const tickEvery = days <= 31 ? 7 : days <= 92 ? 14 : 61;
+  // Spread the date labels out on narrow screens so they never run into each other.
+  let tickEvery = days <= 31 ? 7 : days <= 92 ? 14 : 61;
+  while ((W - m.l - m.r) * tickEvery / days < 54) tickEvery *= 2;
   for (let d = 0; d < days; d += tickEvery){
     const dd = addDays(start, d);
     el('text', { x:x(dd), y:H - m.b + 18, 'text-anchor':'middle' }, svg).textContent = `${MON[parseYmd(dd).getMonth()]} ${parseYmd(dd).getDate()}`;
@@ -4630,7 +4656,8 @@ function liftHero(){
     const done = LV.items.filter(x => x.sets.every(s => s.done)).length;
     return `<div class="card lift-hero live"><div class="eyebrow">Workout in progress</div>
       <div class="lift-hero-row"><div><h2 class="display">${esc(LV.name)}</h2><p class="card-sub">${done} of ${LV.items.length} exercises done · ${liveStats().sets} set${liveStats().sets === 1 ? '' : 's'}</p></div>
-      <button class="btn primary big" data-action="lv-resume">Resume</button></div></div>`;
+      <button class="btn primary big" data-action="lv-resume">Resume</button></div>
+      <button class="btn lift-hero-log" data-action="lift-log-open">+ Log a set without a workout</button></div>`;
   }
   const today = todayYmd(), sets = doc.lifts.filter(l => l.date === today).reduce((n, l) => n + l.sets.length, 0);
   let title, items, start, why;
@@ -4648,7 +4675,8 @@ function liftHero(){
   }
   return `<div class="card lift-hero"><div class="eyebrow">Up next${sets ? ` · ${sets} set${sets === 1 ? '' : 's'} logged today` : ''}</div>
     <div class="lift-hero-row"><div><h2 class="display">${esc(title)}</h2><p class="card-sub">${why}</p></div><button class="btn primary big" ${start}>Start</button></div>
-    <ol class="lift-hero-list">${items.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
+    <ol class="lift-hero-list">${items.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+    <button class="btn lift-hero-log" data-action="lift-log-open">+ Log a set without a workout</button></div>`;
 }
 const LIFT_TABS = [['train', 'Train'], ['progress', 'Progress'], ['badges', 'Badges']];
 function woList(){
@@ -4839,11 +4867,12 @@ function openSheet(html){
   let el = $('#sheet');
   if (!el){ document.body.insertAdjacentHTML('beforeend', '<div id="sheet" class="sheet" role="dialog" aria-modal="true"><div class="sheet-panel"></div></div>'); el = $('#sheet'); }
   clearTimeout(el._t); el.querySelector('.sheet-panel').innerHTML = `<div class="sheet-grab" aria-hidden="true"></div>${html}`;
-  requestAnimationFrame(() => el.classList.add('open'));
+  // Opened in the same tick (a forced layout lets it still slide in), so a quick close can never lose a race with it.
+  void el.offsetHeight; el.classList.add('open');
 }
 function closeSheet(){
   const el = $('#sheet'); if (!el?.classList.contains('open')) return;
-  el.classList.remove('open'); el._t = setTimeout(() => { el.querySelector('.sheet-panel').innerHTML = ''; }, 260);
+  el.classList.remove('open'); clearTimeout(el._t); el._t = setTimeout(() => { el.querySelector('.sheet-panel').innerHTML = ''; }, 260);
 }
 const openLogSheet = () => openSheet(liftLogCard());
 /* Plate calculator: what goes on each side of the bar, heaviest first. */
@@ -5081,8 +5110,7 @@ function renderLift(){
     ${tab === 'progress' ? `<div class="grid two">${liftVolumeCard()}${liftPRCard()}</div><div style="margin-top:16px">${liftRecentCard()}</div>`
       : tab === 'badges' ? badgesCard('lift')
       : `<div class="grid two">${liftWorkoutsCard()}${liftRunTips()}</div>`}
-  </div>
-  <button class="fab" data-action="lift-log-open"><span aria-hidden="true">+</span> Log a set</button>`;
+  </div>`;
   drawLiftChart(); drawLiftVolume();
 }
 
@@ -5117,15 +5145,8 @@ function renderBody(){
       <div class="card"><div class="card-head"><h2>VO2 max</h2><span class="card-sub">${vo2.length ? 'Garmin’s estimate · moves slowly' : 'Garmin’s estimate'}</span></div>
         ${vo2.length > 1 ? '<div class="chart" id="c-vo2"></div>' : `<div class="next-run-big display num">${vo2Now ?? '—'}</div><p class="card-sub" style="margin:0">${vo2Now ? 'Only one reading so far — the trend fills in over weeks.' : 'Comes from Garmin when your watch estimates it, or add it below.'}</p>`}
       </div>
-      <div class="card"><div class="card-head"><h2>Add a measurement</h2><span class="card-sub">a weigh-in, a DEXA scan, a lab test</span></div>
-        <div class="field-row">
-          <div class="field"><label for="m-date">Date</label><input id="m-date" type="date" value="${todayYmd()}"></div>
-          <div class="field"><label for="m-w">Weight (lbs)</label><input id="m-w" type="number" step="0.1" inputmode="decimal"></div>
-          <div class="field"><label for="m-fat">Body fat %</label><input id="m-fat" type="number" step="0.1" inputmode="decimal"></div>
-          <div class="field"><label for="m-vo2">VO2 max</label><input id="m-vo2" type="number" step="1" inputmode="numeric"></div>
-          <div class="field" style="grid-column:1 / -1"><label for="m-note">Note</label><input id="m-note" type="text" placeholder="e.g. DEXA scan"></div>
-        </div>
-        <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="add-measure">Save</button></div>
+      <div class="card"><div class="card-head"><h2>Measurements</h2><span class="card-sub">a weigh-in, a DEXA scan, a lab test</span></div>
+        <button class="btn primary goal-open" style="margin-top:0" data-action="measure-open">+ Add a weigh-in or measurement</button>
         ${comps.length || doc.profile.weights.length ? `<table class="quiet" style="margin-top:16px">
           ${[...doc.profile.weights.map(w => ({ date:w.date, txt:`${w.lbs} lbs`, note:w.note ?? '', kind:'w' })),
              ...comps.map(c => ({ date:c.date, txt:[c.bodyFat != null && c.bodyFat + '% fat', c.vo2 != null && 'VO2 ' + c.vo2].filter(Boolean).join(' · '), note:c.note ?? '', kind:'c' }))]
@@ -6730,6 +6751,7 @@ document.addEventListener('click', async e => {
       doc.defaultShoe = sh.id;
       await save(); toast(`Added${n ? ` · ${n} run${n > 1 ? 's' : ''} counted` : ''}`); render(); break;
     }
+    case 'goal-open': openSheet(`<h2 class="sheet-title">Set a goal</h2><p class="card-sub" style="margin:0 0 12px">Go further, get faster, show up every week, or hit a weight or a lift.</p>${goalForm()}`); setTimeout(syncGoalForm, 0); break;
     case 'add-goal': {
       const type = $('#g-type').value, T = GOAL_TYPES[type], raw = $('#g-val').value.trim(), by = $('#g-by').value || null;
       const target = T.unit === 'm:ss' ? parseDur(raw) : Math.round(+raw * 100) / 100, g = { type, target, by };
@@ -6742,7 +6764,7 @@ document.addEventListener('click', async e => {
         if (g.start == null){ toast('Add a weigh-in on the Body tab first'); break; }
         if (Math.abs(g.start - target) < .5){ toast('You’re already there'); break; }
       }
-      addGoal(g); await save(); toast('Goal added'); render(); break;
+      addGoal(g); closeSheet(); await save(); toast('Goal added'); render(); break;
     }
     case 'save-about': {
       const sex = $('#s-sex').value || null, born = Math.round(+$('#s-born').value) || null;
@@ -6812,6 +6834,15 @@ document.addEventListener('click', async e => {
       Object.assign(intakeUi, { step:0, a:null, start:null });
       await save(); toast('Your extras are tailored'); location.hash = 'today'; break;
     }
+    case 'measure-open': openSheet(`<h2 class="sheet-title">Add a measurement</h2><p class="card-sub" style="margin:0 0 12px">Fill in whichever you have.</p>
+      <div class="field-row">
+        <div class="field"><label for="m-date">Date</label><input id="m-date" type="date" value="${todayYmd()}"></div>
+        <div class="field"><label for="m-w">Weight (lbs)</label><input id="m-w" type="number" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label for="m-fat">Body fat %</label><input id="m-fat" type="number" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label for="m-vo2">VO2 max</label><input id="m-vo2" type="number" step="1" inputmode="numeric"></div>
+        <div class="field" style="grid-column:1 / -1"><label for="m-note">Note</label><input id="m-note" type="text" placeholder="e.g. DEXA scan"></div>
+      </div>
+      <button class="btn primary big sheet-save" data-action="add-measure">Save</button>`); break;
     case 'add-measure': {
       const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
       if (!date || !(lbs || fat || vo2)){ toast('Enter at least one number'); break; }
@@ -6819,7 +6850,7 @@ document.addEventListener('click', async e => {
       if (lbs) doc.profile.weights = [...doc.profile.weights.filter(w => w.date !== date), { date, lbs, ...(note ? { note } : {}) }].sort((a, b) => a.date < b.date ? -1 : 1);
       if (fat || vo2) doc.profile.comps = [...(doc.profile.comps ?? []).filter(c => c.date !== date),
         { date, ...(fat ? { bodyFat:fat } : {}), ...(vo2 ? { vo2 } : {}), ...(note ? { note } : {}) }];
-      await save(); toast('Saved'); renderBody(); break;
+      closeSheet(); await save(); toast('Saved'); renderBody(); break;
     }
     case 'lift-add-set': readLiftForm(); liftUi.sets.push({ ...liftUi.sets.at(-1) }); redrawLiftLog(); break;
     case 'lift-same': {
