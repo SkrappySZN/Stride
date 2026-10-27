@@ -4478,11 +4478,13 @@ function liftBest(ex){
   return { def, best, heavy };
 }
 const liftId = () => 'lf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+// A single is a tested max, not an estimate, so it's never shown with "est." or "~".
+const prTxt = (def, v, s) => byReps(def) ? `${v} reps` : s?.reps <= 1 ? `1-rep max ${v} lb` : `est. 1-rep max ${v} lb`;
 function logLift(e){
   const def = liftDef(e.ex), before = liftBest(e.ex).best?.v ?? 0;
   doc.lifts = [...doc.lifts, { id:liftId(), ...e }];
   const after = liftBest(e.ex).best.v;
-  toast(before && after > before ? `New PR · ${def.name}: ${byReps(def) ? `${after} reps` : `est. 1-rep max ${after} lb`}` : 'Saved');
+  toast(before && after > before ? `New PR · ${def.name}: ${prTxt(def, after, liftBest(e.ex).best.s)}` : 'Saved');
 }
 
 // Up a step after a session with every rep, the same weight after a miss,
@@ -4849,7 +4851,7 @@ function liftPRCard(){
   return `<div class="card"><div class="card-head"><h2>PRs${infoBtn}</h2><span class="card-sub">tap a lift for its chart</span></div>${explain('e1rm')}
     <table class="quiet lift-prs"><tr><th>Lift</th><th>Your best</th><th>Actually lifted</th></tr>${exs.map(x => `<tr data-lift-chart="${x.ex}"${x.ex === sel.ex ? ' aria-current="true"' : ''}>
       <td>${esc(x.def.name)}${x.best.date > x.first && diffDays(x.best.date, todayYmd()) <= 14 ? ' <span class="badge test">new PR</span>' : ''}</td>
-      <td>${byReps(x.def) ? `<b>${x.best.v} reps</b><small>most in one set</small>` : `<b>~${x.best.v} lb</b><small>estimated max</small>`}</td>
+      <td>${byReps(x.def) ? `<b>${x.best.v} reps</b><small>most in one set</small>` : x.best.s.reps <= 1 ? `<b>${x.best.v} lb</b><small>tested max</small>` : `<b>~${x.best.v} lb</b><small>estimated max</small>`}</td>
       <td>${x.def.assist ? `${x.heavy.s.lb} lb help × ${x.heavy.s.reps}<small>least help</small>` : x.def.bw ? `${x.heavy.s.lb ? `+${x.heavy.s.lb} lb` : 'body weight'} × ${x.heavy.s.reps}<small>heaviest set</small>` : `${x.heavy.s.lb} lb × ${x.heavy.s.reps}<small>heaviest set</small>`}</td></tr>`).join('')}</table>
     <p class="card-sub" style="margin:16px 0 4px">${esc(sel.def.name)} · ${byReps(sel.def) ? 'most reps in a set' : 'estimated 1-rep max'}, best set each day</p>
     <div class="chart" id="c-lift" data-ex="${sel.ex}"></div></div>`;
@@ -6367,7 +6369,7 @@ document.addEventListener('click', async e => {
       const prior = Math.max(0, ...doc.lifts.filter(l => l.ex === it.ex && l.id !== it.entry).flatMap(l => l.sets.map(x => liftScore(def, x))));
       const v = liftScore(def, { lb:+s.lb || 0, reps:+s.reps });
       s.done = true;
-      if (prior && v > prior){ toast(`New PR · ${def.name}: ${byReps(def) ? `${v} reps` : `est. 1-rep max ${v} lb`}`); if (!LV.prs.includes(def.name)) LV.prs.push(def.name); }
+      if (prior && v > prior){ toast(`New PR · ${def.name}: ${prTxt(def, v, s)}`); if (!LV.prs.includes(def.name)) LV.prs.push(def.name); }
       const more = LV.items.some(x => x.sets.some(y => !y.done));
       LV.rest = more ? { end:Date.now() + restFor(it.ex) * 1000 } : null;
       // Last set of this one: move on to the next unfinished exercise.
