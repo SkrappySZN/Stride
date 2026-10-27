@@ -121,7 +121,8 @@ data runs through it, so treat changes to data handling with care.
   Each exercise also has a figure in `LMOVES`, posed with `lpose()` from a few anchor points (pelvis,
   ankles, wrists, torso angle) so knees and elbows are solved and bone lengths stay fixed; `gear` draws
   the bar, dumbbells or cable that move with it, `props` the bench or machine. Same rule as routines:
-  check every pose against its `HOWTO` cues on a contact sheet. Barbell lifts (`BARBELL`) show a plate
+  check every pose against its `HOWTO` cues on a contact sheet: `#moves` (`renderMoves`, linked from Setup) shows every
+  lift and stretch figure animated, with six still frames and its cues, for exactly this. Barbell lifts (`BARBELL`) show a plate
   calculator (`platesFor`, bar weight in `prefs` 'barLb').
   Assisted machines (`assist:true`: `apullup`, `adips`) log the machine's help as `lb`, so less is
   stronger: `liftScore()` uses body weight minus help (reps when no weight is on file, see `byReps()`),

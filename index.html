@@ -811,6 +811,15 @@ table.lift-vol td:first-child{font-weight:600}
 .wo-item select{flex:1 1 220px; min-width:0; font:inherit; font-size:15px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 .wo-item input{width:56px; font:inherit; font-size:16px; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 .lift-tips{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.5}
+.mv-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap:14px}
+.mv-top{display:grid; grid-template-columns:150px 1fr; gap:14px; align-items:start}
+.mv-fig{border-radius:var(--radius-sm); background:var(--surface-2); padding:4px}
+.mv-fig .fig{width:100%}
+.mv-card h2{margin:0; font-size:17px}
+.mv-cues{margin:6px 0 0; padding-left:18px; font-size:13px; line-height:1.45; color:var(--ink-2)}
+.mv-strip{display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; margin-top:12px}
+.mv-strip .fig{width:100%; border-radius:6px; background:var(--surface-2)}
+@media (max-width:480px){ .mv-top{grid-template-columns:110px 1fr} }
 .goal-open{width:100%; margin-top:14px; min-height:46px}
 .bdg-more{margin-top:10px}
 .bdg-more > summary{font-weight:700; color:var(--ink-2); padding:10px 0}
@@ -1138,6 +1147,7 @@ table.runs td, .kv b, .stat .s-v, .rc-nums, .te-cell b, .wx-h span, .num:not(.di
   <section class="page" id="page-welcome"></section>
   <section class="page" id="page-routine"></section>
   <section class="page" id="page-intake"></section>
+  <section class="page" id="page-moves"></section>
 </main>
 
 <script type="module">
@@ -3013,6 +3023,23 @@ function drawJourney(host){
   el('text', { x:m.l, y:H - 8, class:'j-label' }, svg).textContent = startTxt;
 }
 
+/* ── Moves preview (#moves): every figure animated, a strip of still frames
+   and its cues, so a pose that disagrees with its words is easy to spot. ── */
+function renderMoves(){
+  const tab = prefs.get('movesTab', 'lift');
+  const strip = m => { const n = 6;
+    return `<div class="mv-strip">${Array.from({ length:n }, (_, i) => { const P = poseAt(m, i / n); return figure({ ...m, a:P, b:P, seq:undefined }, { size:64, still:true, lift:'still', label:'frame' }); }).join('')}</div>`; };
+  const card = (m, { lift, name, cues, sub }) => `<div class="card mv-card" id="mv-${lift ?? Object.keys(MOVES).find(k => MOVES[k] === m)}">
+    <div class="mv-top"><div class="mv-fig">${figure(m, { size:150, ...(lift ? { lift, label:name } : {}) })}</div>
+      <div><h2>${esc(name)}</h2>${sub ? `<p class="card-sub" style="margin:2px 0 8px">${sub}</p>` : ''}<ol class="mv-cues">${cues.map(c => `<li>${c}</li>`).join('')}</ol></div></div>
+    ${strip(m)}</div>`;
+  const lifts = LIFTS.filter(l => LMOVES[l.id]).map(l => card(LMOVES[l.id], { lift:l.id, name:l.name, cues:HOWTO[l.id]?.cues ?? [], sub:HOWTO[l.id]?.eq }));
+  const routines = Object.entries(MOVES).filter(([, m]) => !m.rest).map(([, m]) => card(m, { name:m.name, cues:[m.cue] }));
+  $('#page-moves').innerHTML = band({ eyebrow:'Preview', title:'Moves', sub:'Every animation in Stride. Each one should match its words exactly: the frames underneath show the whole movement, start to finish.' })
+    + `<div class="wrap"><div class="seg" role="tablist" aria-label="Which moves">${[['lift', `Lifts (${lifts.length})`], ['routine', `Stretches (${routines.length})`]].map(([k, l]) => `<button role="tab" data-moves-tab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
+      <div class="mv-grid">${(tab === 'routine' ? routines : lifts).join('')}</div></div>`;
+  animateFigures();
+}
 /* ═══ MOMENTS: full-screen scenes for the things worth stopping for ════
    A run arriving, a checkpoint passed, a week finished. Each shows once
    per device; the first time Stride opens on a device it only notes where
@@ -5443,12 +5470,12 @@ const LMOVES = {
     b:lpose({ p:[63.3, 56], f1:[63.5, 100.9], ft:60, f2:[61.5, 100.9], ft2:60, w:[1, 31] }),
     gear:P => bell(P.w1) },
   bench: { dur:1.6, props:BENCH + RACK(16),
-    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[34, 49], eb:1 }),
-    b:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[40, 72], eb:1 }),
+    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], W:[34, 49], eb:1 }),
+    b:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], W:[40, 72], eb:1 }),
     gear:P => plate(P.w1) },
   incline: { dur:1.6, props:'<polygon points="30,52 66,84 70,80 34,48" class="prop"/><rect x="58" y="84" width="22" height="5" rx="2" class="prop"/><rect x="64" y="89" width="4" height="21" class="prop"/>',
-    a:lpose({ p:[66, 79], t:-140, hd:-125, f1:[92, 107], kb:1, W:[44, 26], eb:1 }),
-    b:lpose({ p:[66, 79], t:-140, hd:-125, f1:[92, 107], kb:1, W:[47, 52], eb:1 }),
+    a:lpose({ p:[66, 79], t:-140, hd:-125, f1:[92, 107], W:[44, 26], eb:1 }),
+    b:lpose({ p:[66, 79], t:-140, hd:-125, f1:[92, 107], W:[47, 52], eb:1 }),
     gear:P => plate(P.w1) },
   chestmachine: { dur:1.6, props:SEAT(24, 84),
     a:lpose({ p:[40, 81], t:-96, f1:[70, 107], w:[12, 8], eb:1 }),
@@ -5475,9 +5502,9 @@ const LMOVES = {
     a:FLYOPEN, b:wide(FLYOPEN, .2),
     gear:P => bellUp(P.w1) + bellUp(P.w2) },
   dbfly: { dur:1.6, props:BENCH,
-    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[33, 49], eb:1 }),
+    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], W:[33, 49], eb:1 }),
     // Arms opening out to the sides point away from you, so side-on they look short.
-    b:wide(lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[33, 49], eb:1 }), .22),
+    b:wide(lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], W:[33, 49], eb:1 }), .22),
     gear:P => bell(P.w1) },
   lateral: { dur:1.5, front:true,
     a:lpose({ p:[60, 62], f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[7, 31], w2r:[-7, 31], eb:-1, eb2:1 }),
@@ -5492,8 +5519,8 @@ const LMOVES = {
     b:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[-5, -6], eb:1 }),
     gear:P => bellUp(P.w1) },
   skull: { dur:1.6, props:BENCH,
-    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[34, 49], eb:1 }),
-    b:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], kb:1, W:[22, 66], eb:1 }),
+    a:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], W:[34, 49], eb:1 }),
+    b:lpose({ p:[66, 80], t:180, hd:190, f1:[92, 107], W:[22, 66], eb:1 }),
     gear:P => bell(P.w1) },
   dips: { dur:1.5, props:'<rect x="38" y="62" width="34" height="4" rx="2" class="prop"/><rect x="66" y="66" width="4" height="44" class="prop"/>',
     a:lpose({ p:[56, 65], f1:[30, 82], kb:-1, ft:-60, W:[55, 62], eb:1 }),
@@ -6035,6 +6062,9 @@ function renderSetup(){
   }) + `<div class="wrap"><div class="grid two" style="align-items:start">
       <div class="col">
         ${installCard()}
+        <div class="card"><div class="card-head"><h2>Exercise animations</h2><span class="card-sub">every stick figure</span></div>
+          <p class="card-sub" style="margin:0 0 12px">See each lift and stretch move, with still frames and its written cues side by side.</p>
+          <a class="btn" href="#moves" style="text-decoration:none">Preview all moves</a></div>
         ${accountCard()}
         ${intervalsCard()}
         <div class="card"><div class="card-head"><h2>Zones & thresholds${infoBtn}</h2><span class="card-sub">changing these re-scores every run</span></div>${explain('zones')}
@@ -6576,6 +6606,8 @@ document.addEventListener('click', async e => {
   }
   const sdl = e.target.closest('[data-set-del]');
   if (sdl){ readLiftForm(); liftUi.sets.splice(+sdl.dataset.setDel, 1); redrawLiftLog(); return; }
+  const mt = e.target.closest('[data-moves-tab]');
+  if (mt){ prefs.set('movesTab', mt.dataset.movesTab); renderMoves(); return; }
   const lt = e.target.closest('[data-lift-tab]');
   if (lt){ prefs.set('liftTab', lt.dataset.liftTab); readLiftForm(); renderLift(); return; }
   const pe = e.target.closest('[data-pick-ex]');
@@ -7014,12 +7046,12 @@ function render(){
   let [page, arg] = (location.hash.slice(1) || 'today').split('/');
   if (page === 'upload') page = 'setup';   // older links
   if (page === 'body' && arg === 'lifting') page = 'lift';   // older links
-  let pg = ['today', 'progress', 'runs', 'body', 'lift', 'plan', 'setup', 'welcome', 'routine', 'intake'].includes(page) ? page : 'today';
+  let pg = ['today', 'progress', 'runs', 'body', 'lift', 'plan', 'setup', 'welcome', 'routine', 'intake', 'moves'].includes(page) ? page : 'today';
   // Leaving the player mid-routine pauses it rather than letting it run on unseen.
   if (pg !== 'routine') pauseRoutine(true);
   // No plan chosen yet: everything but Setup (where you can sign in) waits on the welcome screen.
   // No plan yet: the intake, unless they've chosen to pick a plan by hand. Lifting works without one.
-  if (!doc.planId && !['setup', 'routine', 'welcome', 'intake', 'lift'].includes(pg)) pg = 'intake';
+  if (!doc.planId && !['setup', 'routine', 'welcome', 'intake', 'lift', 'moves'].includes(pg)) pg = 'intake';
   if (pg !== 'lift') document.body.classList.remove('gym');
   document.querySelectorAll('.tab[data-page]').forEach(b => b.dataset.page === pg ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + pg));
@@ -7034,6 +7066,7 @@ function render(){
   if (pg === 'setup') renderSetup();
   if (pg === 'routine') renderRoutine(arg);
   if (pg === 'intake') renderIntake();
+  if (pg === 'moves') renderMoves();
 }
 /* ── Arrival motion ──────────────────────────────────────────────────
    Played when you land on a page, never on the re-renders that sync and
