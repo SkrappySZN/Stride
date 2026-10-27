@@ -4775,7 +4775,7 @@ const HOWTO = {
   dbcurl:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, palms facing forward, elbows at your sides.', cues:['Curl both up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
   cablecurl:{ eq:'Cable station with a straight bar, set at the bottom', set:'Stand facing the cable, close enough that it pulls straight up. Palms up, hands shoulder-width, elbows at your sides.', cues:['Curl the bar up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly; the cable keeps pulling all the way down.'], avoid:'Leaning back to heave the weight.' },
   seatcurl:{ eq:'Two dumbbells and a bench (per dumbbell)', set:'Sit tall at the end of a bench, feet flat, dumbbells hanging at your sides, palms forward.', cues:['Curl both up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly to straight arms.'], avoid:'Rocking your body. Sitting takes your legs out of it, so go a little lighter than standing.' },
-  twist:{ eq:'One light dumbbell (or one held by one end, for more)', set:'Sit tall, elbow tucked at your side and bent to a right angle, forearm pointing forward, dumbbell standing upright in your fist.', cues:['Turn your palm down, slowly, as far as it goes.', 'Turn it back up, palm to the ceiling.', 'Only the forearm turns: elbow and upper arm stay still.'], avoid:'Going heavy or fast. Holding nearer one end makes it harder without more weight.' },
+  twist:{ eq:'One light dumbbell (or one held by one end, for more)', set:'Sit tall, elbow tucked at your side and bent to a right angle, forearm pointing straight ahead, dumbbell standing upright in your fist. Rest the other hand on your thigh.', cues:['Turn your palm down, slowly, as far as it goes.', 'Turn it back up, palm to the ceiling.', 'Only the forearm turns: elbow and upper arm stay still.'], avoid:'Going heavy or fast. Holding nearer one end makes it harder without more weight.' },
   hammer:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, palms facing each other, elbows at your sides.', cues:['Curl up, keeping your palms facing in.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
   shrug:{ eq:'Barbell or two dumbbells', set:'Stand tall holding the weight at arm’s length.', cues:['Lift your shoulders straight up toward your ears.', 'Hold for a second.', 'Lower slowly.'], avoid:'Rolling your shoulders in circles.' },
   legraise:{ eq:'Pull-up bar or a captain’s chair', set:'Hang from the bar, or rest your back against the chair’s pad.', cues:['Raise your knees toward your chest by curling your hips up.', 'Lower slowly.', 'No swinging between reps.'], avoid:'Swinging. Bent knees is the easier version, straight legs the harder one.' },
@@ -5225,8 +5225,8 @@ const MOVES = {
     b:F({ k1:[65,64], f1:[66,86], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }),
     c:F({ k1:[83,62], f1:[82,84], e1:[74,50], w1:[67,62], e2:[46,50], w2:[53,62] }) },
   hipKneel: { name:'Half-kneeling hip flexor stretch', cue:'Back knee down on something soft. Squeeze that glute and tuck the hips under until you feel the front of the hip. Don’t arch your back.', sec:30, sides:true, hold:true, dur:4, hl:1,
-    a:{ h:[60,40], n:[60,51], p:[57,84], k1:[45,106], f1:[26,107], t1:[22,109], k2:[79,85], f2:[80,107], e1:[68,67], w1:[78,82], e2:[64,67], w2:[76,84] },
-    b:{ h:[64,41], n:[63,52], p:[61,86], k1:[45,106], f1:[26,107], t1:[22,109], k2:[83,86], f2:[80,107], e1:[71,68], w1:[80,83], e2:[67,68], w2:[78,85] } },
+    a:{ h:[60,40], n:[60,51], p:[57,84], k1:[45,106], f1:[26,107], t1:[22,107.5], k2:[79,85], f2:[80,107], e1:[68,67], w1:[78,82], e2:[64,67], w2:[76,84] },
+    b:{ h:[64,41], n:[63,52], p:[61,86], k1:[45,106], f1:[26,107], t1:[22,107.5], k2:[83,86], f2:[80,107], e1:[71,68], w1:[80,83], e2:[67,68], w2:[78,85] } },
   calfRaise: { name:'Calf raises', cue:'Rise onto your toes, pause, lower slowly. Hold something for balance if you need it.', sec:30, dur:1.6, hl:1,
     a:S({ t1:[68,107], t2:[66,107] }), b:{ ...up(S({}), 7), f1:[62,100], t1:[68,107], f2:[60,100], t2:[66,107] } },
   highKnees: { name:'High knees', cue:'Quick, light steps on the spot, knees up. A warm-up, not a sprint.', sec:20, dur:.3, alt:true,
@@ -5251,8 +5251,8 @@ const MOVES = {
     a:L({ k1:[66,80], f1:[74,58], t1:[80,56], k2:[80,103], f2:[102,104], t2:[104,97], e1:[40,92], w1:[62,86], e2:[40,94], w2:[63,88] }),
     b:L({ k1:[63,79], f1:[66,56], t1:[72,53], k2:[80,103], f2:[102,104], t2:[104,97], e1:[40,91], w1:[60,85], e2:[40,93], w2:[61,87] }) },
   hipStand: { name:'Standing hip flexor stretch', cue:'Split stance, back heel up. Squeeze the back glute and ease the hips forward. Stay tall.', sec:30, sides:true, hold:true, dur:4, hl:1,
-    a:{ h:[57,20], n:[57,31], p:[58,66], k2:[74,86], f2:[76,107], k1:[46,88], f1:[36,104], t1:[30,108], e1:[50,46], w1:[56,62], e2:[66,46], w2:[62,62] },
-    b:{ h:[61,23], n:[61,34], p:[62,69], k2:[76,88], f2:[76,107], k1:[49,90], f1:[36,104], t1:[30,108], e1:[54,49], w1:[60,65], e2:[70,49], w2:[66,65] } },
+    a:{ h:[57,20], n:[57,31], p:[58,66], k2:[74,86], f2:[76,107], k1:[46,88], f1:[36,104], t1:[30,107.5], e1:[50,46], w1:[56,62], e2:[66,46], w2:[62,62] },
+    b:{ h:[61,23], n:[61,34], p:[62,69], k2:[76,88], f2:[76,107], k1:[49,90], f1:[36,104], t1:[30,107.5], e1:[54,49], w1:[60,65], e2:[70,49], w2:[66,65] } },
   bridge: { name:'Glute bridges', cue:'On your back, knees bent, feet flat. Squeeze your glutes and lift until knees, hips and shoulders line up. Lower slowly. 12–15 reps.', sec:45, prop:'mat', dur:2.4, hl:1,
     a:L({ k1:[70,82], f1:[80,104], t1:[87,105], k2:[69,83], f2:[79,105], t2:[86,106] }),
     b:L({ p:[56,85], k1:[78,79], f1:[80,104], t1:[87,105], k2:[77,80], f2:[79,105], t2:[86,106] }) },
@@ -5260,8 +5260,8 @@ const MOVES = {
     a:{ h:[14,88], n:[24,94], p:[58,100], k1:[80,101], f1:[102,102], t1:[103,96], k2:[80,103], f2:[102,104], t2:[103,98], e1:[40,94], w1:[52,100], e2:[20,104], w2:[12,92] },
     b:{ h:[14,88], n:[24,94], p:[58,100], k1:[80,92], f1:[100,82], t1:[102,76], k2:[80,103], f2:[102,104], t2:[103,98], e1:[40,94], w1:[52,100], e2:[20,104], w2:[12,92] } },
   plank: { name:'Forearm plank', cue:'Elbows under shoulders, body in one straight line. Breathe. Drop to your knees if your back sags.', sec:30, hold:true, prop:'mat', dur:3,
-    a:{ h:[14,82], n:[24,86], e1:[24,106], w1:[38,107], e2:[23,106], w2:[37,108], p:[58,93], k1:[79,99], f1:[99,104], t1:[100,109], k2:[79,100], f2:[99,105], t2:[100,110] },
-    b:{ h:[14,81], n:[24,85], e1:[24,106], w1:[38,107], e2:[23,106], w2:[37,108], p:[58,91], k1:[79,98], f1:[99,104], t1:[100,109], k2:[79,99], f2:[99,105], t2:[100,110] } },
+    a:{ h:[14,82], n:[24,86], e1:[24,106], w1:[38,107], e2:[23,106], w2:[37,108], p:[58,93], k1:[79,99], f1:[99,104], t1:[100,108], k2:[79,100], f2:[99,105], t2:[100,108] },
+    b:{ h:[14,81], n:[24,85], e1:[24,106], w1:[38,107], e2:[23,106], w2:[37,108], p:[58,91], k1:[79,98], f1:[99,104], t1:[100,108], k2:[79,99], f2:[99,105], t2:[100,108] } },
   rest: { name:'Rest', cue:'Shake it out and breathe. Next set coming up.', sec:20, dur:3, rest:true, a:STAND, b:up(STAND, 1) },
 };
 const ROUTINES = {
@@ -5314,7 +5314,34 @@ function poseAt(m, phase){
   const keys = moveKeys(m), legs = keys.length - 1;
   const x = (((phase % 1) + 1) % 1) * legs, i = Math.min(legs - 1, Math.floor(x)), t = (1 - Math.cos((x - i) * Math.PI)) / 2;
   m._rigs ??= keys.map(P => toRig(m, P));
-  return fromRig(lerpRig(m._rigs[i], m._rigs[i + 1], t));
+  m._full ??= keys.map(P => fullPose(m, P));
+  const P = plant(fromRig(lerpRig(m._rigs[i], m._rigs[i + 1], t)), m._full[i], m._full[i + 1]);
+  P._ph = ((phase % 1) + 1) % 1;   // for gear that moves while the body holds still
+  return P;
+}
+// Blending angles alone lets a planted foot or a hand on a bar drift (feet sink through the
+// floor mid-squat). A foot or hand that's in the same place in both poses stays exactly there,
+// the knee or elbow bending to make it work, and a moving foot never dips below where it starts or ends.
+function plant(P, A, B){
+  for (const [root, mid, end, tip] of [['p', 'k1', 'f1', 't1'], ['p', 'k2', 'f2', 't2'], ['n', 'e1', 'w1'], ['n', 'e2', 'w2']]){
+    const ea = A[end], eb = B[end], still = Math.hypot(ea[0] - eb[0], ea[1] - eb[1]) < .6, floor = Math.max(ea[1], eb[1]);
+    const goal = still ? ea : tip && P[end][1] > floor + .3 ? [P[end][0], floor] : null;
+    if (!goal) continue;
+    const o = P[root], l1 = Math.hypot(P[mid][0] - o[0], P[mid][1] - o[1]), l2 = Math.hypot(P[end][0] - P[mid][0], P[end][1] - P[mid][1]);
+    const dx = goal[0] - o[0], dy = goal[1] - o[1], d = Math.max(.01, Math.min(Math.hypot(dx, dy), l1 + l2 - .01)), base = Math.atan2(dy, dx);
+    const a = Math.acos(Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))));
+    // Of the two ways the joint could bend, keep the one nearest where it already is.
+    const j = [base + a, base - a].map(r => [o[0] + Math.cos(r) * l1, o[1] + Math.sin(r) * l1])
+      .sort((u, v) => Math.hypot(u[0] - P[mid][0], u[1] - P[mid][1]) - Math.hypot(v[0] - P[mid][0], v[1] - P[mid][1]))[0];
+    const r2 = Math.atan2(goal[1] - j[1], goal[0] - j[0]), e = [j[0] + Math.cos(r2) * l2, j[1] + Math.sin(r2) * l2];
+    if (tip) P[tip] = [P[tip][0] + e[0] - P[end][0], P[tip][1] + e[1] - P[end][1]];
+    P[mid] = j; P[end] = e;
+  }
+  for (const [end, tip] of [['f1', 't1'], ['f2', 't2']]){
+    const floor = Math.max(A[tip][1], B[tip][1]), f = P[end], q = P[tip], L = Math.hypot(q[0] - f[0], q[1] - f[1]), dy = floor - f[1];
+    if (q[1] > floor + .3 && Math.abs(dy) < L) P[tip] = [f[0] + Math.sign(q[0] - f[0] || 1) * Math.sqrt(L * L - dy * dy), floor];
+  }
+  return P;
 }
 const figLines = P => [[P.p, P.k2, P.f2, P.t2], [P.n, P.e2, P.w2], [P.n, P.p], [P.p, P.k1, P.f1, P.t1], [P.n, P.e1, P.w1]]
   .map(l => l.map(q => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' '));
@@ -5327,11 +5354,11 @@ function figure(m, { size = 240, still = false, lift = null, label = m.name } = 
   const cls = ['far', 'far', 'body', 'near', 'near'];
   const id = lift ? null : Object.keys(MOVES).find(k => MOVES[k] === m);
   const prop = m.props ?? { wallR:'<rect x="94" y="6" width="5" height="104" rx="2" class="prop"/>', wallL:'<rect x="21" y="6" width="5" height="104" rx="2" class="prop"/>',
-    couch:'<rect x="4" y="82" width="32" height="28" rx="5" class="prop"/>', post:'<rect x="45" y="40" width="5" height="70" rx="2" class="prop"/>', mat:'<rect x="6" y="108" width="108" height="3" rx="1.5" class="prop"/>' }[m.prop] ?? '';
+    couch:'<rect x="4" y="82" width="32" height="28" rx="5" class="prop"/>', post:'<rect x="45" y="40" width="5" height="70" rx="2" class="prop"/>', mat:'<rect x="6" y="110" width="108" height="3" rx="1.5" class="prop"/>' }[m.prop] ?? '';
   // Floor moves only use the bottom of the box, so frame them tighter and bigger.
   const vb = m.vb ?? (m.prop === 'mat' ? [0, 46, 120, 70] : [0, 0, 120, 120]);
   return `<svg class="fig" viewBox="${vb.join(' ')}" width="${size}" height="${Math.round(size * vb[3] / vb[2])}" role="img" aria-label="${esc(label)}"${moving && id ? ` data-move="${id}"` : ''}${moving && lift ? ` data-lmove="${lift}"` : ''}>
-    ${prop}${m.hang ? '' : '<line x1="2" y1="110" x2="118" y2="110" class="ground"/>'}
+    ${prop}${m.hang ? '' : '<line x1="2" y1="111" x2="118" y2="111" class="ground"/>'}
     ${L.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0)) ? ' hl' : ''}"/>`).join('')}
     <circle cx="${P.h[0]}" cy="${P.h[1]}" r="7" class="head"/><g class="gear">${m.gear?.(P) ?? ''}</g>
   </svg>`;
@@ -5434,19 +5461,19 @@ const LMOVES = {
     b:lpose({ p:[54, 76], t:-176, hd:-160, f1:[84, 107], W:[57, 70] }),
     gear:P => plate([P.p[0] + 2, P.p[1] - 7]) },
   split: { dur:1.4,
-    a:lpose({ p:[57, 64], f1:[78, 107], f2:[36, 104], ft2:35, kb2:-1, w:[1, 31] }),
-    b:lpose({ p:[55, 84], f1:[78, 107], f2:[34, 104], ft2:35, kb2:-1, w:[1, 31] }),
+    a:lpose({ p:[57, 64], f1:[78, 107], f2:[36, 104], ft2:25, kb2:-1, w:[1, 31] }),
+    b:lpose({ p:[55, 84], f1:[78, 107], f2:[34, 104], ft2:25, kb2:-1, w:[1, 31] }),
     gear:P => bell(P.w1) },
   lunge: { dur:.9,
     // Near leg steps forward, back to standing, then the far leg.
     seq:[lpose({ p:[50, 62], f1:[50, 107], w:[1, 31] }),
-      lpose({ p:[58, 64], f1:[80, 107], f2:[38, 104], ft2:35, w:[1, 31] }),
-      lpose({ p:[56, 84], f1:[80, 107], f2:[36, 104], ft2:35, w:[1, 31] }),
-      lpose({ p:[58, 64], f1:[80, 107], f2:[38, 104], ft2:35, w:[1, 31] }),
+      lpose({ p:[58, 64], f1:[80, 107], f2:[38, 104], ft2:25, w:[1, 31] }),
+      lpose({ p:[56, 84], f1:[80, 107], f2:[36, 104], ft2:25, w:[1, 31] }),
+      lpose({ p:[58, 64], f1:[80, 107], f2:[38, 104], ft2:25, w:[1, 31] }),
       lpose({ p:[50, 62], f1:[50, 107], w:[1, 31] }),
-      lpose({ p:[58, 64], f2:[80, 107], f1:[38, 104], ft:35, ft2:0, w:[1, 31] }),
-      lpose({ p:[56, 84], f2:[80, 107], f1:[36, 104], ft:35, ft2:0, w:[1, 31] }),
-      lpose({ p:[58, 64], f2:[80, 107], f1:[38, 104], ft:35, ft2:0, w:[1, 31] })],
+      lpose({ p:[58, 64], f2:[80, 107], f1:[38, 104], ft:25, ft2:0, w:[1, 31] }),
+      lpose({ p:[56, 84], f2:[80, 107], f1:[36, 104], ft:25, ft2:0, w:[1, 31] }),
+      lpose({ p:[58, 64], f2:[80, 107], f1:[38, 104], ft:25, ft2:0, w:[1, 31] })],
     gear:P => bell(P.w1) },
   stepup: { dur:1.4, vb:[-8, -18, 136, 136], props:'<rect x="66" y="86" width="40" height="24" rx="2" class="prop"/>',
     a:lpose({ p:[54, 64], f1:[76, 84], f2:[48, 107], w:[1, 31] }),
@@ -5456,10 +5483,11 @@ const LMOVES = {
     a:lpose({ p:[38, 79], t:-100, f1:[82, 84], W:[44, 82] }),
     b:lpose({ p:[38, 79], t:-100, f1:[53.5, 100.7], W:[44, 82] }),
     gear:P => knob(at(P.f1, 20, 4)) },
-  nordic: { dur:1.8, props:'<rect x="38" y="104" width="22" height="6" rx="2" class="prop"/><circle cx="20" cy="101" r="4" class="prop"/>',
-    seq:[lpose({ p:[46, 83], f1:[24, 106], kb:-1, ft:160, w:[6, 18] }),
-      lpose({ p:[63, 91], t:-40, f1:[24, 106], kb:-1, ft:160, w:[10, 18] }),
-      lpose({ p:[68, 101], t:-12, hd:-5, f1:[24, 106], kb:-1, ft:160, W:[96, 108], eb:1 })] },
+  // The knee rests on the pad at (46, 104); each pose puts the hip a thigh's length from it.
+  nordic: { props:'<rect x="36" y="106" width="24" height="5" rx="2" class="prop"/><circle cx="20" cy="99" r="4" class="prop"/>',
+    // Hip and shoulders swing in an arc about the knee, so the in-between poses follow that arc.
+    dur:.6, seq:[-90, -70, -52, -34, -12, -40, -68].map(t => { const r = t * Math.PI / 180, p = [46 + Math.cos(r) * 23, 104 + Math.sin(r) * 23];
+      return lpose({ p, t, hd:t === -12 ? -5 : t, f1:[24, 104], kb:-1, ft:160, ...(t === -12 ? { W:[96, 106] } : { w:t < -80 ? [6, 18] : [10, 18] }), eb:1 }); }) },
   legext: { dur:1.6, props:SEAT(22, 82),
     a:lpose({ p:[38, 79], t:-100, f1:[59, 102], W:[44, 82] }),
     b:lpose({ p:[38, 79], t:-100, f1:[83, 78], W:[44, 82] }),
@@ -5527,11 +5555,12 @@ const LMOVES = {
     b:lpose({ p:[63, 80], t:-75, f1:[36, 96], kb:-1, ft:-60, W:[55, 62], eb:1 }),
     hang:true },
   pushup: { dur:1.4,
-    a:lpose({ p:[67, 89], t:-158, f1:[108, 104], ft:75, W:[36, 108], eb:1 }),
-    b:lpose({ p:[62, 101], t:-171, f1:[108, 104], ft:75, W:[36, 108], eb:-1 }) },
-  pullup: { dur:1.6, hang:true, vb:[-4, -8, 128, 128], props:PULLBAR(16),
-    a:lpose({ p:[60, 84], f1:[42, 114], kb:-1, ft:60, W:[62, 16], eb:1 }),
-    b:lpose({ p:[60, 52], f1:[42, 82], kb:-1, ft:60, W:[62, 16], eb:1 }) },
+    a:lpose({ p:[67, 89], t:-158, f1:[106, 101], ft:70, W:[36, 107], eb:1 }),
+    b:lpose({ p:[62, 100], t:-171, f1:[106, 101], ft:70, W:[36, 107], eb:-1 }) },
+  // Seen from behind, so both arms show: hands wide on the bar, elbows driving down to the sides.
+  pullup: { dur:1.6, hang:true, front:true, vb:[-4, -8, 128, 128], props:PULLBAR(16),
+    a:lpose({ p:[60, 71], front:true, f1:[63, 115.5], f2:[57, 115.5], kb:1, kb2:-1, W:[84, 16], W2:[36, 16], eb:1, eb2:-1 }),
+    b:lpose({ p:[60, 53], front:true, f1:[63, 97.5], f2:[57, 97.5], kb:1, kb2:-1, W:[84, 16], W2:[36, 16], eb:1, eb2:-1 }) },
   pulldown: { dur:1.5, props:SEAT(28, 84, false) + '<rect x="54" y="72" width="16" height="4" rx="2" class="prop"/>' + pulley(66, 4),
     a:lpose({ p:[44, 81], t:-96, f1:[76, 107], w:[10, -31], eb:1 }),
     b:lpose({ p:[44, 81], t:-104, f1:[76, 107], w:[14, 8], eb:1 }),
@@ -5549,9 +5578,10 @@ const LMOVES = {
     a:lpose({ p:[40, 93], t:-70, f1:[86, 90], kb:-1, ft:-80, w:[30, 6], eb:1 }),
     b:lpose({ p:[40, 93], t:-95, f1:[86, 90], kb:-1, ft:-80, W:[52, 80], eb:1 }),
     gear:P => cable([110, 86], P.w1) + knob(P.w1, 2.5) },
-  invrow: { dur:1.4, props:RACK(46) + '<rect x="40" y="40" width="12" height="4" rx="2" class="prop"/>',
-    a:lpose({ p:[72, 86], t:-160, hd:-160, f1:[106, 104], ft:-80, W:[46, 43], eb:1 }),
-    b:lpose({ p:[78, 74], t:-138, hd:-140, f1:[106, 104], ft:-80, W:[46, 43], eb:-1 }) },
+  // One straight line from heels to head, pivoting on the heels; the chest comes up to the bar.
+  invrow: { dur:1.4, props:'<rect x="53" y="20" width="4" height="90" class="prop"/><rect x="47" y="54" width="16" height="4" rx="2" class="prop"/>',
+    a:lpose({ p:[64.4, 89.1], t:-159, hd:-159, f1:[106, 105], ft:-80, W:[55, 56], eb:1 }),
+    b:lpose({ p:[71.4, 77], t:-141, hd:-141, f1:[106, 105], ft:-80, W:[55, 56], eb:1 }) },
   facepull: { dur:1.5, props:STACK + pulley(104, 22),
     a:lpose({ p:[56, 62], f1:[56, 107], w:[31, -4], eb:1 }),
     b:lpose({ p:[56, 62], f1:[56, 107], w:[6, -10], eb:1 }),
@@ -5567,20 +5597,23 @@ const LMOVES = {
     a:lpose({ p:[60, 62], f1:STANDF, w:[3, 31], eb:1 }),
     b:lpose({ p:[60, 62], f1:STANDF, w:[8, 3], eb:1 }),
     gear:P => bell(P.w1) },
-  shrug: { dur:1.4, front:true,
-    a:lpose({ p:[60, 62], f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[9, 31], w2r:[-9, 31], eb:-1, eb2:1 }),
-    b:lpose({ p:[60, 62], len:39, f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[9, 31], w2r:[-9, 31], eb:-1, eb2:1 }),
+  // Only the shoulders and dumbbells rise toward the ears; the head stays put. A hold at the top.
+  shrug: { dur:.9, front:true,
+    seq:(() => { const lo = lpose({ p:[60, 62], f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[9, 31], w2r:[-9, 31], eb:-1, eb2:1 });
+      const hi = { ...lpose({ p:[60, 62], len:41, f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[9, 31], w2r:[-9, 31], eb:-1, eb2:1 }), h:lo.h };
+      return [lo, hi, { ...hi }]; })(),
     gear:P => bellUp(P.w1) + bellUp(P.w2) },
   legraise: { dur:1.6, hang:true, props:PULLBAR(8),
     a:lpose({ p:[60, 74], f1:[56, 118], ft:80, W:[62, 8], eb:1 }),
     b:lpose({ p:[60, 74], f1:[76, 80], kb:-1, ft:80, W:[62, 8], eb:1 }) },
-  crunch: { dur:1.6, props:STACK + pulley(104, 8) + '<rect x="40" y="104" width="26" height="6" rx="2" class="prop"/>',
-    a:lpose({ p:[58, 83], t:-88, f1:[36, 106], ft:160, w:[5, -5], eb:1 }),
-    b:lpose({ p:[58, 83], t:-28, hd:20, f1:[36, 106], ft:160, w:[6, -2], eb:1 }),
+  // Kneeling, hips still: the torso curls from upright to below level, head tucked, rope by the head.
+  crunch: { dur:1.6, props:STACK + pulley(104, 8) + '<rect x="30" y="106" width="30" height="5" rx="2" class="prop"/>',
+    a:lpose({ p:[50, 83], t:-80, f1:[28, 104], ft:160, w:[6, -3], eb:1 }),
+    b:lpose({ p:[50, 83], t:12, hd:70, f1:[28, 104], ft:160, w:[8, 7], eb:1 }),
     gear:P => cable([104, 8], P.w1) },
-  backext: { dur:1.6, vb:[-4, -4, 128, 128], props:'<polygon points="58,84 72,70 76,74 62,88" class="prop"/><circle cx="30" cy="100" r="4" class="prop"/><line x1="36" y1="110" x2="68" y2="86" class="ground"/>',
-    a:lpose({ p:[66, 74], t:-45, f1:[34, 106], kb:-1, ft:-45, w:[4, 10], eb:-1 }),
-    b:lpose({ p:[66, 74], t:30, hd:45, f1:[34, 106], kb:-1, ft:-45, w:[4, 10], eb:-1 }) },
+  backext: { dur:1.7, props:'<rect x="40" y="61" width="24" height="5" rx="2" class="prop"/><rect x="49" y="66" width="5" height="44" class="prop"/><circle cx="13" cy="52" r="4" class="prop"/><rect x="5" y="48" width="4" height="62" class="prop"/>',
+    a:lpose({ p:[57, 57], t:0, hd:0, f1:[12, 57], ft:90, w:[-8, 4], eb:1 }),
+    b:lpose({ p:[57, 57], t:75, hd:80, f1:[12, 57], ft:90, w:[-6, -7], eb:1 }) },
 };
 const kneePad = P => `<rect x="${(P.k1[0] - 9).toFixed(1)}" y="${(P.k1[1] + 3).toFixed(1)}" width="18" height="4" rx="2" class="kit-solid"/>`;
 // Exercises that move the same way share a figure.
@@ -5588,8 +5621,8 @@ Object.assign(LMOVES, { dbrdl:{ ...LMOVES.rdl, gear:P => bell(P.w1) }, dbbench:{
   dbincline:{ ...LMOVES.incline, gear:P => bell(P.w1) }, chinup:LMOVES.pullup, hammer:LMOVES.dbcurl,
   // Facing away from the stack, so the cable comes over the shoulders from behind.
   cableohext:{ dur:1.4, props:'<rect x="4" y="8" width="10" height="102" rx="2" class="prop"/>' + pulley(14, 30),
-    a:lpose({ p:[66, 70], t:-55, f1:[88, 107], f2:[40, 104], ft2:35, w:[3, -15], eb:1 }),
-    b:lpose({ p:[66, 70], t:-55, f1:[88, 107], f2:[40, 104], ft2:35, w:[25, -21], eb:1 }),
+    a:lpose({ p:[66, 70], t:-55, f1:[88, 107], f2:[40, 104], ft2:25, w:[3, -15], eb:1 }),
+    b:lpose({ p:[66, 70], t:-55, f1:[88, 107], f2:[40, 104], ft2:25, w:[25, -21], eb:1 }),
     gear:P => cable([14, 30], P.w1) + knob(P.w1, 2.5) },
   // Reclined on a pad that slides down 45° rails; the shoulder pads ride on the shoulders.
   hacksquat:{ dur:1.6, props:'<line x1="10" y1="44" x2="72" y2="106" class="ground"/><rect x="2" y="30" width="5" height="80" class="prop"/>',
@@ -5601,17 +5634,20 @@ Object.assign(LMOVES, { dbrdl:{ ...LMOVES.rdl, gear:P => bell(P.w1) }, dbbench:{
     a:lpose({ p:[40, 79], t:-92, f1:[63, 102], ft:-30, w:[16, 2], eb:1 }),
     b:lpose({ p:[40, 79], t:-92, f1:[62.7, 95.5], ft:25, w:[16, 2], eb:1 }),
     gear:P => `<rect x="${(P.k1[0] - 9).toFixed(1)}" y="${(P.k1[1] - 8).toFixed(1)}" width="18" height="5" rx="2" class="kit-solid"/>` },
-  apullup:{ ...LMOVES.pullup, gear:kneePad }, adips:{ ...LMOVES.dips, gear:kneePad },
+  apullup:{ ...LMOVES.pullup, gear:P => `<rect x="${(Math.min(P.k1[0], P.k2[0]) - 7).toFixed(1)}" y="${(Math.max(P.k1[1], P.k2[1]) + 3).toFixed(1)}" width="${(Math.abs(P.k1[0] - P.k2[0]) + 14).toFixed(1)}" height="4" rx="2" class="kit-solid"/>` }, adips:{ ...LMOVES.dips, gear:kneePad },
   cablecurl:{ ...LMOVES.curl, props:STACK + pulley(104, 104), gear:P => cable([104, 104], P.w1) + `<rect x="${(P.w1[0] - 2).toFixed(1)}" y="${(P.w1[1] - 6).toFixed(1)}" width="4" height="12" rx="2" class="kit-solid"/>` },
   seatcurl:{ dur:1.4, props:SEAT(34, 84),
     a:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[3, 30], eb:1 }),
     b:lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[8, 3], eb:1 }),
     gear:P => bell(P.w1) },
   // The forearm stays put and the dumbbell turns; the faint far hand sets which way it points.
-  twist:{ dur:1.6, props:SEAT(34, 84),
-    // Upright, palm down, upright, palm up.
-    seq:[[15, 13], [11, 17], [15, 13], [19, 17]].map(w2r => lpose({ p:[50, 81], t:-92, f1:[78, 107], w:[15, 17], w2r, eb:1 })),
-    gear:P => { const a = Math.atan2(P.w1[1] - P.w2[1], P.w1[0] - P.w2[0]) * 180 / Math.PI + 90;
+  // Seen from the front: the elbow is tucked at the side and the forearm points at you, so the
+  // dumbbell turns like a clock hand, upright to palm down, back, to palm up. The other hand rests on the thigh.
+  twist:{ dur:1.4, front:true, props:SEAT(45, 86, false),
+    ...(() => { const P = lpose({ p:[60, 83], front:true, f1:[66, 107], f2:[54, 107], kb:-1, kb2:1, w:[12, 18], w2r:[-9, 33], eb:1, eb2:-1 });
+      P.e1 = [P.n[0] + 9, P.n[1] + 15]; P.w1 = [P.n[0] + 11, P.n[1] + 18];
+      return { a:P, b:{ ...P } }; })(),
+    gear:P => { const a = 90 * Math.sin(2 * Math.PI * (P._ph ?? 0));
       return `<g transform="translate(${P.w1[0].toFixed(1)} ${P.w1[1].toFixed(1)}) rotate(${a.toFixed(1)})"><rect x="-1.5" y="-8" width="3" height="16" class="kit-solid"/><rect x="-4" y="-11" width="8" height="4" rx="1.5" class="kit-solid"/><rect x="-4" y="7" width="8" height="4" rx="1.5" class="kit-solid"/></g>`; } } });
 
 // The routine as timed steps. Sore spots from the last few days get longer holds.
