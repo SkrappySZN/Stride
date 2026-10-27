@@ -5312,7 +5312,12 @@ const moveKeys = m => m.seq ? [...m.seq, m.seq[0]] : m.c ? [m.a, m.b, m.c, m.a] 
 // Where the figure is at a point in its loop (0–1).
 function poseAt(m, phase){
   const keys = moveKeys(m), legs = keys.length - 1;
-  const x = (((phase % 1) + 1) % 1) * legs, i = Math.min(legs - 1, Math.floor(x)), t = (1 - Math.cos((x - i) * Math.PI)) / 2;
+  const x = (((phase % 1) + 1) % 1) * legs;
+  // Each leg eases in and out on its own, unless the move names its only real pauses (`stops`):
+  // then it eases between those and glides through the poses in between, with no ticking.
+  let pos = x;
+  if (m.stops){ const st = m.stops, k = st.findLastIndex(s => s <= x), a = st[k], b = st[k + 1] ?? legs; pos = a + (1 - Math.cos((x - a) / (b - a) * Math.PI)) / 2 * (b - a); }
+  const i = Math.min(legs - 1, Math.floor(pos)), t = m.stops ? pos - i : (1 - Math.cos((x - i) * Math.PI)) / 2;
   m._rigs ??= keys.map(P => toRig(m, P));
   m._full ??= keys.map(P => fullPose(m, P));
   const P = plant(fromRig(lerpRig(m._rigs[i], m._rigs[i + 1], t)), m._full[i], m._full[i + 1]);
@@ -5466,6 +5471,7 @@ const LMOVES = {
     gear:P => bell(P.w1) },
   lunge: { dur:.9,
     // Near leg steps forward, back to standing, then the far leg.
+    stops:[0, 2, 4, 6],   // pause standing and at the bottom, glide through the step
     seq:[lpose({ p:[50, 62], f1:[50, 107], w:[1, 31] }),
       lpose({ p:[58, 64], f1:[80, 107], f2:[38, 104], ft2:25, w:[1, 31] }),
       lpose({ p:[56, 84], f1:[80, 107], f2:[36, 104], ft2:25, w:[1, 31] }),
@@ -5486,7 +5492,7 @@ const LMOVES = {
   // The knee rests on the pad at (46, 104); each pose puts the hip a thigh's length from it.
   nordic: { props:'<rect x="36" y="106" width="24" height="5" rx="2" class="prop"/><circle cx="20" cy="99" r="4" class="prop"/>',
     // Hip and shoulders swing in an arc about the knee, so the in-between poses follow that arc.
-    dur:.6, seq:[-90, -70, -52, -34, -12, -40, -68].map(t => { const r = t * Math.PI / 180, p = [46 + Math.cos(r) * 23, 104 + Math.sin(r) * 23];
+    dur:.7, stops:[0, 4], seq:[-90, -70, -52, -34, -12, -40, -68].map(t => { const r = t * Math.PI / 180, p = [46 + Math.cos(r) * 23, 104 + Math.sin(r) * 23];
       return lpose({ p, t, hd:t === -12 ? -5 : t, f1:[24, 104], kb:-1, ft:160, ...(t === -12 ? { W:[96, 106] } : { w:t < -80 ? [6, 18] : [10, 18] }), eb:1 }); }) },
   legext: { dur:1.6, props:SEAT(22, 82),
     a:lpose({ p:[38, 79], t:-100, f1:[59, 102], W:[44, 82] }),
