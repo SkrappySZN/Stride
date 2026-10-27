@@ -670,6 +670,74 @@ table.lift-recent td:first-child{white-space:nowrap; padding-right:12px}
 .lift-list li.wo-row{flex-wrap:wrap}
 .wo-swap{flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px}
 .lv .wo-swap{margin-top:12px}
+/* Gym mode: no header or dock, a sticky top strip and a thumb bar */
+body.gym .topbar{display:none}
+body.gym main{padding-bottom:0}
+.gym-top{position:sticky; top:0; z-index:20; display:grid; grid-template-columns:44px 1fr 44px; align-items:center; gap:8px; padding:calc(8px + env(safe-area-inset-top)) 14px 8px; background:var(--bg); border-bottom:1px solid var(--line)}
+.gym-x{width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:15px; cursor:pointer}
+.gym-title{display:flex; flex-direction:column; align-items:center; min-width:0}
+.gym-title b{font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%}
+.gym-title span{font-family:var(--mono); font-size:12px; color:var(--muted)}
+.gym-count{text-align:right; font-family:var(--mono); font-size:13px; color:var(--muted)}
+.gym-dots{display:flex; gap:5px; max-width:640px; margin:0 auto; padding:10px 16px 0}
+.gym-dots button{flex:1; height:6px; padding:0; border:0; border-radius:3px; background:var(--line); cursor:pointer}
+.gym-dots .some{background:color-mix(in srgb, var(--accent) 45%, var(--line))}
+.gym-dots .done{background:var(--accent)}
+.gym-dots [aria-current]{outline:2px solid var(--ink); outline-offset:2px}
+.gym-body{max-width:640px; margin:0 auto; padding:16px 16px calc(190px + env(safe-area-inset-bottom))}
+.gym-ex{display:grid; grid-template-columns:96px 1fr; gap:14px; align-items:center}
+.gym-ex .lv-fig{margin:0; padding:2px}
+.gym-ex .lv-fig .fig{width:92px}
+.gym-name{font-family:var(--display, inherit); font-size:24px; line-height:1.1; margin:4px 0 6px}
+.gym-ex .lv-eq{margin:0; font-size:13px; color:var(--muted)}
+.gym-tools{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:4px 0 6px}
+.gym-tools .pill{min-height:40px; padding:0 16px}
+.lv-set.cur{background:color-mix(in srgb, var(--accent) 8%, transparent); border-radius:12px; box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); padding:4px 0}
+.gym-foot{margin:16px 2px 0; text-align:center}
+.gym-bar{position:fixed; left:0; right:0; bottom:0; z-index:25; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-top:1px solid var(--line)}
+.gym-bar > *{max-width:640px; margin-left:auto; margin-right:auto}
+.gym-bar .lv-rest{margin-bottom:10px}
+.gym-actions{display:grid; grid-template-columns:56px 1fr 56px; gap:8px}
+.gym-nav{height:62px; border-radius:16px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:28px; cursor:pointer}
+.gym-nav:disabled{opacity:.3; cursor:default}
+.gym-go{height:62px; border-radius:16px; font-size:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; line-height:1.1}
+.gym-go small{font-family:var(--mono); font-size:12px; font-weight:600; opacity:.75}
+.lv-rest{position:relative; overflow:hidden}
+.lv-rest > span{position:relative}
+.lv-rest-bar{position:absolute; left:0; top:0; bottom:0; background:color-mix(in srgb, var(--accent) 22%, transparent); transition:width .25s linear}
+/* Sheets */
+.sheet{position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:opacity .2s}
+.sheet.open{opacity:1; pointer-events:auto}
+.sheet-panel{position:absolute; left:0; right:0; bottom:0; max-height:90vh; overflow:auto; overscroll-behavior:contain; background:var(--surface); border-radius:22px 22px 0 0; border-top:1px solid var(--line); padding:6px 18px calc(18px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+.sheet.open .sheet-panel{transform:none}
+@media (min-width:721px){ .sheet-panel{left:50%; right:auto; width:560px; bottom:24px; border-radius:22px; border:1px solid var(--line); transform:translate(-50%, 120%)} .sheet.open .sheet-panel{transform:translate(-50%, 0)} }
+@media (prefers-reduced-motion:reduce){ .sheet, .sheet-panel{transition:none} }
+.sheet-grab{width:40px; height:5px; border-radius:3px; background:var(--line); margin:6px auto 12px}
+.sheet .card{border:0; background:none; box-shadow:none; padding:0}
+.sheet-title{margin:0 0 6px; font-size:20px}
+.sheet-actions{display:flex; flex-direction:column; gap:10px}
+.sheet-save{width:100%; margin-top:16px}
+.sheet .lift-set input{width:auto; flex:1; min-width:0; padding:12px; font-size:17px}
+.ex-btn{display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; font:inherit; font-size:16px; text-align:left; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink); cursor:pointer}
+.ex-search{width:100%; font:inherit; font-size:17px; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink); margin-bottom:8px}
+.ex-list{display:flex; flex-direction:column}
+.ex-group{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:14px 0 4px}
+.ex-row{display:flex; justify-content:space-between; align-items:center; gap:10px; min-height:48px; padding:8px 4px; border:0; border-bottom:1px solid var(--line); background:none; color:var(--ink); font:inherit; font-size:16px; text-align:left; cursor:pointer}
+.ex-row small{color:var(--muted); font-size:12px}
+/* Lift page: one action, then tabs */
+.lift-hero{margin-bottom:16px; border-color:color-mix(in srgb, var(--accent) 45%, var(--line))}
+.lift-hero-row{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:4px}
+.card.lift-hero h2.display{font-size:40px; line-height:.95; margin:4px 0 8px; letter-spacing:0}
+.lift-hero .btn.big{flex:none; min-width:120px}
+.lift-hero-list{margin:12px 0 0; padding-left:20px; color:var(--ink-2); font-size:14px; line-height:1.7}
+.lift-hero.live{box-shadow:var(--glow)}
+.seg{display:flex; gap:4px; padding:4px; margin:0 0 16px; border-radius:14px; background:var(--surface-2); border:1px solid var(--line)}
+.seg button{flex:1; min-height:42px; border:0; border-radius:10px; background:none; color:var(--muted); font:inherit; font-weight:700; font-size:14px; cursor:pointer}
+.seg button[aria-selected="true"]{background:color-mix(in srgb, var(--accent) 16%, var(--surface)); color:var(--ink); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent)}
+.fab{position:fixed; right:16px; bottom:calc(84px + env(safe-area-inset-bottom)); z-index:26; display:flex; align-items:center; gap:8px; min-height:52px; padding:0 20px; border-radius:26px; border:0; background:var(--accent); color:var(--accent-ink); font:inherit; font-weight:800; font-size:15px; box-shadow:0 6px 20px rgba(0,0,0,.35); cursor:pointer}
+.fab span{font-size:22px; line-height:1}
+@media (min-width:721px){ .fab{bottom:24px; right:24px} }
+#page-lift .wrap{padding-bottom:80px}
 /* Live workout */
 .wrap.lv{max-width:760px}
 .lv-strip{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 10px; margin:0 -2px 6px; scrollbar-width:none}
@@ -4556,17 +4624,37 @@ function woNext(){
   const { g } = nextGroup(), last = w => doc.lifts.filter(l => l.wo === w.id).map(l => l.date).sort().at(-1) ?? '';
   return doc.workouts.filter(w => groupOf(w.items.map(it => it.ex)) === g).sort((a, b) => last(a) < last(b) ? -1 : 1)[0]?.id ?? null;
 }
+// What to do next, with one big Start: the program's day, your next workout, or a suggested one.
+function liftHero(){
+  if (LV?.away){
+    const done = LV.items.filter(x => x.sets.every(s => s.done)).length;
+    return `<div class="card lift-hero live"><div class="eyebrow">Workout in progress</div>
+      <div class="lift-hero-row"><div><h2 class="display">${esc(LV.name)}</h2><p class="card-sub">${done} of ${LV.items.length} exercises done · ${liveStats().sets} set${liveStats().sets === 1 ? '' : 's'}</p></div>
+      <button class="btn primary big" data-action="lv-resume">Resume</button></div></div>`;
+  }
+  const today = todayYmd(), sets = doc.lifts.filter(l => l.date === today).reduce((n, l) => n + l.sets.length, 0);
+  let title, items, start, why;
+  if (doc.liftProg){
+    const { day } = progNext(), prog = LIFT_PROGS[doc.liftProg.id];
+    title = `Workout ${day}`; why = prog.name; start = 'data-action="lv-prog"';
+    items = prog.days[day].map(([ex, n, r]) => `${liftDef(ex).name} · ${n} × ${r}`);
+  } else {
+    const { g, after } = nextGroup(), w = doc.workouts.find(x => x.id === woNext());
+    const days = doc.planId && coached() ? schedule(today, 2) : [];
+    why = (after ? `You did ${after.g.toLowerCase()} ${after.date === today ? 'today' : diffDays(after.date, today) === 1 ? 'yesterday' : 'on ' + fmtDate(after.date).slice(4)}, so ${g.toLowerCase()} is next.` : 'Push, pull and legs, in turn.')
+      + (g === 'Legs' && days[1]?.kind === 'run' ? ' You run tomorrow, so keep legs light today or do another day first.' : '');
+    if (w){ title = w.name; start = `data-wo-start="${w.id}"`; items = woPlan(w, today).map(it => liftDef(it.ex).name + (it.sets ? ` · ${it.sets} × ${it.reps || '?'}` : '')); }
+    else { const sg = suggestWorkout(g); title = g; start = 'data-action="wo-suggest-start"'; items = sg.items.map(it => `${liftDef(it.ex).name} · ${it.sets} × ${it.reps}`); why += ` Starting saves it as your ${g} workout.`; }
+  }
+  return `<div class="card lift-hero"><div class="eyebrow">Up next${sets ? ` · ${sets} set${sets === 1 ? '' : 's'} logged today` : ''}</div>
+    <div class="lift-hero-row"><div><h2 class="display">${esc(title)}</h2><p class="card-sub">${why}</p></div><button class="btn primary big" ${start}>Start</button></div>
+    <ol class="lift-hero-list">${items.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
+}
+const LIFT_TABS = [['train', 'Train'], ['progress', 'Progress'], ['badges', 'Badges']];
 function woList(){
-  const next = woNext(), date = liftUi.date || todayYmd(), { g, after } = nextGroup();
+  const next = woNext(), date = liftUi.date || todayYmd();
   const loose = doc.lifts.some(l => l.date === date && !l.wo && !l.day);
-  const days = doc.planId && coached() ? schedule(todayYmd(), 2) : [];
-  const legsWarn = g === 'Legs' && days[1]?.kind === 'run' ? ' You run tomorrow, so keep legs light today or do another day first.' : '';
-  const why = after ? `You did ${after.g.toLowerCase()} ${after.date === todayYmd() ? 'today' : diffDays(after.date, todayYmd()) === 1 ? 'yesterday' : 'on ' + fmtDate(after.date).slice(4)}, so ${g.toLowerCase()} is next.` : 'Push, pull and legs, in turn.';
-  const sug = !next && suggestWorkout(g);
-  return `${sug ? `<div class="wo-next"><div class="wo-next-head"><span><b>Up next: ${g}</b><small>${why}${legsWarn}</small></span><button class="btn small primary" data-action="wo-suggest-start">Start</button></div>
-      <small>${sug.items.map(it => esc(liftDef(it.ex).name)).join(' · ')}</small>
-      <small class="wo-next-foot">Starting saves it as your ${g} workout. It picks variations you haven’t done lately, and you can swap any of them.</small></div>`
-    : `<p class="card-sub" style="margin:0 0 10px">${why}${legsWarn}</p>`}
+  return `${doc.workouts.length ? '' : '<p class="card-sub" style="margin:0 0 10px">Save the workouts you repeat (Push, Pull, Legs…) and Stride rotates them for you.</p>'}
     ${doc.workouts.length ? `<ul class="lift-list">${doc.workouts.map(w => {
       const last = doc.lifts.filter(l => l.wo === w.id).sort(byDate).at(-1);
       return `<li><span><b>${esc(w.name)}${w.id === next ? ' <span class="badge test">next</span>' : ''}</b>
@@ -4663,7 +4751,7 @@ function liveItem(ex, sets, reps, day){
 function liveStart({ wo = null, day = null, name, items }){
   try { audioCtx ??= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch {}
   const date = todayYmd(), claimed = new Set();
-  LV = { wo, day, name, date, started:Date.now(), i:0, rest:null, swap:false, prs:[], items:items.map(it => liveItem(it.ex, it.sets, it.reps, day)) };
+  LV = { wo, day, name, date, started:Date.now(), i:0, rest:null, swap:false, away:false, prs:[], items:items.map(it => liveItem(it.ex, it.sets, it.reps, day)) };
   // Anything already logged today for this workout counts as done.
   for (const it of LV.items){
     const l = doc.lifts.find(l => l.date === date && l.ex === it.ex && !claimed.has(l.id) && (wo ? l.wo === wo : l.day === day));
@@ -4690,41 +4778,74 @@ function liveFinish(){
   liftUi.summary = st.sets ? { name:LV.name, ...st, exs:done.map(it => liftDef(it.ex).name), prs:LV.prs } : null;
   LV = null; liveSave(); keepAwake(false); scrollTo(0, 0); renderLift();
 }
+// Gym mode: the whole screen, one exercise at a time, the next set's button under your thumb.
 function renderLive(){
-  const it = LV.items[LV.i], def = liftDef(it.ex), how = HOWTO[it.ex], st = liveStats(), n = LV.items.length;
-  const left = it.sets.filter(s => !s.done).length, nextI = LV.items.findIndex((x, j) => j !== LV.i && x.sets.some(s => !s.done));
+  document.body.classList.add('gym');
+  const it = LV.items[LV.i], def = liftDef(it.ex), how = HOWTO[it.ex], n = LV.items.length, short = id => liftDef(id).name.replace(/ \(.*\)$/, '');
+  const cur = it.sets.findIndex(s => !s.done), left = it.sets.filter(s => !s.done).length;
+  const nextI = LV.items.findIndex((x, j) => j > LV.i && x.sets.some(s => !s.done)), anyI = nextI >= 0 ? nextI : LV.items.findIndex((x, j) => j !== LV.i && x.sets.some(s => !s.done));
   const alts = def.f ? LIFTS.filter(l => l.f === def.f && l.id !== it.ex && !doc.gym.skip.includes(l.id)) : [];
   const stepper = (i, k, v, ph) => `<span class="lv-step"><button type="button" data-lv-step="${i}|${k}|-1" aria-label="Less ${k === 'lb' ? 'weight' : 'reps'}">−</button><input type="number" inputmode="${k === 'lb' ? 'decimal' : 'numeric'}" data-lv-${k}="${i}" value="${v}" placeholder="${ph}" aria-label="Set ${i + 1} ${k === 'lb' ? 'weight' : 'reps'}"><button type="button" data-lv-step="${i}|${k}|1" aria-label="More ${k === 'lb' ? 'weight' : 'reps'}">+</button></span>`;
-  $('#page-lift').innerHTML = band({
-    eyebrow: `Live workout · exercise ${LV.i + 1} of ${n}`,
-    title: esc(LV.name),
-    stats: [['Time', `<span id="lv-clock">${mmss((Date.now() - LV.started) / 1000)}</span>`, ''], ['Sets done', st.sets, ''], ['Lbs moved', st.lbs.toLocaleString(), '']],
-  }) + `<div class="wrap lv">
-    <div class="lv-strip" role="list">${LV.items.map((x, j) => { const d = x.sets.every(s => s.done), some = x.sets.some(s => s.done);
-      return `<button class="lv-chip${d ? ' done' : some ? ' some' : ''}" role="listitem" data-lv-go="${j}"${j === LV.i ? ' aria-current="step"' : ''}><span class="num">${d ? '✓' : j + 1}</span>${esc(liftDef(x.ex).name.replace(/ \(.*\)$/, ''))}</button>`; }).join('')}</div>
-    <div id="lv-rest">${liveRest()}</div>
-    <div class="card lv-card">
-      <div class="card-head"><h2>${esc(def.name)}${infoBtn}</h2><span class="card-sub">${left ? `${left} set${left > 1 ? 's' : ''} to go` : 'done ✓'}</span></div>${explain('liftLive')}
-      ${LMOVES[it.ex] ? `<div class="lv-fig">${figure(LMOVES[it.ex], { size:220, lift:it.ex, label:def.name })}</div>` : ''}
-      ${how ? `<p class="lv-eq"><b>Use:</b> ${how.eq}</p>` : ''}
+  const setTxt = s => { const lb = +s.lb || 0, r = +s.reps || 0;
+    return def.assist ? `${lb} lb help × ${r}` : def.bw ? `${lb ? `+${lb} lb` : 'body weight'} × ${r}` : lb ? `${lb} lb × ${r}` : `${r} reps · set the weight above`; };
+  const go = cur >= 0 ? `<button class="btn primary gym-go" data-lv-done="${cur}">✓ Done set ${cur + 1}<small>${setTxt(it.sets[cur])}</small></button>`
+    : anyI >= 0 ? `<button class="btn primary gym-go" data-lv-go="${anyI}">Next: ${esc(short(LV.items[anyI].ex))} →</button>`
+    : `<button class="btn primary gym-go" data-action="lv-finish">Finish workout</button>`;
+  $('#page-lift').innerHTML = `<div class="gym-top">
+      <button class="gym-x" data-action="lv-menu" aria-label="Workout menu">✕</button>
+      <div class="gym-title"><b>${esc(LV.name)}</b><span class="num" id="lv-clock">${mmss((Date.now() - LV.started) / 1000)}</span></div>
+      <span class="gym-count num">${LV.i + 1}/${n}</span>
+    </div>
+    <div class="gym-dots">${LV.items.map((x, j) => { const d = x.sets.every(s => s.done), some = x.sets.some(s => s.done);
+      return `<button class="${d ? 'done' : some ? 'some' : ''}" data-lv-go="${j}"${j === LV.i ? ' aria-current="step"' : ''} aria-label="${esc(liftDef(x.ex).name)}${d ? ', done' : ''}"></button>`; }).join('')}</div>
+    <div class="gym-body" id="gym-body">
+      <div class="gym-ex">
+        ${LMOVES[it.ex] ? `<div class="lv-fig">${figure(LMOVES[it.ex], { size:96, lift:it.ex, label:def.name })}</div>` : '<span></span>'}
+        <div><div class="eyebrow">Exercise ${LV.i + 1} of ${n} · ${left ? `${left} set${left > 1 ? 's' : ''} to go` : 'done ✓'}</div>
+          <h1 class="gym-name">${esc(def.name)}</h1>
+          ${how ? `<p class="lv-eq">${how.eq}</p>` : ''}</div>
+      </div>
       <p class="lv-why">${it.why}</p>
-      ${how ? `<button class="link-btn lv-how-btn" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how to do it' : 'How to do it'}</button>
-        ${it.how ? `<div class="lv-how"><p><b>Set up:</b> ${how.set}</p><ol>${how.cues.map(c => `<li>${c}</li>`).join('')}</ol><p class="lv-avoid"><b>Watch for:</b> ${how.avoid}</p></div>` : ''}` : ''}
+      <div class="gym-tools">${how ? `<button class="pill" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how-to' : 'How to do it'}</button>` : ''}<button class="pill" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button><button class="pill" data-action="lv-add-set">+ Set</button>${infoBtn}</div>${explain('liftLive')}
+      ${how && it.how ? `<div class="lv-how"><p><b>Set up:</b> ${how.set}</p><ol>${how.cues.map(c => `<li>${c}</li>`).join('')}</ol><p class="lv-avoid"><b>Watch for:</b> ${how.avoid}</p></div>` : ''}
+      ${LV.swap ? `<div class="wo-swap">${alts.length ? alts.map(l => `<button class="pill" data-lv-pick="${l.id}">${esc(l.name)}</button>`).join('') : '<small>No other variations listed for this one.</small>'}
+        ${LIFTS.some(l => l.id === it.ex) ? `<button class="link-btn" data-gym-skip="${it.ex}">${esc(def.name)} isn’t at my gym</button>` : ''}</div>` : ''}
       <div class="lv-sets">
         <div class="lv-set lv-head" aria-hidden="true"><span>Set</span><span>${def.assist ? 'help lbs' : def.bw ? '+ lbs' : 'lbs'}</span><span>Reps</span><span></span></div>
-        ${it.sets.map((s, i) => `<div class="lv-set${s.done ? ' done' : ''}"><span class="num">${i + 1}</span>${stepper(i, 'lb', s.lb, def.assist ? 'help' : def.bw ? 'body' : 'lbs')}${stepper(i, 'reps', s.reps, 'reps')}
+        ${it.sets.map((s, i) => `<div class="lv-set${s.done ? ' done' : ''}${i === cur ? ' cur' : ''}"><span class="num">${i + 1}</span>${stepper(i, 'lb', s.lb, def.assist ? 'help' : def.bw ? 'body' : 'lbs')}${stepper(i, 'reps', s.reps, 'reps')}
           <button class="lv-tick" data-lv-done="${i}" aria-pressed="${s.done}" aria-label="${s.done ? `Undo set ${i + 1}` : `Done set ${i + 1}`}">✓</button></div>`).join('')}
       </div>
       ${BARBELL.includes(it.ex) ? `<div class="lv-plates" id="lv-plates">${platesLine(it)}</div>` : ''}
-      <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="lv-add-set">+ Set</button><button class="btn small" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button>
-        ${nextI >= 0 ? `<button class="btn small${left ? '' : ' primary'}" data-lv-go="${nextI}">${left ? 'Skip for now' : 'Next'}: ${esc(liftDef(LV.items[nextI].ex).name.replace(/ \(.*\)$/, ''))} →</button>` : `<button class="btn small primary" data-action="lv-finish">Finish workout</button>`}</div>
-      ${LV.swap ? `<div class="wo-swap">${alts.length ? alts.map(l => `<button class="pill" data-lv-pick="${l.id}">${esc(l.name)}</button>`).join('') : '<small>No other variations listed for this one.</small>'}
-        ${LIFTS.some(l => l.id === it.ex) ? `<button class="link-btn" data-gym-skip="${it.ex}">${esc(def.name)} isn’t at my gym</button>` : ''}</div>` : ''}
+      <p class="card-sub gym-foot">Swipe or use the arrows to move between exercises. Every ticked set saves straight away.</p>
     </div>
-    <p class="card-sub lv-foot">Each ticked set saves as you go. ${nextI >= 0 ? '<button class="link-btn" data-action="lv-finish">End workout here</button>' : ''}</p>
-  </div>`;
+    <div class="gym-bar"><div id="lv-rest">${liveRest()}</div>
+      <div class="gym-actions">
+        <button class="gym-nav" data-lv-go="${LV.i - 1}"${LV.i ? '' : ' disabled'} aria-label="Previous exercise">‹</button>${go}<button class="gym-nav" data-lv-go="${LV.i + 1}"${LV.i < n - 1 ? '' : ' disabled'} aria-label="Next exercise">›</button>
+      </div>
+    </div>`;
+  // Swipe sideways between exercises.
+  const body = $('#gym-body'); let sx = null, sy = 0;
+  body.addEventListener('touchstart', e => { if (e.target.closest('input, .lv-step')) { sx = null; return; } sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive:true });
+  body.addEventListener('touchend', e => {
+    if (sx == null) return;
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy, to = LV.i + (dx < 0 ? 1 : -1);
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 50 && to >= 0 && to < n){ LV.i = to; LV.swap = false; liveSave(); renderLive(); scrollTo(0, 0); }
+  });
   animateFigures();
 }
+/* A sheet slides up from the bottom for short tasks (logging a set, the
+   workout menu), so the page underneath keeps its place. */
+function openSheet(html){
+  let el = $('#sheet');
+  if (!el){ document.body.insertAdjacentHTML('beforeend', '<div id="sheet" class="sheet" role="dialog" aria-modal="true"><div class="sheet-panel"></div></div>'); el = $('#sheet'); }
+  clearTimeout(el._t); el.querySelector('.sheet-panel').innerHTML = `<div class="sheet-grab" aria-hidden="true"></div>${html}`;
+  requestAnimationFrame(() => el.classList.add('open'));
+}
+function closeSheet(){
+  const el = $('#sheet'); if (!el?.classList.contains('open')) return;
+  el.classList.remove('open'); el._t = setTimeout(() => { el.querySelector('.sheet-panel').innerHTML = ''; }, 260);
+}
+const openLogSheet = () => openSheet(liftLogCard());
 /* Plate calculator: what goes on each side of the bar, heaviest first. */
 const BARBELL = ['squat', 'fsquat', 'deadlift', 'rdl', 'hipthrust', 'bench', 'incline', 'press', 'row'];
 const PLATES = [45, 35, 25, 10, 5, 2.5];
@@ -4745,8 +4866,8 @@ function platesLine(it){
 }
 function liveRest(){
   if (!LV?.rest) return '';
-  const sec = Math.max(0, (LV.rest.end - Date.now()) / 1000);
-  return `<div class="lv-rest${sec <= 0 ? ' go' : ''}"><span><small>${sec > 0 ? 'Rest' : 'Rest’s up'}</small><b class="num">${sec > 0 ? mmss(Math.ceil(sec)) : 'Go'}</b></span>
+  const sec = Math.max(0, (LV.rest.end - Date.now()) / 1000), pct = LV.rest.dur ? Math.min(100, sec / LV.rest.dur * 100) : 0;
+  return `<div class="lv-rest${sec <= 0 ? ' go' : ''}"><i class="lv-rest-bar" style="width:${pct.toFixed(1)}%"></i><span><small>${sec > 0 ? 'Rest' : 'Rest’s up'}</small><b class="num">${sec > 0 ? mmss(Math.ceil(sec)) : 'Go'}</b></span>
     <span class="btn-row"><button class="btn small" data-action="lv-rest-add">+30 s</button><button class="btn small" data-action="lv-rest-skip">${sec > 0 ? 'Skip' : 'Hide'}</button></span></div>`;
 }
 // The clock and rest countdown come from timestamps, so a locked phone doesn't stretch them.
@@ -4754,6 +4875,7 @@ setInterval(() => {
   if (!LV) return;
   const c = $('#lv-clock'); if (c) c.textContent = mmss((Date.now() - LV.started) / 1000);
   if (!LV.rest) return;
+  const bar = $('#lv-rest .lv-rest-bar'); if (bar && LV.rest.dur) bar.style.width = `${Math.max(0, Math.min(100, (LV.rest.end - Date.now()) / 10 / LV.rest.dur)).toFixed(1)}%`;
   const sec = Math.ceil((LV.rest.end - Date.now()) / 1000);
   if (sec !== LV.rest.last){
     if (sec > 0 && sec <= 3) beep(660, 90);
@@ -4814,13 +4936,29 @@ function liftWorkoutsCard(){
     <p class="card-sub" style="margin:12px 0 0">${allDone ? `All done. Next time: workout ${keys[(keys.indexOf(day) + 1) % keys.length]}.` : '“Start” walks you through it set by set. Already done it? “Did it” logs every set as written; “Change” if you missed reps.'}</p>
     <div class="wo-sub">Your workouts</div>${woList()}</div>`;
 }
+// Exercises matching what's typed; with nothing typed, the ones you did lately come first.
+function pickList(q){
+  const all = [...LIFTS, ...doc.liftEx], t = q.trim().toLowerCase();
+  const row = l => `<button class="ex-row" data-pick-ex="${l.id}">${esc(l.name)}<small>${l.g ?? 'Yours'}</small></button>`;
+  if (t){
+    const hit = all.filter(l => l.name.toLowerCase().includes(t));
+    return (hit.length ? hit.map(row).join('') : '<p class="card-sub">Nothing by that name.</p>') + `<button class="ex-row" data-pick-ex="_new">Add “${esc(q.trim())}” as a new exercise</button>`;
+  }
+  const recent = [...new Set([...doc.lifts].sort(byDate).reverse().map(l => l.ex))].slice(0, 6).map(liftDef);
+  return (recent.length ? `<div class="ex-group">Recent</div>${recent.map(row).join('')}` : '')
+    + ['Legs', 'Push', 'Pull', 'Core'].map(g => `<div class="ex-group">${g}</div>${LIFTS.filter(l => l.g === g).map(row).join('')}`).join('')
+    + (doc.liftEx.length ? `<div class="ex-group">Yours</div>${doc.liftEx.map(row).join('')}` : '')
+    + '<button class="ex-row" data-pick-ex="_new">Something else…</button>';
+}
 function liftLogCard(){
   const u = liftUi, custom = u.ex === '_new', def = custom ? {} : liftDef(u.ex), last = custom ? null : liftHist(u.ex).at(-1);
-  const recent = [...doc.lifts].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0).slice(0, 8);
+  if (u.pick) return `<div class="card" id="lift-log"><div class="card-head"><h2>Pick an exercise</h2><button class="link-btn" data-action="lf-pick">back</button></div>
+    <input id="lf-q" class="ex-search" type="search" placeholder="Search, e.g. curl" value="${esc(u.q ?? '')}" autocomplete="off" aria-label="Search exercises">
+    <div class="ex-list" id="lf-list">${pickList(u.q ?? '')}</div></div>`;
   return `<div class="card" id="lift-log"><div class="card-head"><h2>${u.editId ? 'Edit lift' : 'Log a lift'}</h2><span class="card-sub">${u.editId ? '<button class="link-btn" data-action="lift-edit-cancel">cancel edit</button> · ' : ''}${u.day ? `workout ${u.day} · ` : ''}${u.wo ? `${esc(doc.workouts.find(w => w.id === u.wo)?.name ?? '')} · ` : ''}${last ? `last time ${fmtDate(last.date).slice(4)}: ${fmtSets(last.sets, setMode(def))}` : 'weight × reps for each set'}</span></div>
     <div class="field-row">
       <div class="field"><label for="lf-date">Date</label><input id="lf-date" type="date" value="${u.date || todayYmd()}"></div>
-      <div class="field"><label for="lf-ex">Exercise</label><select id="lf-ex">${exOptions(u.ex, true)}</select></div>
+      <div class="field"><label for="lf-exbtn">Exercise</label><input type="hidden" id="lf-ex" value="${u.ex}"><button type="button" id="lf-exbtn" class="ex-btn" data-action="lf-pick">${custom ? 'Something else…' : esc(def.name)}<span aria-hidden="true">▾</span></button></div>
       ${custom ? `<div class="field"><label for="lf-name">Name</label><input id="lf-name" type="text" placeholder="e.g. Hip thrust" value="${esc(u.name)}"></div>
       <div class="field"><label for="lf-legs">Works the legs?</label><select id="lf-legs"><option value="1"${u.legs ? ' selected' : ''}>Yes</option><option value=""${u.legs ? '' : ' selected'}>No</option></select></div>` : ''}
     </div>
@@ -4830,19 +4968,27 @@ function liftLogCard(){
       ${u.sets.length > 1 ? `<button class="link-btn" data-set-del="${i}" aria-label="Remove set ${i + 1}">remove</button>` : ''}</div>`).join('')}</div>
     ${def.bw ? '<p class="card-sub" style="margin:8px 0 0">Weight is anything added (a belt or vest). Leave it empty for body weight.</p>' : ''}
     ${def.assist ? '<p class="card-sub" style="margin:8px 0 0">Weight is the help: the number you set on the machine’s stack. Less help means you’re stronger.</p>' : ''}
-    <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="lift-add-set">+ Set</button>${last ? '<button class="btn small" data-action="lift-same">Same as last time</button>' : ''}<button class="btn small primary" data-action="lift-save">${u.editId ? 'Save changes' : 'Save'}</button></div>
-    ${recent.length ? `<table class="quiet lift-recent" style="margin-top:16px">${recent.map(l => `<tr><td>${fmtDate(l.date).slice(4)}</td><td>${esc(liftDef(l.ex).name)}</td><td>${fmtSets(l.sets, setMode(liftDef(l.ex)))} <button class="link-btn" data-edit-lift="${l.id}">edit</button> <button class="link-btn" data-del-lift="${l.id}">remove</button></td></tr>`).join('')}</table>` : ''}
+    <div class="btn-row" style="margin-top:14px"><button class="btn" data-action="lift-add-set">+ Set</button>${last ? '<button class="btn" data-action="lift-same">Same as last time</button>' : ''}</div>
+    <button class="btn primary big sheet-save" data-action="lift-save">${u.editId ? 'Save changes' : 'Save'}</button>
   </div>`;
+}
+// What you've logged lately, to fix or remove.
+function liftRecentCard(){
+  const recent = [...doc.lifts].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0).slice(0, 12);
+  if (!recent.length) return '';
+  return `<div class="card"><div class="card-head"><h2>Logged lately</h2><span class="card-sub">tap Edit to fix one</span></div>
+    <ul class="lift-list">${recent.map(l => `<li><span><b>${esc(liftDef(l.ex).name)}</b><small>${fmtDate(l.date)} · ${fmtSets(l.sets, setMode(liftDef(l.ex)))}</small></span>
+      <span class="btn-row"><button class="btn small" data-edit-lift="${l.id}">Edit</button><button class="btn small" data-del-lift="${l.id}" aria-label="Remove">✕</button></span></li>`).join('')}</ul></div>`;
 }
 // Keeps what's typed when the card redraws (adding a set, switching exercise).
 function readLiftForm(){
-  if (!$('#lift-log')) return;
+  if (!$('#lf-date')) return;
   liftUi.date = $('#lf-date').value; liftUi.ex = $('#lf-ex').value;
   if ($('#lf-name')){ liftUi.name = $('#lf-name').value; liftUi.legs = !!$('#lf-legs').value; }
   liftUi.sets = liftUi.sets.map((s, i) => ({ lb:$(`[data-set-lb="${i}"]`)?.value ?? s.lb, reps:$(`[data-set-reps="${i}"]`)?.value ?? s.reps }));
   readWoForm();
 }
-const redrawLiftLog = () => { $('#lift-log').outerHTML = liftLogCard(); };
+const redrawLiftLog = () => { const el = $('#lift-log'); if (el) el.outerHTML = liftLogCard(); };
 function liftPRCard(){
   const exs = [...new Set(doc.lifts.map(l => l.ex))].map(ex => { const h = liftHist(ex); return { ex, ...liftBest(ex), first:h[0].date, last:h.at(-1).date }; })
     .sort((a, b) => a.last < b.last ? 1 : a.last > b.last ? -1 : 0);
@@ -4921,18 +5067,22 @@ function liftRunTips(){
 function renderLift(){
   // A workout left open past midnight is over; its ticked sets are already saved.
   if (LV && LV.date !== todayYmd()){ LV = null; liveSave(); }
-  if (LV) return renderLive();
+  if (LV && !LV.away) return renderLive();
+  document.body.classList.remove('gym');
+  const tab = prefs.get('liftTab', 'train');
   const today = todayYmd(), ws = weekStart(today), wk = doc.lifts.filter(l => l.date >= ws && l.date <= today);
   const prs = [...new Set(doc.lifts.map(l => l.ex))].filter(ex => { const h = liftHist(ex), b = liftBest(ex).best; return b.date > h[0].date && diffDays(b.date, today) <= 30; }).length;
   $('#page-lift').innerHTML = band({
     eyebrow: 'Lift · strength alongside your running',
     title: 'Lift',
     stats: [['Lifts · week', new Set(wk.map(l => l.date)).size, ''], ['Volume · week', fmtK(liftVolume(wk)), 'lb'], ['PRs · 30 days', prs, '']],
-  }) + `<div class="wrap">${liftSummary()}${freshBadgesCard('lift')}
-    <div class="grid two">${liftWorkoutsCard()}${liftLogCard()}</div>
-    <div class="grid two" style="margin-top:16px">${liftVolumeCard()}${liftPRCard()}</div>
-    <div class="grid two" style="margin-top:16px">${badgesCard('lift')}${liftRunTips()}</div>
-  </div>`;
+  }) + `<div class="wrap">${liftSummary()}${freshBadgesCard('lift')}${liftHero()}
+    <div class="seg" role="tablist" aria-label="Lift sections">${LIFT_TABS.map(([k, l]) => `<button role="tab" data-lift-tab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
+    ${tab === 'progress' ? `<div class="grid two">${liftVolumeCard()}${liftPRCard()}</div><div style="margin-top:16px">${liftRecentCard()}</div>`
+      : tab === 'badges' ? badgesCard('lift')
+      : `<div class="grid two">${liftWorkoutsCard()}${liftRunTips()}</div>`}
+  </div>
+  <button class="fab" data-action="lift-log-open"><span aria-hidden="true">+</span> Log a set</button>`;
   drawLiftChart(); drawLiftVolume();
 }
 
@@ -6334,7 +6484,7 @@ document.addEventListener('click', async e => {
     const { day } = progNext(), [ex, n, reps] = LIFT_PROGS[doc.liftProg.id].days[day][+(ld.dataset.liftDid ?? ld.dataset.liftEdit)];
     const sets = Array.from({ length:n }, () => ({ lb:progWeight(ex, n, reps), reps }));
     if (ld.dataset.liftDid != null){ readLiftForm(); logLift({ date:todayYmd(), ex, sets, day }); liftUi.chart = ex; await save(); renderLift(); }
-    else { Object.assign(liftUi, { ex, date:todayYmd(), sets, day, wo:null, editId:null }); redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' }); }
+    else { Object.assign(liftUi, { ex, date:todayYmd(), sets, day, wo:null, editId:null }); openLogSheet(); }
     return;
   }
   const woBtn = e.target.closest('[data-wo-start], [data-wo-edit]');
@@ -6371,7 +6521,8 @@ document.addEventListener('click', async e => {
       s.done = true;
       if (prior && v > prior){ toast(`New PR · ${def.name}: ${prTxt(def, v, s)}`); if (!LV.prs.includes(def.name)) LV.prs.push(def.name); }
       const more = LV.items.some(x => x.sets.some(y => !y.done));
-      LV.rest = more ? { end:Date.now() + restFor(it.ex) * 1000 } : null;
+      LV.rest = more ? { end:Date.now() + restFor(it.ex) * 1000, dur:restFor(it.ex) } : null;
+      navigator.vibrate?.(35);
       // Last set of this one: move on to the next unfinished exercise.
       if (!it.sets.some(y => !y.done) && more){ LV.i = LV.items.findIndex(x => x.sets.some(y => !y.done)); scrollTo(0, 0); }
     }
@@ -6400,10 +6551,15 @@ document.addEventListener('click', async e => {
   if (editL){
     const l = doc.lifts.find(x => x.id === editL.dataset.editLift); if (!l) return;
     Object.assign(liftUi, { editId:l.id, ex:l.ex, date:l.date, sets:l.sets.map(s => ({ lb:s.lb || '', reps:s.reps })), day:null, wo:null });
-    redrawLiftLog(); $('#lift-log').scrollIntoView({ behavior:calm() ? 'auto' : 'smooth', block:'start' }); return;
+    openLogSheet(); return;
   }
   const sdl = e.target.closest('[data-set-del]');
   if (sdl){ readLiftForm(); liftUi.sets.splice(+sdl.dataset.setDel, 1); redrawLiftLog(); return; }
+  const lt = e.target.closest('[data-lift-tab]');
+  if (lt){ prefs.set('liftTab', lt.dataset.liftTab); readLiftForm(); renderLift(); return; }
+  const pe = e.target.closest('[data-pick-ex]');
+  if (pe){ Object.assign(liftUi, { ex:pe.dataset.pickEx, pick:false, day:null, wo:null, name:pe.dataset.pickEx === '_new' ? (liftUi.q ?? '').trim() : liftUi.name, q:'' }); redrawLiftLog(); return; }
+  if (e.target.id === 'sheet'){ closeSheet(); return; }
   const lc = e.target.closest('[data-lift-chart]');
   if (lc){ liftUi.chart = lc.dataset.liftChart; readLiftForm(); renderLift(); return; }
   const dl = e.target.closest('[data-del-lift]');
@@ -6687,8 +6843,11 @@ document.addEventListener('click', async e => {
       if (u.editId){ doc.lifts = doc.lifts.map(l => l.id === u.editId ? { ...l, date:u.date, ex, sets } : l); toast('Updated'); }
       else logLift({ date:u.date, ex, sets, ...(u.day ? { day:u.day } : {}), ...(u.wo ? { wo:u.wo } : {}) });
       Object.assign(liftUi, { ex, day:null, wo:null, editId:null, date:u.editId ? null : u.date, name:'', chart:ex, sets:[{ lb:'', reps:'' }] });
-      await save(); renderLift(); break;
+      closeSheet(); await save(); renderLift(); break;
     }
+    case 'lift-log-open': Object.assign(liftUi, { pick:false, q:'', editId:null }); openLogSheet(); break;
+    case 'sheet-close': closeSheet(); break;
+    case 'lf-pick': readLiftForm(); liftUi.pick = !liftUi.pick; liftUi.q = ''; redrawLiftLog(); if (liftUi.pick) setTimeout(() => $('#lf-q')?.focus(), 60); break;
     case 'lift-edit-cancel': Object.assign(liftUi, { editId:null, date:null, sets:[{ lb:'', reps:'' }] }); redrawLiftLog(); break;
     case 'wo-new': readLiftForm(); liftUi.edit = { id:null, name:'', items:[{ ex:'bench', sets:3, reps:8 }] }; redrawWo(); break;
     case 'wo-from-day': {
@@ -6729,9 +6888,13 @@ document.addEventListener('click', async e => {
     case 'lv-how': LV.items[LV.i].how = !LV.items[LV.i].how; liveSave(); renderLive(); break;
     case 'lv-swap': LV.swap = !LV.swap; liveSave(); renderLive(); break;
     case 'lv-add-set': { const it = LV.items[LV.i], last = it.sets.at(-1); it.sets.push({ lb:last?.lb ?? '', reps:last?.reps ?? '', done:false }); liveSave(); renderLive(); break; }
-    case 'lv-rest-add': LV.rest = { end:Math.max(LV.rest?.end ?? 0, Date.now()) + 30000 }; liveSave(); $('#lv-rest').innerHTML = liveRest(); break;
+    case 'lv-rest-add': { const end = Math.max(LV.rest?.end ?? 0, Date.now()) + 30000; LV.rest = { end, dur:Math.max(LV.rest?.dur ?? 0, (end - Date.now()) / 1000) }; liveSave(); $('#lv-rest').innerHTML = liveRest(); break; }
     case 'lv-rest-skip': LV.rest = null; liveSave(); $('#lv-rest').innerHTML = ''; break;
-    case 'lv-finish': liveFinish(); break;
+    case 'lv-finish': closeSheet(); liveFinish(); break;
+    case 'lv-menu': openSheet(`<h2 class="sheet-title">${esc(LV.name)}</h2><p class="card-sub" style="margin:0 0 14px">Every ticked set is already saved. Leaving keeps your place: pick it up from the Lift tab.</p>
+      <div class="sheet-actions"><button class="btn primary big" data-action="lv-finish">Finish workout</button><button class="btn big" data-action="lv-leave">Leave for now</button><button class="btn big" data-action="sheet-close">Keep going</button></div>`); break;
+    case 'lv-leave': closeSheet(); LV.away = true; liveSave(); keepAwake(false); location.hash = 'today'; break;
+    case 'lv-resume': LV.away = false; liveSave(); keepAwake(true); scrollTo(0, 0); renderLift(); break;
     case 'lv-bar': prefs.set('barLb', prefs.get('barLb', 45) === 45 ? 35 : 45); $('#lv-plates').innerHTML = platesLine(LV.items[LV.i]); break;
     case 'lv-summary-close': liftUi.summary = null; readLiftForm(); renderLift(); break;
     case 'lift-prog-cancel': liftUi.setup = null; readLiftForm(); renderLift(); break;
@@ -6764,6 +6927,7 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && momentOpen){ closeMoment(); return; }
+  if (e.key === 'Escape' && $('#sheet.open')){ closeSheet(); return; }
   if (e.key === 'Enter' && e.target.id === 'si-email' && authUi.mode === 'code'){ sendLink(); return; }
   if (e.key === 'Enter' && e.target.id === 'si-code'){ verifyCode(); return; }
   if (e.key === 'Enter' && e.target.id === 'icu-key'){ connectIntervals(); return; }
@@ -6782,6 +6946,10 @@ document.addEventListener('change', e => {
   if (e.target.id === 'lf-date'){ readLiftForm(); if ($('#lift-wo') && !liftUi.edit) redrawWo(); return; }
   if (e.target.id !== 'lf-ex') return;
   readLiftForm(); liftUi.day = null; liftUi.wo = null; redrawLiftLog();
+});
+document.addEventListener('input', e => {
+  if (e.target.id !== 'lf-q') return;
+  liftUi.q = e.target.value; $('#lf-list').innerHTML = pickList(liftUi.q);
 });
 // Typed weights and reps in the live workout; a ticked set saves the change.
 document.addEventListener('input', e => {
@@ -6821,6 +6989,7 @@ function render(){
   // No plan chosen yet: everything but Setup (where you can sign in) waits on the welcome screen.
   // No plan yet: the intake, unless they've chosen to pick a plan by hand. Lifting works without one.
   if (!doc.planId && !['setup', 'routine', 'welcome', 'intake', 'lift'].includes(pg)) pg = 'intake';
+  if (pg !== 'lift') document.body.classList.remove('gym');
   document.querySelectorAll('.tab[data-page]').forEach(b => b.dataset.page === pg ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + pg));
   tip.classList.remove('show');
@@ -6877,7 +7046,7 @@ addEventListener('scroll', () => {
 }, { passive:true });
 
 let lastRoute = null;
-addEventListener('hashchange', () => { render(); if (location.hash !== lastRoute){ scrollTo(0, 0); arrive(); } lastRoute = location.hash; });
+addEventListener('hashchange', () => { closeSheet(); render(); if (location.hash !== lastRoute){ scrollTo(0, 0); arrive(); } lastRoute = location.hash; });
 let rt, lastW = innerWidth;
 addEventListener('resize', () => {
   if (innerWidth === lastW) return; lastW = innerWidth;
