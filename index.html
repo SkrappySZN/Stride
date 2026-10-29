@@ -2638,7 +2638,7 @@ const EXPLAIN = {
   take: () => 'A read of this run the way a coach would give it, written by Stride from your own history (nothing leaves the app). It compares the run with your last few of a similar distance, indoors with indoors and outdoors with outdoors: faster for the same or lower heart rate means fitness is building. Then it looks inside the run (how much was easy, when it got hard, whether heart rate crept up) and ends with one thing to do next.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
-  onerm: () => 'Your 1-rep max is the heaviest weight you’ve lifted for a single rep: a true max, not an estimate. Only sets you log as 1 rep count here, so to set one, warm up with a few lighter singles, then log the heaviest one you got (weight × 1). Use a spotter or safety arms. Everyday progress (best sets of several reps) is on the Best sets card. Body-weight and assisted moves aren’t listed: they go by reps or help instead.',
+  onerm: () => 'Your 1-rep max is the heaviest weight you’ve lifted for a single rep: a true max, not an estimate. Log one with “+ Log a 1-rep max”: pick the lift and enter the heaviest weight you got for one full rep. Warm up with a few lighter singles first, and use a spotter or safety arms. Max tests never change the weights Stride suggests for your normal sets. Everyday progress (best sets of several reps) is on the Best sets card. Body-weight and assisted moves aren’t listed: they go by reps or help instead.',
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
   liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
   badges: () => 'Badges come from what you’ve already done, so older runs and lifts count too. Each one has tiers, from bronze to silver, gold and volt: the more you do, the higher it goes. The bar shows how close you are to the next tier; tap a badge to see every tier and the day you earned it. Runs live on Progress (counts, miles, longest run, steady weeks, fastest mile and 5K, early, late, cold and hot runs); lifting on Lift (lifting days, volume, steady weeks, PRs, pull-ups, run-and-lift days, and bench, squat and deadlift against your body weight, which use your latest weight from the Body tab). New ones show on Today and in the new-run scene.',
@@ -4671,9 +4671,10 @@ function groupOf(exs){
   return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 }
 function nextGroup(){
-  const last = doc.lifts.map(l => l.date).sort().at(-1);
+  // A max test isn't a training day, so it doesn't move the rotation.
+  const ls = doc.lifts.filter(l => !l.max), last = ls.map(l => l.date).sort().at(-1);
   if (!last) return { g:'Push', after:null };
-  const g = groupOf(doc.lifts.filter(l => l.date === last).map(l => l.ex));
+  const g = groupOf(ls.filter(l => l.date === last).map(l => l.ex));
   return { g: g ? LIFT_SPLIT[(LIFT_SPLIT.indexOf(g) + 1) % LIFT_SPLIT.length] : 'Push', after:g && { g, date:last } };
 }
 // The family member done longest ago (never done counts as longest), skipping
@@ -4734,7 +4735,7 @@ function liftHero(){
 const LIFT_TABS = [['train', 'Train'], ['progress', 'Progress'], ['badges', 'Badges']];
 function woList(){
   const next = woNext(), date = liftUi.date || todayYmd();
-  const loose = doc.lifts.some(l => l.date === date && !l.wo && !l.day);
+  const loose = doc.lifts.some(l => l.date === date && !l.wo && !l.day && !l.max);
   return `${doc.workouts.length ? '' : '<p class="card-sub" style="margin:0 0 10px">Save the workouts you repeat (Push, Pull, Legs…) and Stride rotates them for you.</p>'}
     ${doc.workouts.length ? `<ul class="lift-list">${doc.workouts.map(w => {
       const last = doc.lifts.filter(l => l.wo === w.id).sort(byDate).at(-1);
@@ -5126,7 +5127,7 @@ function liftRecentCard(){
   const recent = [...doc.lifts].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0).slice(0, 12);
   if (!recent.length) return '';
   return `<div class="card"><div class="card-head"><h2>Logged lately</h2><span class="card-sub">tap Edit to fix one</span></div>
-    <ul class="lift-list">${recent.map(l => `<li><span><b>${esc(liftDef(l.ex).name)}</b><small>${fmtDate(l.date)}${l.wo && doc.workouts.some(w => w.id === l.wo) ? ` · ${esc(doc.workouts.find(w => w.id === l.wo).name)}` : l.day ? ` · workout ${l.day}` : ''} · ${fmtSets(l.sets, setMode(liftDef(l.ex)))}</small></span>
+    <ul class="lift-list">${recent.map(l => `<li><span><b>${esc(liftDef(l.ex).name)}</b><small>${fmtDate(l.date)}${l.max ? ' · 1-rep max' : ''}${l.wo && doc.workouts.some(w => w.id === l.wo) ? ` · ${esc(doc.workouts.find(w => w.id === l.wo).name)}` : l.day ? ` · workout ${l.day}` : ''} · ${fmtSets(l.sets, setMode(liftDef(l.ex)))}</small></span>
       <span class="btn-row"><button class="btn small" data-edit-lift="${l.id}">Edit</button><button class="btn small" data-del-lift="${l.id}" aria-label="Remove">✕</button></span></li>`).join('')}</ul></div>`;
 }
 // Keeps what's typed when the card redraws (adding a set, switching exercise).
@@ -5152,8 +5153,29 @@ function liftMaxCard(){
   return `<div class="card"><div class="card-head"><h2>1-rep maxes${infoBtn}</h2><span class="card-sub">the most you’ve lifted once</span></div>${explain('onerm')}
     ${rows.length ? `<ul class="pr-list">${rows.map(r => `<li><span><b>${esc(r.def.name)}</b>${r.isNew ? ' <span class="badge test">new</span>' : ''}</span>
       <span class="pr-v"><b>${r.best.lb} lb</b><small>${fmtDate(r.best.date)}</small></span></li>`).join('')}</ul>`
-      : '<div class="pending-box">None yet. When you test a true max, log the weight × 1 rep and it shows here.</div>'}</div>`;
+      : '<div class="pending-box">None yet. Tested a true max? Log it here.</div>'}
+    <button class="btn primary goal-open" data-action="max-open">+ Log a 1-rep max</button></div>`;
 }
+/* Logging a 1-rep max is its own short form: a lift, a weight, a day. Saved as one
+   single marked `max`, so it never sets working weights (see lastWorking). */
+const maxOf = ex => liftHist(ex).flatMap(l => l.sets.filter(x => x.reps === 1 && x.lb > 0).map(x => ({ lb:x.lb, date:l.date }))).reduce((a, b) => !a || b.lb > a.lb ? b : a, null);
+function maxSheet(){
+  const m = liftUi.max, def = liftDef(m.ex), cur = maxOf(m.ex);
+  if (m.pick) return `<div id="max-sheet"><div class="card-head"><h2 class="sheet-title">Which lift?</h2><button class="link-btn" data-action="max-pick">back</button></div>
+    <input id="max-q" class="ex-search" type="search" placeholder="Search, e.g. squat" value="${esc(m.q)}" autocomplete="off" aria-label="Search lifts">
+    <div class="ex-list" id="max-list">${pickList(m.q, 'data-max-ex')}</div></div>`;
+  return `<div id="max-sheet"><h2 class="sheet-title">Log a 1-rep max</h2>
+    <p class="card-sub" style="margin:0 0 12px">The heaviest weight you lifted for one full rep. Warm up with a few lighter singles first, and use a spotter or safety arms.</p>
+    <div class="field"><label for="max-exbtn">Lift</label><button type="button" id="max-exbtn" class="ex-btn" data-action="max-pick">${esc(def.name)}<span aria-hidden="true">▾</span></button></div>
+    <div class="field-row" style="margin-top:10px">
+      <div class="field"><label for="max-lb">Weight (lbs)</label><input id="max-lb" type="number" inputmode="decimal" value="${m.lb}" placeholder="${cur ? cur.lb + 5 : 'lbs'}"></div>
+      <div class="field"><label for="max-date">Day</label><input id="max-date" type="date" max="${todayYmd()}" value="${m.date}"></div>
+    </div>
+    <p class="card-sub" style="margin:12px 0 0">${cur ? `Your max now: <b>${cur.lb} lb</b>, ${fmtDate(cur.date)}.` : 'Your first max on this lift.'}</p>
+    <button class="btn primary big sheet-save" data-action="max-save">Save 1-rep max</button></div>`;
+}
+const readMax = () => { const m = liftUi.max; if (m && $('#max-lb')){ m.lb = $('#max-lb').value; m.date = $('#max-date').value; } };
+const redrawMax = () => { const el = $('#max-sheet'); if (el) el.outerHTML = maxSheet(); };
 function liftPRCard(){
   // Working sets only: singles are max tests, and live on the 1-rep max card.
   const exs = [...new Set(doc.lifts.map(l => l.ex))].map(ex => {
@@ -6794,6 +6816,13 @@ document.addEventListener('click', async e => {
     LV.items.push(liveItem(ex)); LV.i = LV.items.length - 1; LV.swap = false;
     closeSheet(); liveSave(); renderLive(); scrollTo(0, 0); return;
   }
+  const mx = liftUi.max && e.target.closest('[data-max-ex]');
+  if (mx){
+    const def = liftDef(mx.dataset.maxEx);
+    if (mx.dataset.maxEx === '_new'){ toast('Pick a lift from the list'); return; }
+    if (def.bw || def.assist){ toast('Body-weight and assisted moves don’t have a 1-rep max'); return; }
+    Object.assign(liftUi.max, { ex:mx.dataset.maxEx, pick:false, q:'' }); redrawMax(); return;
+  }
   const pd = e.target.closest('[data-past-del], [data-past-addset], [data-past-setdel]');
   if (pd && liftUi.past){
     readPast(); const P = liftUi.past;
@@ -7113,6 +7142,20 @@ document.addEventListener('click', async e => {
       doc.lifts = doc.lifts.map(l => m.entries.includes(l.id) ? { ...l, wo:id } : l);
       m.saved = name; await save(); renderLift(); toast(`Saved as ${name}`); break;
     }
+    case 'max-open': {
+      const lastMax = [...doc.lifts].sort(byDate).reverse().find(l => l.sets.length === 1 && l.sets[0].reps === 1 && !liftDef(l.ex).bw && !liftDef(l.ex).assist);
+      liftUi.max = { ex:lastMax?.ex ?? 'bench', lb:'', date:todayYmd(), pick:false, q:'' };
+      openSheet(maxSheet()); break;
+    }
+    case 'max-pick': readMax(); liftUi.max.pick = !liftUi.max.pick; liftUi.max.q = ''; redrawMax(); if (liftUi.max.pick) setTimeout(() => $('#max-q')?.focus(), 60); break;
+    case 'max-save': {
+      readMax(); const m = liftUi.max, def = liftDef(m.ex), lb = +m.lb, before = maxOf(m.ex);
+      if (!(lb > 0) || lb > 1500){ toast('Enter the weight you lifted'); break; }
+      if (!m.date || m.date > todayYmd()){ toast('Pick a day up to today'); break; }
+      doc.lifts = [...doc.lifts, { id:liftId(), date:m.date, ex:m.ex, sets:[{ lb, reps:1 }], max:true }];
+      liftUi.max = null; closeSheet(); await save(); renderLift();
+      toast(before && lb > before.lb ? `New 1-rep max · ${def.name}: ${lb} lb (up ${lb - before.lb})` : before ? `Saved · your max is still ${before.lb} lb` : `Saved · ${def.name} 1-rep max: ${lb} lb`); break;
+    }
     case 'past-open': {
       const date = addDays(todayYmd(), -1), wo = woNext() ?? doc.workouts.at(-1)?.id ?? '';
       liftUi.past = { date, wo, items:pastItems(wo, date), removed:[] };
@@ -7149,7 +7192,7 @@ document.addEventListener('click', async e => {
     case 'wo-new': readLiftForm(); liftUi.edit = { id:null, name:'', items:[{ ex:'bench', sets:3, reps:8 }] }; redrawWo(); break;
     case 'wo-from-day': {
       readLiftForm();
-      const date = liftUi.date || todayYmd(), ls = doc.lifts.filter(l => l.date === date && !l.wo && !l.day);
+      const date = liftUi.date || todayYmd(), ls = doc.lifts.filter(l => l.date === date && !l.wo && !l.day && !l.max);
       const items = [...new Map(ls.map(l => [l.ex, l])).values()].map(l => ({ ex:l.ex, sets:l.sets.length, reps:l.sets[0].reps }));
       liftUi.edit = { id:null, name:'', items, from:date }; redrawWo(); break;
     }
@@ -7248,6 +7291,7 @@ document.addEventListener('change', e => {
   readLiftForm(); liftUi.day = null; liftUi.wo = null; redrawLiftLog();
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'max-q' && liftUi.max){ liftUi.max.q = e.target.value; $('#max-list').innerHTML = pickList(e.target.value, 'data-max-ex'); return; }
   if (e.target.id === 'lv-q'){ $('#lv-list').innerHTML = pickList(e.target.value, 'data-lv-add'); return; }
   if (e.target.id !== 'lf-q') return;
   liftUi.q = e.target.value; $('#lf-list').innerHTML = pickList(liftUi.q);

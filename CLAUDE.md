@@ -141,6 +141,9 @@ data runs through it, so treat changes to data handling with care.
   "Start an empty workout" (`LV.free`) opens gym mode with nothing in it; "+ Exercise" (`lv-add-open`, `pickList(q,
   'data-lv-add')`) adds one at any time, in any workout, and can create a custom exercise by name. A free session's
   summary offers to save it as a preset and tags its entries with the new `wo`.
+  Progress shows "1-rep maxes" (`liftMaxCard`, singles only) and "Best sets" (`liftPRCard`, working sets only). A max
+  is logged with "+ Log a 1-rep max" (`maxSheet`) as one single with `max:true`; max tests never prefill working sets
+  (`lastWorking`) and don't move the push/pull/legs rotation (`nextGroup`).
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.
