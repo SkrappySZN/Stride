@@ -138,6 +138,9 @@ data runs through it, so treat changes to data handling with care.
   "+ Log a past workout" (`pastItems`, `pastCard`, `liftUi.past`) logs a whole earlier session in one sheet: a day
   and a workout, each exercise prefilled from the last time before that day, saved as entries carrying `wo`. A day
   already logged for that workout opens as logged (only those entries), so saving edits rather than duplicates.
+  "Start an empty workout" (`LV.free`) opens gym mode with nothing in it; "+ Exercise" (`lv-add-open`, `pickList(q,
+  'data-lv-add')`) adds one at any time, in any workout, and can create a custom exercise by name. A free session's
+  summary offers to save it as a preset and tags its entries with the new `wo`.
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.
