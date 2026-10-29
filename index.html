@@ -4530,6 +4530,8 @@ const LIFTS = [
   { id:'legcurl', name:'Leg curl', g:'Legs', f:'hamcurl', inc:5, legs:true },
   { id:'nordic', name:'Nordic curl', g:'Legs', f:'hamcurl', inc:5, legs:true, bw:true },
   { id:'legext', name:'Leg extension', g:'Legs', f:'quad', inc:5, legs:true },
+  { id:'abductor', name:'Hip abductor (machine)', g:'Legs', f:'abduct', inc:10 },
+  { id:'adductor', name:'Hip adductor (machine)', g:'Legs', f:'adduct', inc:10 },
   { id:'calf', name:'Standing calf raise', g:'Legs', f:'calf', inc:10, legs:true },
   { id:'seatcalf', name:'Seated calf raise (machine)', g:'Legs', f:'calf', inc:10, legs:true },
   { id:'bench', name:'Bench press', g:'Push', f:'hpress', inc:5 },
@@ -4758,6 +4760,8 @@ const HOWTO = {
   rdl:{ eq:'Barbell (lift it from a rack at hip height)', set:'Hold the bar at your hips, hands just outside your thighs, knees softly bent.', cues:['Push your hips straight back and let the bar slide down your thighs.', 'Stop at a strong hamstring stretch, usually just below the knee.', 'Drive your hips forward to stand.'], avoid:'Turning it into a squat, or rounding your back to reach lower.' },
   legpress:{ eq:'Leg press machine', set:'Back and hips flat on the pad, feet shoulder-width in the middle of the platform. Release the safety handles.', cues:['Lower until your knees are about at a right angle.', 'Press through your heels and mid-foot.', 'Stop just short of locking your knees.'], avoid:'Going so deep your lower back lifts off the pad. Lock the safeties before you get out.' },
   seatcalf:{ eq:'Seated calf-raise machine', set:'Sit with the balls of your feet on the foot bar, heels hanging off, and the pad snug on your thighs just above your knees. Release the safety lever.', cues:['Lower your heels as far as they go and pause.', 'Push up onto your toes as high as you can, lifting the pad.', 'Come down slowly.'], avoid:'Bouncing at the bottom. Bent knees aim this at the deeper calf muscle that carries a lot of running load, so slow, full reps matter.' },
+  abductor:{ eq:'Hip abductor machine (pads on the outside of your knees)', set:'Sit back against the pad with the pads on the outside of your knees. Set the start so your legs begin close together, and hold the handles.', cues:['Push your knees out against the pads, as wide as is comfortable.', 'Pause for a second at the widest point.', 'Let them come back in slowly, without the weight stack touching down.'], avoid:'Rocking your body to throw the weight. Slow and controlled works the side of the hip best: the muscle that keeps your knees and pelvis steady when you run.' },
+  adductor:{ eq:'Hip adductor machine (pads on the inside of your knees)', set:'Sit back against the pad with the pads on the inside of your knees. Set the start width to a comfortable stretch, not your widest, and hold the handles.', cues:['Squeeze your knees together against the pads.', 'Pause for a second when they meet.', 'Let them open slowly back to the start.'], avoid:'Starting so wide it strains the groin. Begin with a smaller range and widen it over a few weeks.' },
   hacksquat:{ eq:'Hack squat machine (often the same frame as a 45° leg press, used standing)', set:'Stand on the foot plate with your back flat on the angled pad and your shoulders under the shoulder pads. Feet shoulder-width in the middle of the plate. Release the safety handles.', cues:['Bend your knees and sink straight down the rails, back staying on the pad.', 'Go until your thighs are about parallel to the foot plate.', 'Drive up through your whole foot, stopping just short of locking your knees.'], avoid:'Heels lifting or knees caving in. Lock the safety handles before you step off. The sled has weight of its own: log just the plates you add, the same way every time.' },
   goblet:{ eq:'One dumbbell or kettlebell', set:'Hold the dumbbell upright against your chest, both hands cupping the top end.', cues:['Feet a little wider than your hips, toes slightly out.', 'Sit down between your heels, elbows inside your knees.', 'Stand up tall, weight close to your chest.'], avoid:'Letting the weight drift away from your body.' },
   split:{ eq:'Two dumbbells (the weight is per dumbbell)', set:'Long stance: one foot forward, back heel up, a dumbbell in each hand.', cues:['Drop your back knee straight down toward the floor.', 'Keep most of your weight on the front foot.', 'Push up through the front heel. All reps, then switch legs.'], avoid:'Too short a stance, which shoves the front knee far forward.' },
@@ -5792,6 +5796,15 @@ Object.assign(LMOVES, { dbrdl:{ ...LMOVES.rdl, gear:P => bell(P.w1) }, dbbench:{
   // Side-on: palms in, the dumbbell is seen lengthwise; palms up at the top, it's seen end-on.
   twistcurl:{ ...LMOVES.dbcurl, gear:P => { const f = Math.max(0, Math.min(1, (P.w1[1] - P.n[1] - 3) / 28)), wd = 6 + 7 * f;
     return `<rect x="${(P.w1[0] - wd / 2).toFixed(1)}" y="${(P.w1[1] - 3.5).toFixed(1)}" width="${wd.toFixed(1)}" height="7" rx="3" class="kit-solid"/>`; } },
+  ...(() => {
+    // Seated, facing you: the knees open and close (thighs come toward you, so they're short), feet on the rests.
+    const legs = (P, d) => ({ ...P, k1:[60 + d, 87], k2:[60 - d, 87], f1:[60 + d + 2, 107], f2:[60 - d - 2, 107], t1:[60 + d + 2, 107], t2:[60 - d - 2, 107] });
+    const top = lpose({ p:[60, 83], front:true, f1:[66, 107], f2:[54, 107], kb:-1, kb2:1, w:[13, 33], w2r:[-13, 33], eb:-1, eb2:1 });
+    const shut = legs(top, 5), wide = legs(top, 17);
+    const pads = side => P => [['k1', 1], ['k2', -1]].map(([k, sgn]) => `<rect x="${(P[k][0] + side * sgn * 5 - 2).toFixed(1)}" y="${(P[k][1] - 6).toFixed(1)}" width="4" height="12" rx="2" class="kit-solid"/>`).join('');
+    return { abductor:{ dur:1.4, front:true, props:SEAT(45, 86, false), a:shut, b:wide, gear:pads(1) },
+      adductor:{ dur:1.4, front:true, props:SEAT(45, 86, false), a:wide, b:shut, gear:pads(-1) } };
+  })(),
   apullup:{ ...LMOVES.pullup, gear:P => `<rect x="${(Math.min(P.k1[0], P.k2[0]) - 7).toFixed(1)}" y="${(Math.max(P.k1[1], P.k2[1]) + 3).toFixed(1)}" width="${(Math.abs(P.k1[0] - P.k2[0]) + 14).toFixed(1)}" height="4" rx="2" class="kit-solid"/>` }, adips:{ ...LMOVES.dips, gear:kneePad },
   cablecurl:{ ...LMOVES.curl, props:STACK + pulley(104, 104), gear:P => cable([104, 104], P.w1) + `<rect x="${(P.w1[0] - 2).toFixed(1)}" y="${(P.w1[1] - 6).toFixed(1)}" width="4" height="12" rx="2" class="kit-solid"/>` },
   seatcurl:{ dur:1.4, props:SEAT(34, 84),
