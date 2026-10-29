@@ -5091,7 +5091,7 @@ function liftRecentCard(){
   const recent = [...doc.lifts].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0).slice(0, 12);
   if (!recent.length) return '';
   return `<div class="card"><div class="card-head"><h2>Logged lately</h2><span class="card-sub">tap Edit to fix one</span></div>
-    <ul class="lift-list">${recent.map(l => `<li><span><b>${esc(liftDef(l.ex).name)}</b><small>${fmtDate(l.date)} · ${fmtSets(l.sets, setMode(liftDef(l.ex)))}</small></span>
+    <ul class="lift-list">${recent.map(l => `<li><span><b>${esc(liftDef(l.ex).name)}</b><small>${fmtDate(l.date)}${l.wo && doc.workouts.some(w => w.id === l.wo) ? ` · ${esc(doc.workouts.find(w => w.id === l.wo).name)}` : l.day ? ` · workout ${l.day}` : ''} · ${fmtSets(l.sets, setMode(liftDef(l.ex)))}</small></span>
       <span class="btn-row"><button class="btn small" data-edit-lift="${l.id}">Edit</button><button class="btn small" data-del-lift="${l.id}" aria-label="Remove">✕</button></span></li>`).join('')}</ul></div>`;
 }
 // Keeps what's typed when the card redraws (adding a set, switching exercise).
