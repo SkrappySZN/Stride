@@ -749,7 +749,14 @@ body.gym main{padding-bottom:0}
 .seg{display:flex; gap:4px; padding:4px; margin:0 0 16px; border-radius:14px; background:var(--surface-2); border:1px solid var(--line)}
 .seg button{flex:1; min-height:42px; border:0; border-radius:10px; background:none; color:var(--muted); font:inherit; font-weight:700; font-size:14px; cursor:pointer}
 .seg button[aria-selected="true"]{background:color-mix(in srgb, var(--accent) 16%, var(--surface)); color:var(--ink); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent)}
-.lift-hero-log{width:100%; margin-top:14px; min-height:46px}
+.lift-hero-more{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px}
+.lift-hero-more .btn{min-height:46px}
+.past-ex{border-top:1px solid var(--line); padding:12px 0}
+.past-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:6px}
+.past-head span{display:flex; flex-direction:column; min-width:0}
+.past-head small{color:var(--muted); font-size:12px}
+.past-add{display:flex; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
+.past-add select{flex:1; min-width:0; font:inherit; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
 .wk-nav{min-width:40px; min-height:40px}
 /* Live workout */
 .wrap.lv{max-width:760px}
@@ -4685,7 +4692,7 @@ function liftHero(){
     return `<div class="card lift-hero live"><div class="eyebrow">Workout in progress</div>
       <div class="lift-hero-row"><div><h2 class="display">${esc(LV.name)}</h2><p class="card-sub">${done} of ${LV.items.length} exercises done · ${liveStats().sets} set${liveStats().sets === 1 ? '' : 's'}</p></div>
       <button class="btn primary big" data-action="lv-resume">Resume</button></div>
-      <button class="btn lift-hero-log" data-action="lift-log-open">+ Log a set without a workout</button></div>`;
+      <div class="lift-hero-more"><button class="btn" data-action="lift-log-open">+ Log a set</button><button class="btn" data-action="past-open">+ Log a past workout</button></div></div>`;
   }
   const today = todayYmd(), sets = doc.lifts.filter(l => l.date === today).reduce((n, l) => n + l.sets.length, 0);
   let title, items, start, why;
@@ -4704,7 +4711,7 @@ function liftHero(){
   return `<div class="card lift-hero"><div class="eyebrow">Up next${sets ? ` · ${sets} set${sets === 1 ? '' : 's'} logged today` : ''}</div>
     <div class="lift-hero-row"><div><h2 class="display">${esc(title)}</h2><p class="card-sub">${why}</p></div><button class="btn primary big" ${start}>Start</button></div>
     <ol class="lift-hero-list">${items.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
-    <button class="btn lift-hero-log" data-action="lift-log-open">+ Log a set without a workout</button></div>`;
+    <div class="lift-hero-more"><button class="btn" data-action="lift-log-open">+ Log a set</button><button class="btn" data-action="past-open">+ Log a past workout</button></div></div>`;
 }
 const LIFT_TABS = [['train', 'Train'], ['progress', 'Progress'], ['badges', 'Badges']];
 function woList(){
@@ -4904,6 +4911,49 @@ function closeSheet(){
   el.classList.remove('open'); clearTimeout(el._t); el._t = setTimeout(() => { el.querySelector('.sheet-panel').innerHTML = ''; }, 260);
 }
 const openLogSheet = () => openSheet(liftLogCard());
+/* Log a past workout: a day and a workout, every exercise in one sheet,
+   prefilled from the last time before that day. A day already logged opens
+   as it was, so saving again edits it instead of doubling it. */
+function pastItems(woId, date){
+  const w = doc.workouts.find(x => x.id === woId), copy = ss => ss.map(x => ({ lb:x.lb || '', reps:x.reps }));
+  const done = doc.lifts.filter(l => l.date === date && (w ? l.wo === w.id : !l.wo && !l.day));
+  // A day that's already logged shows just what was logged, so a skipped exercise doesn't creep back in.
+  const items = (w && !done.length ? woPlan(w, date) : []).map(it => {
+    const got = done.find(l => l.ex === it.ex), last = liftHist(it.ex).filter(l => l.date < date).at(-1);
+    return { ex:it.ex, entry:got?.id ?? null, from:got ? null : last?.date ?? null,
+      sets:got ? copy(got.sets) : last ? copy(last.sets) : Array.from({ length:it.sets || 3 }, () => ({ lb:'', reps:it.reps || '' })) };
+  });
+  // Lifts logged that day for this workout but not in its plan (a swap) show too.
+  for (const l of done) if (!items.some(it => it.entry === l.id)) items.push({ ex:l.ex, entry:l.id, from:null, sets:copy(l.sets) });
+  return items;
+}
+function pastCard(){
+  const P = liftUi.past, today = todayYmd();
+  const ph = def => def.assist ? 'help lbs' : def.bw ? '+ lbs' : 'lbs';
+  return `<div id="lift-past"><h2 class="sheet-title">Log a past workout</h2>
+    <div class="field-row">
+      <div class="field"><label for="past-date">Day</label><input id="past-date" type="date" max="${today}" value="${P.date}"></div>
+      <div class="field"><label for="past-wo">Workout</label><select id="past-wo">${doc.workouts.map(w => `<option value="${w.id}"${w.id === P.wo ? ' selected' : ''}>${esc(w.name)}</option>`).join('')}<option value=""${P.wo ? '' : ' selected'}>Just exercises</option></select></div>
+    </div>
+    <p class="card-sub" style="margin:10px 0 4px">${P.items.some(it => it.entry) ? 'This day is already logged: change anything and save.' : 'Filled in from the last time you did each one. Change what was different, and ✕ anything you skipped.'}</p>
+    ${P.items.map((it, i) => { const def = liftDef(it.ex);
+      return `<div class="past-ex"><div class="past-head"><span><b>${esc(def.name)}</b><small>${it.entry ? 'logged that day' : it.from ? `from ${fmtDate(it.from).slice(4)}` : 'first time: enter what you did'}</small></span><button class="link-btn" data-past-del="${i}">✕ skip</button></div>
+        <div class="lift-sets">${it.sets.map((x, j) => `<div class="lift-set"><span class="num">${j + 1}</span>
+          <input type="number" inputmode="decimal" data-past-lb="${i}|${j}" value="${x.lb}" placeholder="${ph(def)}" aria-label="${esc(def.name)} set ${j + 1} weight">
+          <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-past-reps="${i}|${j}" value="${x.reps}" placeholder="reps" aria-label="${esc(def.name)} set ${j + 1} reps">
+          ${it.sets.length > 1 ? `<button class="link-btn" data-past-setdel="${i}|${j}" aria-label="Remove set ${j + 1}">remove</button>` : ''}</div>`).join('')}</div>
+        <button class="btn small" style="margin-top:8px" data-past-addset="${i}">+ Set</button></div>`; }).join('')}
+    <div class="past-add"><select id="past-add" aria-label="Exercise to add">${exOptions('bench', false)}</select><button class="btn" data-action="past-add-ex">+ Add</button></div>
+    <button class="btn primary big sheet-save" data-action="past-save">Save workout</button></div>`;
+}
+function readPast(){
+  const P = liftUi.past; if (!P || !$('#past-date')) return;
+  P.date = $('#past-date').value; P.wo = $('#past-wo').value;
+  P.items.forEach((it, i) => it.sets.forEach((x, j) => {
+    x.lb = $(`[data-past-lb="${i}|${j}"]`)?.value ?? x.lb; x.reps = $(`[data-past-reps="${i}|${j}"]`)?.value ?? x.reps;
+  }));
+}
+const redrawPast = () => { const el = $('#lift-past'); if (el) el.outerHTML = pastCard(); };
 /* Plate calculator: what goes on each side of the bar, heaviest first. */
 const BARBELL = ['squat', 'fsquat', 'deadlift', 'rdl', 'hipthrust', 'bench', 'incline', 'press', 'row'];
 const PLATES = [45, 35, 25, 10, 5, 2.5];
@@ -6659,6 +6709,14 @@ document.addEventListener('click', async e => {
   if (mt){ prefs.set('movesTab', mt.dataset.movesTab); renderMoves(); return; }
   const lt = e.target.closest('[data-lift-tab]');
   if (lt){ prefs.set('liftTab', lt.dataset.liftTab); readLiftForm(); renderLift(); return; }
+  const pd = e.target.closest('[data-past-del], [data-past-addset], [data-past-setdel]');
+  if (pd && liftUi.past){
+    readPast(); const P = liftUi.past;
+    if (pd.dataset.pastDel != null){ const [it] = P.items.splice(+pd.dataset.pastDel, 1); if (it.entry) P.removed.push(it.entry); }
+    else if (pd.dataset.pastAddset != null){ const it = P.items[+pd.dataset.pastAddset]; it.sets.push({ ...(it.sets.at(-1) ?? { lb:'', reps:'' }) }); }
+    else { const [i, j] = pd.dataset.pastSetdel.split('|').map(Number); P.items[i].sets.splice(j, 1); }
+    redrawPast(); return;
+  }
   const pe = e.target.closest('[data-pick-ex]');
   if (pe){ Object.assign(liftUi, { ex:pe.dataset.pickEx, pick:false, day:null, wo:null, name:pe.dataset.pickEx === '_new' ? (liftUi.q ?? '').trim() : liftUi.name, q:'' }); redrawLiftLog(); return; }
   if (e.target.id === 'sheet'){ closeSheet(); return; }
@@ -6957,6 +7015,35 @@ document.addEventListener('click', async e => {
       Object.assign(liftUi, { ex, day:null, wo:null, editId:null, date:u.editId ? null : u.date, name:'', chart:ex, sets:[{ lb:'', reps:'' }] });
       closeSheet(); await save(); renderLift(); break;
     }
+    case 'past-open': {
+      const date = addDays(todayYmd(), -1), wo = woNext() ?? doc.workouts.at(-1)?.id ?? '';
+      liftUi.past = { date, wo, items:pastItems(wo, date), removed:[] };
+      openSheet(pastCard()); break;
+    }
+    case 'past-add-ex': {
+      readPast(); const ex = $('#past-add').value, last = liftHist(ex).filter(l => l.date < liftUi.past.date).at(-1);
+      liftUi.past.items.push({ ex, entry:null, from:last?.date ?? null, sets:last ? last.sets.map(x => ({ lb:x.lb || '', reps:x.reps })) : [{ lb:'', reps:'' }] });
+      redrawPast(); break;
+    }
+    case 'past-save': {
+      readPast(); const P = liftUi.past;
+      if (!P.date || P.date > todayYmd()){ toast('Pick a day up to today'); break; }
+      let n = 0;
+      const lifts = P.items.map(it => { const def = liftDef(it.ex);
+        return { it, sets:it.sets.map(x => ({ lb:+x.lb || 0, reps:Math.round(+x.reps) || 0 })).filter(x => x.reps > 0 && (x.lb > 0 || def.bw || def.assist)) }; });
+      if (!lifts.some(x => x.sets.length) && !P.removed.length && !P.items.some(it => it.entry)){ toast('Enter weight and reps for at least one set'); break; }
+      if (lifts.some(x => x.sets.some(y => y.lb > 1500 || y.reps > 100))){ toast('One of those sets looks off'); break; }
+      doc.lifts = doc.lifts.filter(l => !P.removed.includes(l.id));
+      for (const { it, sets } of lifts){
+        if (!sets.length){ if (it.entry) doc.lifts = doc.lifts.filter(l => l.id !== it.entry); continue; }
+        n++;
+        if (it.entry && doc.lifts.some(l => l.id === it.entry)) doc.lifts = doc.lifts.map(l => l.id === it.entry ? { ...l, date:P.date, ex:it.ex, sets } : l);
+        else doc.lifts = [...doc.lifts, { id:liftId(), date:P.date, ex:it.ex, sets, ...(P.wo ? { wo:P.wo } : {}) }];
+      }
+      const name = doc.workouts.find(w => w.id === P.wo)?.name;
+      liftUi.past = null; closeSheet(); await save(); renderLift();
+      toast(n ? `Logged ${name ? name + ', ' : ''}${n} exercise${n === 1 ? '' : 's'} on ${fmtDate(P.date)}` : 'Removed'); break;
+    }
     case 'lift-log-open': Object.assign(liftUi, { pick:false, q:'', editId:null }); openLogSheet(); break;
     case 'sheet-close': closeSheet(); break;
     case 'lf-pick': readLiftForm(); liftUi.pick = !liftUi.pick; liftUi.q = ''; redrawLiftLog(); if (liftUi.pick) setTimeout(() => $('#lf-q')?.focus(), 60); break;
@@ -7054,6 +7141,9 @@ document.addEventListener('change', e => {
   if (e.target.id === 'g-type' || e.target.id === 'g-ex') syncGoalForm();
 });
 document.addEventListener('change', e => {
+  if ((e.target.id === 'past-date' || e.target.id === 'past-wo') && liftUi.past){
+    readPast(); Object.assign(liftUi.past, { items:pastItems(liftUi.past.wo, liftUi.past.date), removed:[] }); redrawPast(); return;
+  }
   // The workouts card offers to save the chosen day's lifts as a workout.
   if (e.target.id === 'lf-date'){ readLiftForm(); if ($('#lift-wo') && !liftUi.edit) redrawWo(); return; }
   if (e.target.id !== 'lf-ex') return;

@@ -135,6 +135,9 @@ data runs through it, so treat changes to data handling with care.
   bottom sheet (`openSheet`/`closeSheet`) with a searchable picker (`pickList`). The live workout is gym mode:
   `body.gym` hides the header and dock, a fixed thumb bar holds "✓ Done set" and the rest timer, swipes move
   between exercises, and ✕ offers finish or leave (`LV.away`, resumed from the hero).
+  "+ Log a past workout" (`pastItems`, `pastCard`, `liftUi.past`) logs a whole earlier session in one sheet: a day
+  and a workout, each exercise prefilled from the last time before that day, saved as entries carrying `wo`. A day
+  already logged for that workout opens as logged (only those entries), so saving edits rather than duplicates.
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.
