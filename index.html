@@ -668,6 +668,9 @@ a.btn.primary{color:var(--accent-ink)}
 .pr-list li[aria-current] b{color:var(--accent-text)}
 .pr-v{display:flex; flex-direction:column; align-items:flex-end; text-align:right; flex:none}
 .pr-v small{font-size:11.5px; color:var(--muted)}
+.pr-chev{flex:none; color:var(--ink-2); font-size:15px; line-height:1; transition:transform .15s}
+.pr-list li[aria-expanded="true"] .pr-chev{transform:rotate(180deg); color:var(--accent-text)}
+.pr-list li.pr-chart{display:block; cursor:default; border-top:0; padding:0 0 12px}
 .lift-prs tr{cursor:pointer}
 .lift-prs tr[aria-current] td:first-child{color:var(--accent-text); font-weight:700}
 table.lift-prs td:nth-child(3), table.lift-recent td:nth-child(3){text-align:right}
@@ -5198,18 +5201,19 @@ function liftPRCard(){
     return { ex, def, best, first:h[0].date, last:h.at(-1).date };
   }).filter(Boolean).sort((a, b) => a.last < b.last ? 1 : a.last > b.last ? -1 : 0);
   if (!exs.length) return `<div class="card"><div class="card-head"><h2>PRs${infoBtn}</h2><span class="card-sub">your bests, per lift</span></div>${explain('e1rm')}<div class="pending-box">Log a lift and your bests show here.</div></div>`;
-  const sel = exs.find(x => x.ex === liftUi.chart) ?? exs[0];
+  // Only the lift you tap opens, right under its row.
+  const sel = exs.find(x => x.ex === liftUi.chart) ?? null;
   // One number that's real (your best set), the estimate small underneath; grouped so it scans.
   const row = x => { const d = x.def, s = x.best.s, isNew = x.best.date > x.first && diffDays(x.best.date, todayYmd()) <= 14;
     const set = d.assist ? `${s.lb} lb help × ${s.reps}` : d.bw ? `${s.lb ? `+${s.lb} lb × ` : ''}${s.reps} rep${s.reps === 1 ? '' : 's'}` : `${s.lb} lb × ${s.reps}`;
     const sub = d.assist ? 'best set' : d.bw ? 'most in one set' : s.reps <= 1 ? 'a true 1-rep max' : `≈ ${x.best.v} lb for 1 rep`;
-    return `<li data-lift-chart="${x.ex}"${x.ex === sel.ex ? ' aria-current="true"' : ''}><span><b>${esc(d.name)}</b>${isNew ? ' <span class="badge test">new PR</span>' : ''}</span>
-      <span class="pr-v"><b>${set}</b><small>${sub}</small></span></li>`; };
+    const open = x.ex === sel?.ex;
+    return `<li data-lift-chart="${x.ex}" role="button" aria-expanded="${open}"${open ? ' aria-current="true"' : ''}><span><b>${esc(d.name)}</b>${isNew ? ' <span class="badge test">new PR</span>' : ''}</span>
+      <span class="pr-v"><b>${set}</b><small>${sub}</small></span><span class="pr-chev" aria-hidden="true">▾</span></li>
+      ${open ? `<li class="pr-chart"><p class="card-sub" style="margin:0 0 4px">${byReps(d) ? 'Most reps in a set' : 'Estimated 1-rep max'}, best set each day</p><div class="chart" id="c-lift" data-ex="${x.ex}"></div></li>` : ''}`; };
   const groups = ['Push', 'Pull', 'Legs', 'Core', 'Other'].map(g => [g, exs.filter(x => (x.def.g ?? 'Other') === g)]).filter(([, xs]) => xs.length);
   return `<div class="card"><div class="card-head"><h2>Best sets${infoBtn}</h2><span class="card-sub">your best working set · tap one for its chart</span></div>${explain('e1rm')}
-    ${groups.map(([g, xs]) => `<div class="pr-group">${g}</div><ul class="pr-list">${xs.map(row).join('')}</ul>`).join('')}
-    <p class="card-sub" style="margin:16px 0 4px">${esc(sel.def.name)} · ${byReps(sel.def) ? 'most reps in a set' : 'estimated 1-rep max'}, best set each day</p>
-    <div class="chart" id="c-lift" data-ex="${sel.ex}"></div></div>`;
+    ${groups.map(([g, xs]) => `<div class="pr-group">${g}</div><ul class="pr-list">${xs.map(row).join('')}</ul>`).join('')}</div>`;
 }
 const liftWeeks = n => { const ws = weekStart(todayYmd()); return Array.from({ length:n }, (_, i) => addDays(ws, -7 * (n - 1 - i))); };
 const liftsIn = (from, to) => doc.lifts.filter(l => l.date >= from && l.date <= to);
@@ -6766,7 +6770,7 @@ document.addEventListener('click', async e => {
   if (ld){
     const { day } = progNext(), [ex, n, reps] = LIFT_PROGS[doc.liftProg.id].days[day][+(ld.dataset.liftDid ?? ld.dataset.liftEdit)];
     const sets = Array.from({ length:n }, () => ({ lb:progWeight(ex, n, reps), reps }));
-    if (ld.dataset.liftDid != null){ readLiftForm(); logLift({ date:todayYmd(), ex, sets, day }); liftUi.chart = ex; await save(); renderLift(); }
+    if (ld.dataset.liftDid != null){ readLiftForm(); logLift({ date:todayYmd(), ex, sets, day }); await save(); renderLift(); }
     else { Object.assign(liftUi, { ex, date:todayYmd(), sets, day, wo:null, editId:null }); openLogSheet(); }
     return;
   }
@@ -6873,7 +6877,7 @@ document.addEventListener('click', async e => {
   if (pe){ Object.assign(liftUi, { ex:pe.dataset.pickEx, pick:false, day:null, wo:null, name:pe.dataset.pickEx === '_new' ? (liftUi.q ?? '').trim() : liftUi.name, q:'' }); redrawLiftLog(); return; }
   if (e.target.id === 'sheet'){ closeSheet(); return; }
   const lc = e.target.closest('[data-lift-chart]');
-  if (lc){ liftUi.chart = lc.dataset.liftChart; readLiftForm(); renderLift(); return; }
+  if (lc){ liftUi.chart = liftUi.chart === lc.dataset.liftChart ? null : lc.dataset.liftChart; readLiftForm(); renderLift(); return; }
   const dl = e.target.closest('[data-del-lift]');
   if (dl){ readLiftForm(); doc.lifts = doc.lifts.filter(l => l.id !== dl.dataset.delLift); await save(); renderLift(); toast('Removed'); return; }
   const task = e.target.closest('[data-task]');
@@ -7164,7 +7168,7 @@ document.addEventListener('click', async e => {
       }
       if (u.editId){ doc.lifts = doc.lifts.map(l => l.id === u.editId ? { ...l, date:u.date, ex, sets } : l); toast('Updated'); }
       else logLift({ date:u.date, ex, sets, ...(u.day ? { day:u.day } : {}), ...(u.wo ? { wo:u.wo } : {}) });
-      Object.assign(liftUi, { ex, day:null, wo:null, editId:null, date:u.editId ? null : u.date, name:'', chart:ex, sets:[{ lb:'', reps:'' }] });
+      Object.assign(liftUi, { ex, day:null, wo:null, editId:null, date:u.editId ? null : u.date, name:'', sets:[{ lb:'', reps:'' }] });
       closeSheet(); await save(); renderLift(); break;
     }
     case 'lv-empty': readLiftForm(); liveStart({ name:'Free workout', items:[], free:true }); setTimeout(() => $('[data-action="lv-add-open"]')?.click(), 0); break;
