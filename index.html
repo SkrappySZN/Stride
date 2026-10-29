@@ -4551,6 +4551,7 @@ const LIFTS = [
   { id:'curl', name:'Barbell curl', g:'Pull', f:'biceps', inc:5 },
   { id:'dbcurl', name:'Dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
   { id:'hammer', name:'Hammer curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
+  { id:'twistcurl', name:'Twist curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
   { id:'cablecurl', name:'Cable curl (straight bar)', g:'Pull', f:'biceps', inc:5 },
   { id:'seatcurl', name:'Seated dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
   { id:'twist', name:'Forearm twist (dumbbell)', g:'Pull', f:'forearm', inc:2.5 },
@@ -4785,6 +4786,7 @@ const HOWTO = {
   cablecurl:{ eq:'Cable station with a straight bar, set at the bottom', set:'Stand facing the cable, close enough that it pulls straight up. Palms up, hands shoulder-width, elbows at your sides.', cues:['Curl the bar up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly; the cable keeps pulling all the way down.'], avoid:'Leaning back to heave the weight.' },
   seatcurl:{ eq:'Two dumbbells and a bench (per dumbbell)', set:'Sit tall at the end of a bench, feet flat, dumbbells hanging at your sides, palms forward.', cues:['Curl both up without your elbows moving forward.', 'Squeeze at the top.', 'Lower slowly to straight arms.'], avoid:'Rocking your body. Sitting takes your legs out of it, so go a little lighter than standing.' },
   twist:{ eq:'One light dumbbell (or one held by one end, for more)', set:'Sit tall, elbow tucked at your side and bent to a right angle, forearm pointing straight ahead, dumbbell standing upright in your fist. Rest the other hand on your thigh.', cues:['Turn your palm down, slowly, as far as it goes.', 'Turn it back up, palm to the ceiling.', 'Only the forearm turns: elbow and upper arm stay still.'], avoid:'Going heavy or fast. Holding nearer one end makes it harder without more weight.' },
+  twistcurl:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, dumbbells at your sides with your palms facing in (like a hammer curl), elbows at your sides.', cues:['Curl up, turning your palms to face the ceiling as you lift.', 'Squeeze at the top, palms up.', 'Lower slowly, turning back to palms-in by the bottom.'], avoid:'Swinging, or your elbows drifting forward.' },
   hammer:{ eq:'Two dumbbells (per dumbbell)', set:'Stand tall, palms facing each other, elbows at your sides.', cues:['Curl up, keeping your palms facing in.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging with your back.' },
   shrug:{ eq:'Barbell or two dumbbells', set:'Stand tall holding the weight at arm’s length.', cues:['Lift your shoulders straight up toward your ears.', 'Hold for a second.', 'Lower slowly.'], avoid:'Rolling your shoulders in circles.' },
   legraise:{ eq:'Pull-up bar or a captain’s chair', set:'Hang from the bar, or rest your back against the chair’s pad.', cues:['Raise your knees toward your chest by curling your hips up.', 'Lower slowly.', 'No swinging between reps.'], avoid:'Swinging. Bent knees is the easier version, straight legs the harder one.' },
@@ -5703,6 +5705,9 @@ Object.assign(LMOVES, { dbrdl:{ ...LMOVES.rdl, gear:P => bell(P.w1) }, dbbench:{
     a:lpose({ p:[52, 68], t:-40, f1:[40, 99], W:[79, 76], eb:1 }),
     b:lpose({ p:[52, 68], t:-40, f1:[40, 99], W:[72, 62], eb:1 }),
     gear:P => cable([106, 104], P.w1).replace('kit-line', 'kit-plat') + plate([P.w1[0] + 9, P.w1[1] + 3], 8) },
+  // Side-on: palms in, the dumbbell is seen lengthwise; palms up at the top, it's seen end-on.
+  twistcurl:{ ...LMOVES.dbcurl, gear:P => { const f = Math.max(0, Math.min(1, (P.w1[1] - P.n[1] - 3) / 28)), wd = 6 + 7 * f;
+    return `<rect x="${(P.w1[0] - wd / 2).toFixed(1)}" y="${(P.w1[1] - 3.5).toFixed(1)}" width="${wd.toFixed(1)}" height="7" rx="3" class="kit-solid"/>`; } },
   apullup:{ ...LMOVES.pullup, gear:P => `<rect x="${(Math.min(P.k1[0], P.k2[0]) - 7).toFixed(1)}" y="${(Math.max(P.k1[1], P.k2[1]) + 3).toFixed(1)}" width="${(Math.abs(P.k1[0] - P.k2[0]) + 14).toFixed(1)}" height="4" rx="2" class="kit-solid"/>` }, adips:{ ...LMOVES.dips, gear:kneePad },
   cablecurl:{ ...LMOVES.curl, props:STACK + pulley(104, 104), gear:P => cable([104, 104], P.w1) + `<rect x="${(P.w1[0] - 2).toFixed(1)}" y="${(P.w1[1] - 6).toFixed(1)}" width="4" height="12" rx="2" class="kit-solid"/>` },
   seatcurl:{ dur:1.4, props:SEAT(34, 84),
