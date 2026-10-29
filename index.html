@@ -789,6 +789,7 @@ body.gym main{padding-bottom:0}
 .lv-rest.go .btn{background:var(--accent-ink); color:var(--accent); border-color:var(--accent-ink)}
 .lv-eq{margin:0 0 6px; font-size:14px}
 .lv-why{margin:0 0 8px; font-size:13.5px; color:var(--muted); line-height:1.45}
+.lv-warm{display:block; margin:0 0 10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:14px; font-weight:600; color:var(--ink); text-decoration:none}
 .lv-last{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:10px 0 8px; padding:10px 12px; border-radius:var(--radius-sm); background:var(--surface-2); border:1px solid var(--line)}
 .lv-last span{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .lv-last b{font-family:var(--mono); font-size:15px}
@@ -2645,7 +2646,7 @@ const EXPLAIN = {
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
   liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
   badges: () => 'Badges come from what you’ve already done, so older runs and lifts count too. Each one has tiers, from bronze to silver, gold and volt: the more you do, the higher it goes. The bar shows how close you are to the next tier; tap a badge to see every tier and the day you earned it. Runs live on Progress (counts, miles, longest run, steady weeks, fastest mile and 5K, early, late, cold and hot runs); lifting on Lift (lifting days, volume, steady weeks, PRs, pull-ups, run-and-lift days, and bench, squat and deadlift against your body weight, which use your latest weight from the Body tab). New ones show on Today and in the new-run scene.',
-  e1rm: () => 'Each lift shows your best set: the set you actually did that’s worth the most. The small “≈ … for 1 rep” under it is your estimated one-rep max: the most you could likely lift once, worked out from that set (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. Tested a true max? Log it as one set of 1 rep: a single counts as exactly what you lifted. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set. Assisted machines count your body weight minus the help (from your latest weight on the Body tab), so less help shows as a higher number; with no weight on file they count reps.',
+  e1rm: () => 'Each lift shows your best set: the set you actually did that’s worth the most. The small “≈ … for 1 rep” under it is your estimated one-rep max: the most you could likely lift once, worked out from that set (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. Tested a true max? Log it as one set of 1 rep: a single counts as exactly what you lifted. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set. Timed moves are logged in seconds: a plank or dead hang’s best is the longest hold, a farmer’s carry’s the heaviest dumbbells you took the full time. Assisted machines count your body weight minus the help (from your latest weight on the Body tab), so less help shows as a higher number; with no weight on file they count reps.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
   goals: () => 'Targets you set yourself. Distance, time and lift goals count your best ever; total miles and number of runs count from the day you set them. Weekly goals need that many weeks in a row, Monday to Sunday, and the week you’re in can’t break a streak. Weight goals use your 7-day average, so one heavy or light morning doesn’t decide it. Lift goals use the estimated one-rep max from the Lift tab (reps, for body-weight moves). Add a date and Stride tells you whether you’re on track and what each week needs from here. The thin line under each bar is how you’ve moved over time; the dashed line is the target.',
   standards: () => 'Where you sit against published averages for your age, sex and size. Green is in the healthy or typical range; amber is something to work toward. These move slowly, over months.',
@@ -3509,7 +3510,7 @@ const GOAL_TYPES = {
   wkmi:   { group:'Every week', label:'Miles every week', unit:'mi a week', ph:'10', weeks:true, fmt:g => `${g.target} mi a week, ${g.weeks} weeks in a row` },
   weight: { group:'Body', label:'Reach a weight', unit:'lbs', ph:'180', fmt:g => `Weigh ${g.target} lbs` },
   lift:   { group:'Lifting', label:'Lift a weight', unit:'lb', ph:'225', lift:true,
-    fmt:g => { const d = liftDef(g.ex); return byReps(d) ? `${d.name}: ${g.target} reps in a set` : `${d.name}: ${g.target} lb max`; } },
+    fmt:g => { const d = liftDef(g.ex); return d.secs ? `${d.name}: ${prTxt(d, g.target)}` : byReps(d) ? `${d.name}: ${g.target} reps in a set` : `${d.name}: ${g.target} lb max`; } },
 };
 const parseDur = s => { const m = String(s).trim().match(/^(\d+):([0-5]\d)$/); return m ? +m[1] * 60 + +m[2] : null; };
 const goalLabel = g => GOAL_TYPES[g.type].fmt(g);
@@ -3571,9 +3572,9 @@ function goalState(g){
       cur = Math.max(cur, ...l.sets.map(s => liftScore(def, s))); hist.push({ date:l.date, v:cur });
       if (!hit && cur >= g.target) hit = l.date;
     }
-    const u = byReps(def) ? ' reps' : ' lb';
+    const u = def.secs && def.bw ? ' s' : byReps(def) ? ' reps' : ' lb';
     return { cur, pct:Math.min(1, cur / g.target), hit, hist,
-      txt:cur ? `best ${cur}${u}${byReps(def) ? '' : ' (est. 1-rep max)'} · ${Math.max(0, g.target - cur)}${u} to go` : 'not logged yet' };
+      txt:cur ? `best ${cur}${u}${byReps(def) || def.secs ? '' : ' (est. 1-rep max)'} · ${Math.max(0, g.target - cur)}${u} to go` : 'not logged yet' };
   }
   // Mile and 5K times: lower is better.
   const k = g.type, hist = []; let cur = null, hit = null;
@@ -3673,7 +3674,7 @@ function syncGoalForm(){
   const t = GOAL_TYPES[$('#g-type')?.value]; if (!t) return;
   const def = t.lift ? liftDef($('#g-ex').value) : null, b = def ? liftBest(def.id).best?.v : null;
   $('#g-ex-f').hidden = !t.lift; $('#g-weeks-f').hidden = !t.weeks;
-  $('#g-unit').textContent = `(${def?.bw ? 'reps' : t.unit})`;
+  $('#g-unit').textContent = `(${def?.bw ? (def.secs ? 'seconds' : 'reps') : t.unit})`;
   $('#g-val').placeholder = def ? (b ? String(def.bw ? b + 2 : round5(b * 1.05)) : def.bw ? '10' : t.ph) : $('#g-type').value === 'weight' && currentWeight() ? String(Math.round(currentWeight() - 5)) : t.ph;
   $('#g-val').inputMode = t.unit === 'm:ss' ? 'text' : 'decimal';
 }
@@ -4579,10 +4580,19 @@ const LIFTS = [
   { id:'cablecurl', name:'Cable curl (straight bar)', g:'Pull', f:'biceps', inc:5 },
   { id:'seatcurl', name:'Seated dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
   { id:'twist', name:'Forearm twist (dumbbell)', g:'Pull', f:'forearm', inc:2.5 },
+  { id:'wristcurl', name:'Wrist curl (palms up)', g:'Pull', f:'forearm', inc:5 },
+  { id:'revwrist', name:'Reverse wrist curl (palms down)', g:'Pull', f:'forearm', inc:5 },
+  { id:'revcurl', name:'Reverse curl (barbell, palms down)', g:'Pull', f:'forearm', inc:5 },
+  // secs: the reps box holds seconds (holds and carries).
+  { id:'deadhang', name:'Dead hang', g:'Pull', f:'grip', inc:5, bw:true, secs:true },
+  { id:'farmer', name:'Farmer’s carry (per dumbbell)', g:'Core', f:'grip', inc:5, secs:true },
   { id:'shrug', name:'Shrug', g:'Pull', f:'shrug', inc:10 },
   { id:'legraise', name:'Hanging leg raise', g:'Core', f:'core', inc:5, bw:true },
   { id:'crunch', name:'Cable crunch', g:'Core', f:'core', inc:5 },
   { id:'backext', name:'Back extension', g:'Core', f:'core', inc:5, bw:true },
+  { id:'pallof', name:'Pallof press (cable, each side)', g:'Core', f:'core', inc:5 },
+  { id:'abwheel', name:'Ab wheel rollout', g:'Core', f:'core', inc:5, bw:true },
+  { id:'plank', name:'Plank', g:'Core', f:'plank', inc:5, bw:true, secs:true },
 ];
 const exOptions = (sel, withNew) => {
   const opt = l => `<option value="${l.id}"${l.id === sel ? ' selected' : ''}>${esc(l.name)}</option>`;
@@ -4602,13 +4612,15 @@ const e1rm = s => s.reps <= 1 ? s.lb : Math.round(s.lb * (1 + s.reps / 30));
 // Assisted lifts count what you actually moved: body weight minus the machine's help.
 // With no weight on file they fall back to reps, like body-weight moves.
 const byReps = def => def.bw || (def.assist && !currentWeight());
-const liftScore = (def, s) => def.assist && currentWeight() ? e1rm({ lb:Math.max(0, Math.round(currentWeight() - s.lb)), reps:s.reps }) : byReps(def) ? s.reps : e1rm(s);
+// A carry's best is the heaviest weight taken the full distance; a hold's (bw) is the longest time.
+const liftScore = (def, s) => def.secs && !def.bw ? s.lb : def.assist && currentWeight() ? e1rm({ lb:Math.max(0, Math.round(currentWeight() - s.lb)), reps:s.reps }) : byReps(def) ? s.reps : e1rm(s);
 const setMode = def => def.assist ? 'assist' : def.bw;
 // Volume is weight × reps, added up. Pull-ups, chin-ups and dips lift your whole body, so they
 // count your weight plus anything added; assisted machines your weight minus the help. Other
 // body-weight moves count only added weight. Dumbbells count as logged (one dumbbell).
 const setLoad = (def, s) => def.whole || def.assist ? Math.max(0, (currentWeight() ?? 0) + (def.assist ? -s.lb : +s.lb || 0)) : +s.lb || 0;
-const setsVolume = (def, sets) => sets.reduce((n, s) => n + setLoad(def, s) * (+s.reps || 0), 0);
+// Seconds aren't reps, so holds and carries don't count toward volume.
+const setsVolume = (def, sets) => def.secs ? 0 : sets.reduce((n, s) => n + setLoad(def, s) * (+s.reps || 0), 0);
 const liftVolume = ls => Math.round(ls.reduce((n, l) => n + setsVolume(liftDef(l.ex), l.sets), 0));
 const fmtK = v => v >= 1000 ? `${+(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k` : String(Math.round(v));
 // The last ordinary session before a day. A max test (only singles) isn't what to base working sets on.
@@ -4618,11 +4630,11 @@ const topLb = l => Math.max(...l.sets.map(s => s.lb));
 const round5 = v => Math.round(v / 5) * 5;
 const progExercises = id => [...new Set(Object.values(LIFT_PROGS[id].days).flat().map(x => x[0]))];
 // "3 × 5 @ 185 lb" when every set matches, otherwise each set.
-// bw: true for added weight on a body-weight move, 'assist' for a machine's help.
-function fmtSets(sets, bw){
-  const s0 = sets[0], same = sets.length > 1 && sets.every(s => s.lb === s0.lb && s.reps === s0.reps), help = bw === 'assist';
-  if (same) return `${sets.length} × ${s0.reps}${s0.lb ? ` @ ${bw === true ? '+' : ''}${s0.lb} lb${help ? ' help' : ''}` : ''}`;
-  return sets.map(s => bw ? `${s.reps}${s.lb ? ` @ ${help ? `${s.lb} help` : `+${s.lb}`}` : ''}` : `${s.lb}×${s.reps}`).join(', ');
+// bw: true for added weight on a body-weight move, 'assist' for a machine's help; secs: timed sets.
+function fmtSets(sets, bw, secs){
+  const s0 = sets[0], same = sets.length > 1 && sets.every(s => s.lb === s0.lb && s.reps === s0.reps), help = bw === 'assist', u = secs ? ' s' : '';
+  if (same) return `${sets.length} × ${s0.reps}${u}${s0.lb ? ` @ ${bw === true ? '+' : ''}${s0.lb} lb${help ? ' help' : ''}` : ''}`;
+  return sets.map(s => bw ? `${s.reps}${u}${s.lb ? ` @ ${help ? `${s.lb} help` : `+${s.lb}`}` : ''}` : `${s.lb}×${s.reps}${u}`).join(', ');
 }
 function liftBest(ex){
   const def = liftDef(ex); let best = null, heavy = null;
@@ -4635,7 +4647,7 @@ function liftBest(ex){
 }
 const liftId = () => 'lf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 // A single is a tested max, not an estimate, so it's never shown with "est." or "~".
-const prTxt = (def, v, s) => byReps(def) ? `${v} reps` : s?.reps <= 1 ? `1-rep max ${v} lb` : `est. 1-rep max ${v} lb`;
+const prTxt = (def, v, s) => def.secs ? (def.bw ? `${v} s hold` : `${v} lb carried`) : byReps(def) ? `${v} reps` : s?.reps <= 1 ? `1-rep max ${v} lb` : `est. 1-rep max ${v} lb`;
 function logLift(e){
   const def = liftDef(e.ex), before = liftBest(e.ex).best?.v ?? 0;
   doc.lifts = [...doc.lifts, { id:liftId(), ...e }];
@@ -4679,9 +4691,15 @@ function groupOf(exs){
   for (const ex of exs){ const g = liftDef(ex).g; if (LIFT_SPLIT.includes(g)) c[g] = (c[g] || 0) + 1; }
   return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 }
+// Days outside push → pull → legs (shoulders, arms and abs): `extra` workouts never move the rotation.
+const EXTRA_DAYS = {
+  sap:{ name:'Shoulders, Arms & Abs', routine:'shoulders', items:[['dbpress', 3, 10], ['lateral', 4, 15], ['reardelt', 3, 15], ['facepull', 3, 15],
+    ['legraise', 3, 12], ['crunch', 3, 15], ['pallof', 3, 10], ['wristcurl', 3, 15], ['revwrist', 3, 15], ['farmer', 3, 40]] },
+};
+const extraWos = () => new Set(doc.workouts.filter(w => w.extra).map(w => w.id));
 function nextGroup(){
-  // A max test isn't a training day, so it doesn't move the rotation.
-  const ls = doc.lifts.filter(l => !l.max), last = ls.map(l => l.date).sort().at(-1);
+  // A max test isn't a training day, and an extra day isn't push, pull or legs, so neither moves the rotation.
+  const ex = extraWos(), ls = doc.lifts.filter(l => !l.max && !ex.has(l.wo)), last = ls.map(l => l.date).sort().at(-1);
   if (!last) return { g:'Push', after:null };
   const g = groupOf(ls.filter(l => l.date === last).map(l => l.ex));
   return { g: g ? LIFT_SPLIT[(LIFT_SPLIT.indexOf(g) + 1) % LIFT_SPLIT.length] : 'Push', after:g && { g, date:last } };
@@ -4711,7 +4729,7 @@ function suggestWorkout(g){
 }
 function woNext(){
   const { g } = nextGroup(), last = w => doc.lifts.filter(l => l.wo === w.id).map(l => l.date).sort().at(-1) ?? '';
-  return doc.workouts.filter(w => groupOf(w.items.map(it => it.ex)) === g).sort((a, b) => last(a) < last(b) ? -1 : 1)[0]?.id ?? null;
+  return doc.workouts.filter(w => !w.extra && groupOf(w.items.map(it => it.ex)) === g).sort((a, b) => last(a) < last(b) ? -1 : 1)[0]?.id ?? null;
 }
 // What to do next, with one big Start: the program's day, your next workout, or a suggested one.
 function liftHero(){
@@ -4749,9 +4767,9 @@ function woList(){
     ${doc.workouts.length ? `<ul class="lift-list">${doc.workouts.map(w => {
       const last = doc.lifts.filter(l => l.wo === w.id).sort(byDate).at(-1);
       return `<li><span><b>${esc(w.name)}${w.id === next ? ' <span class="badge test">next</span>' : ''}</b>
-        <small>${w.vary ? 'mixes up variations · ' : ''}${woPlan(w, todayYmd()).map(it => esc(liftDef(it.ex).name)).join(', ')}${last ? ` · last ${fmtDate(last.date).slice(4)}` : ''}</small></span>
+        <small>${w.extra ? 'extra day · ' : ''}${w.vary ? 'mixes up variations · ' : ''}${woPlan(w, todayYmd()).map(it => esc(liftDef(it.ex).name)).join(', ')}${last ? ` · last ${fmtDate(last.date).slice(4)}` : ''}</small></span>
         <span class="btn-row"><button class="btn small${w.id === next ? ' primary' : ''}" data-wo-start="${w.id}">Start</button><button class="btn small" data-wo-edit="${w.id}">Edit</button></span></li>`; }).join('')}</ul>` : ''}
-    <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-new">+ New workout</button>${loose ? `<button class="btn small" data-action="wo-from-day">Save ${date === todayYmd() ? 'today' : fmtDate(date).slice(4)} as a workout</button>` : ''}</div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-new">+ New workout</button>${doc.workouts.some(w => w.tpl === 'sap') ? '' : '<button class="btn small" data-action="wo-extra" data-tpl="sap">+ Shoulders, arms &amp; abs day</button>'}${loose ? `<button class="btn small" data-action="wo-from-day">Save ${date === todayYmd() ? 'today' : fmtDate(date).slice(4)} as a workout</button>` : ''}</div>
     ${doc.gym.skip.length ? `<p class="card-sub" style="margin:12px 0 0">Not at your gym (tap to bring back): ${doc.gym.skip.map(ex => `<button class="link-btn" data-gym-unskip="${ex}">${esc(liftDef(ex).name)}</button>`).join(', ')}</p>` : ''}`;
 }
 /* ── Live workout ────────────────────────────────────────────────────
@@ -4824,6 +4842,14 @@ const HOWTO = {
   shrug:{ eq:'Barbell or two dumbbells', set:'Stand tall holding the weight at arm’s length.', cues:['Lift your shoulders straight up toward your ears.', 'Hold for a second.', 'Lower slowly.'], avoid:'Rolling your shoulders in circles.' },
   legraise:{ eq:'Pull-up bar or a captain’s chair', set:'Hang from the bar, or rest your back against the chair’s pad.', cues:['Raise your knees toward your chest by curling your hips up.', 'Lower slowly.', 'No swinging between reps.'], avoid:'Swinging. Bent knees is the easier version, straight legs the harder one.' },
   crunch:{ eq:'Cable station with a rope, set high', set:'Kneel facing the cable, holding the rope beside your head.', cues:['Curl your ribs down toward your hips, rounding your back.', 'Keep your hips still.', 'Return slowly.'], avoid:'Pulling with your arms or sitting back on your heels.' },
+  wristcurl:{ eq:'A light barbell, EZ bar or two dumbbells, and a flat bench', set:'Kneel beside a flat bench and lay your forearms flat on it, palms up, wrists just past the edge, holding the bar.', cues:['Let the bar roll down toward your fingertips.', 'Curl it back up by bending only at the wrists, as high as they go.', 'Squeeze for a second, then lower slowly.'], avoid:'Lifting your forearms off the bench to help. It’s a small muscle: high reps and a light weight.' },
+  revwrist:{ eq:'A light barbell, EZ bar or two dumbbells, and a flat bench', set:'Kneel beside a flat bench, forearms flat on it, palms down, wrists just past the edge.', cues:['Let your hands droop down over the edge.', 'Raise the backs of your hands up as high as they go, bending only at the wrists.', 'Lower slowly.'], avoid:'Going heavy: this one is weaker than the palms-up curl, so expect a lighter weight.' },
+  revcurl:{ eq:'Barbell or EZ bar', set:'Stand tall, hands shoulder-width on the bar, palms facing down, elbows at your sides.', cues:['Curl the bar up, keeping your palms down and wrists straight.', 'Squeeze at the top.', 'Lower slowly.'], avoid:'Swinging, or your wrists bending back. It works the top of the forearm, so it’s lighter than a normal curl.' },
+  deadhang:{ eq:'Pull-up bar', set:'Grab the bar a bit wider than your shoulders, palms facing away, and let your feet come off the floor (step off a box if it’s high).', cues:['Hang with straight arms, shoulders relaxed up by your ears.', 'Breathe slowly and keep your body still.', 'Stop just before your grip gives out.'], avoid:'Dropping off when your grip fails. Log the seconds you held: it builds grip and gently stretches the shoulders.' },
+  farmer:{ eq:'Two heavy dumbbells (or kettlebells)', set:'Stand between the dumbbells, squat down and pick them up with a flat back, like a deadlift.', cues:['Stand tall, shoulders back and down, arms straight.', 'Walk with short, steady steps, looking ahead.', 'Grip hard. Set them down with a flat back when the time is up.'], avoid:'Leaning to one side or shrugging. Log the weight of one dumbbell and how many seconds you walked.' },
+  pallof:{ eq:'Cable station with a handle, set at chest height', set:'Stand side-on to the cable, a step away, holding the handle in both hands at the middle of your chest. Feet shoulder-width, knees soft.', cues:['Press the handle straight out in front of your chest.', 'Hold for two seconds: don’t let the cable twist you toward it.', 'Bring it back to your chest. Do all your reps, then turn around for the other side.'], avoid:'Turning your hips or shoulders toward the cable. It trains your core to resist twisting, which is what it does when you run.' },
+  abwheel:{ eq:'Ab wheel and a mat (or a barbell with round plates)', set:'Kneel on the mat with the wheel on the floor under your shoulders, arms straight.', cues:['Squeeze your glutes and brace like you’re about to be poked in the stomach.', 'Roll forward slowly as far as you can without your lower back sagging.', 'Pull back with your abs to the start.'], avoid:'Your lower back dipping or your hips staying back. Only roll out as far as you can come back from; it gets longer as you get stronger.' },
+  plank:{ eq:'A mat', set:'Forearms on the floor, elbows under your shoulders, legs straight and toes on the floor.', cues:['Make one straight line from your head to your heels.', 'Squeeze your glutes and pull your belly button in.', 'Breathe, and stop when your hips start to sag.'], avoid:'Hips sagging or piking up. Drop to your knees if your back starts to ache. Log the seconds you held.' },
   backext:{ eq:'Back extension bench (45° or flat)', set:'Hips on the edge of the pad, ankles hooked under the rollers.', cues:['Lower your body by bending at the hips.', 'Rise until you’re straight, squeezing your glutes.', 'Stop at straight.'], avoid:'Arching past straight at the top.' },
 };
 let LV = prefs.get('liftLive', null);
@@ -4834,16 +4860,18 @@ const mmss = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padS
 // Last time's weight, one step up when every set hit its reps.
 function liveItem(ex, sets, reps, day){
   const def = liftDef(ex), last = lastWorking(ex, todayYmd());
-  let n = sets || last?.sets.length || 3, r = reps || last?.sets[0].reps || (def.bw ? 8 : 10), lb = def.bw ? 0 : '', why = 'First time: start light and find a weight you could lift a couple more reps with.';
+  let n = sets || last?.sets.length || 3, r = reps || last?.sets[0].reps || (def.secs ? 30 : def.bw ? 8 : 10), lb = def.bw ? 0 : '', why = 'First time: start light and find a weight you could lift a couple more reps with.';
+  if (def.secs && !last) why = def.bw ? 'First time: hold with good form and stop when it slips. Change the seconds to what you managed.' : 'First time: pick dumbbells you can grip for the whole walk. Change the seconds to how long you went.';
+  const all = def.secs ? 'went the full time' : 'got every rep';
   if (day){ lb = progWeight(ex, sets, reps); why = 'Your program’s weight for today.'; }
   else if (last){
     const w = def.assist ? Math.min(...last.sets.map(s => s.lb)) : topLb(last), top = last.sets.filter(s => def.assist ? s.lb <= w : s.lb >= w);
     lb = w;
     if (top.length >= n && top.every(s => s.reps >= r)){
       if (def.assist){ lb = Math.max(0, w - def.inc); why = `You got every rep last time, so try ${def.inc} lb less help.`; }
-      else if (def.bw) { r += 1; why = 'You got every rep last time, so try one more rep each set.'; }
-      else { lb = w + def.inc; why = `You got every rep last time, so try ${def.inc} lb more.`; }
-    } else why = `Same ${def.assist ? 'help' : 'weight'} as last time: aim to get every rep.`;
+      else if (def.bw) { r += def.secs ? 5 : 1; why = `You ${all} last time, so try ${def.secs ? '5 seconds longer' : 'one more rep'} each set.`; }
+      else { lb = w + def.inc; why = `You ${all} last time, so try ${def.inc} lb more.`; }
+    } else why = `Same ${def.assist ? 'help' : 'weight'} as last time: aim to ${def.secs ? 'go the full time' : 'get every rep'}.`;
   }
   return { ex, why, entry:null, how:!last, sets:Array.from({ length:n }, () => ({ lb, reps:r, done:false })) };
 }
@@ -4893,13 +4921,13 @@ function renderLive(){
   const it = LV.items[LV.i], def = liftDef(it.ex), how = HOWTO[it.ex], n = LV.items.length, short = id => liftDef(id).name.replace(/ \(.*\)$/, '');
   const cur = it.sets.findIndex(s => !s.done), left = it.sets.filter(s => !s.done).length;
   // The last session before today, so you can match or beat it set by set.
-  const prevL = lastWorking(it.ex, LV.date);
-  const prevTxt = x => def.assist ? `${x.lb} help × ${x.reps}` : def.bw ? (x.lb ? `+${x.lb} × ${x.reps}` : `${x.reps} reps`) : `${x.lb} × ${x.reps}`;
+  const prevL = lastWorking(it.ex, LV.date), warm = doc.workouts.find(w => w.id === LV.wo)?.routine;
+  const u = def.secs ? ' s' : '', prevTxt = x => def.assist ? `${x.lb} help × ${x.reps}` : def.bw ? (x.lb ? `+${x.lb} × ${x.reps}${u}` : `${x.reps}${u || ' reps'}`) : `${x.lb} × ${x.reps}${u}`;
   const nextI = LV.items.findIndex((x, j) => j > LV.i && x.sets.some(s => !s.done)), anyI = nextI >= 0 ? nextI : LV.items.findIndex((x, j) => j !== LV.i && x.sets.some(s => !s.done));
   const alts = def.f ? LIFTS.filter(l => l.f === def.f && l.id !== it.ex && !doc.gym.skip.includes(l.id)) : [];
   const stepper = (i, k, v, ph) => `<span class="lv-step"><button type="button" data-lv-step="${i}|${k}|-1" aria-label="Less ${k === 'lb' ? 'weight' : 'reps'}">−</button><input type="number" inputmode="${k === 'lb' ? 'decimal' : 'numeric'}" data-lv-${k}="${i}" value="${v}" placeholder="${ph}" aria-label="Set ${i + 1} ${k === 'lb' ? 'weight' : 'reps'}"><button type="button" data-lv-step="${i}|${k}|1" aria-label="More ${k === 'lb' ? 'weight' : 'reps'}">+</button></span>`;
   const setTxt = s => { const lb = +s.lb || 0, r = +s.reps || 0;
-    return def.assist ? `${lb} lb help × ${r}` : def.bw ? `${lb ? `+${lb} lb` : 'body weight'} × ${r}` : lb ? `${lb} lb × ${r}` : `${r} reps · set the weight above`; };
+    return def.assist ? `${lb} lb help × ${r}` : def.bw ? `${lb ? `+${lb} lb` : 'body weight'} × ${r}${u}` : lb ? `${lb} lb × ${r}${u}` : `${r}${u || ' reps'} · set the weight above`; };
   const go = cur >= 0 ? `<button class="btn primary gym-go" data-lv-done="${cur}">✓ Done set ${cur + 1}<small>${setTxt(it.sets[cur])}</small></button>`
     : anyI >= 0 ? `<button class="btn primary gym-go" data-lv-go="${anyI}">Next: ${esc(short(LV.items[anyI].ex))} →</button>`
     : LV.free ? `<button class="btn primary gym-go" data-action="lv-add-open">+ Add next exercise</button>`
@@ -4918,15 +4946,16 @@ function renderLive(){
           <h1 class="gym-name">${esc(def.name)}</h1>
           ${how ? `<p class="lv-eq">${how.eq}</p>` : ''}</div>
       </div>
-      ${prevL ? `<div class="lv-last"><span>Last time · ${fmtDate(prevL.date)}</span><b>${fmtSets(prevL.sets, setMode(def))}</b></div>` : ''}
+      ${prevL ? `<div class="lv-last"><span>Last time · ${fmtDate(prevL.date)}</span><b>${fmtSets(prevL.sets, setMode(def), def.secs)}</b></div>` : ''}
       <p class="lv-why">${it.why}</p>
+      ${warm && !LV.items.some(x => x.sets.some(s => s.done)) ? `<a class="lv-warm" href="#routine/${warm}">▶ Warm up first: ${ROUTINES[warm].name} · ${Math.round(routineSec(routineSteps(warm)) / 60)} min</a>` : ''}
       <div class="gym-tools">${how ? `<button class="pill" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how-to' : 'How to do it'}</button>` : ''}<button class="pill" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button><button class="pill" data-action="lv-add-set">+ Set</button><button class="pill" data-action="lv-add-open">+ Exercise</button>${infoBtn}</div>${explain('liftLive')}
       ${how && it.how ? `<div class="lv-how"><p><b>Set up:</b> ${how.set}</p><ol>${how.cues.map(c => `<li>${c}</li>`).join('')}</ol><p class="lv-avoid"><b>Watch for:</b> ${how.avoid}</p></div>` : ''}
       ${LV.swap ? `<div class="wo-swap">${alts.length ? alts.map(l => `<button class="pill" data-lv-pick="${l.id}">${esc(l.name)}</button>`).join('') : '<small>No other variations listed for this one.</small>'}
         ${LIFTS.some(l => l.id === it.ex) ? `<button class="link-btn" data-gym-skip="${it.ex}">${esc(def.name)} isn’t at my gym</button>` : ''}</div>` : ''}
       <div class="lv-sets">
-        <div class="lv-set lv-head" aria-hidden="true"><span>Set</span><span>${def.assist ? 'help lbs' : def.bw ? '+ lbs' : 'lbs'}</span><span>Reps</span><span></span></div>
-        ${it.sets.map((s, i) => `<div class="lv-set${s.done ? ' done' : ''}${i === cur ? ' cur' : ''}"><span class="num">${i + 1}</span>${stepper(i, 'lb', s.lb, def.assist ? 'help' : def.bw ? 'body' : 'lbs')}${stepper(i, 'reps', s.reps, 'reps')}
+        <div class="lv-set lv-head" aria-hidden="true"><span>Set</span><span>${def.assist ? 'help lbs' : def.bw ? '+ lbs' : 'lbs'}</span><span>${def.secs ? 'Secs' : 'Reps'}</span><span></span></div>
+        ${it.sets.map((s, i) => `<div class="lv-set${s.done ? ' done' : ''}${i === cur ? ' cur' : ''}"><span class="num">${i + 1}</span>${stepper(i, 'lb', s.lb, def.assist ? 'help' : def.bw ? 'body' : 'lbs')}${stepper(i, 'reps', s.reps, def.secs ? 'sec' : 'reps')}
           <button class="lv-tick" data-lv-done="${i}" aria-pressed="${s.done}" aria-label="${s.done ? `Undo set ${i + 1}` : `Done set ${i + 1}`}">✓</button>
           ${prevL?.sets[i] ? `<small class="lv-prev">last time ${prevTxt(prevL.sets[i])}</small>` : ''}</div>`).join('')}
       </div>
@@ -4997,7 +5026,7 @@ function pastCard(){
       return `<div class="past-ex"><div class="past-head"><span><b>${esc(def.name)}</b><small>${it.entry ? 'logged that day' : it.from ? `from ${fmtDate(it.from).slice(4)}` : 'first time: enter what you did'}</small></span><button class="link-btn" data-past-del="${i}">✕ skip</button></div>
         <div class="lift-sets">${it.sets.map((x, j) => `<div class="lift-set"><span class="num">${j + 1}</span>
           <input type="number" inputmode="decimal" data-past-lb="${i}|${j}" value="${x.lb}" placeholder="${ph(def)}" aria-label="${esc(def.name)} set ${j + 1} weight">
-          <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-past-reps="${i}|${j}" value="${x.reps}" placeholder="reps" aria-label="${esc(def.name)} set ${j + 1} reps">
+          <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-past-reps="${i}|${j}" value="${x.reps}" placeholder="${def.secs ? 'sec' : 'reps'}" aria-label="${esc(def.name)} set ${j + 1} reps">
           ${it.sets.length > 1 ? `<button class="link-btn" data-past-setdel="${i}|${j}" aria-label="Remove set ${j + 1}">remove</button>` : ''}</div>`).join('')}</div>
         <button class="btn small" style="margin-top:8px" data-past-addset="${i}">+ Set</button></div>`; }).join('')}
     <div class="past-add"><select id="past-add" aria-label="Exercise to add">${exOptions('bench', false)}</select><button class="btn" data-action="past-add-ex">+ Add</button></div>
@@ -5061,12 +5090,13 @@ function woEditor(){
       <button class="btn small wo-move" data-wo-move="${i}|-1" aria-label="Move exercise ${i + 1} up"${i ? '' : ' disabled'}>↑</button><button class="btn small wo-move" data-wo-move="${i}|1" aria-label="Move exercise ${i + 1} down"${i < n - 1 ? '' : ' disabled'}>↓</button>
       <button class="link-btn" data-wo-del="${i}" aria-label="Remove exercise ${i + 1}">remove</button></span></div>`).join('')}</div>
     <label class="wo-vary"><input type="checkbox" id="wo-vary"${e.vary ? ' checked' : ''}> Mix up variations each time <small>(e.g. bench one week, dumbbell press the next)</small></label>
+    <label class="wo-vary"><input type="checkbox" id="wo-extra"${e.extra ? ' checked' : ''}> Extra day <small>(like shoulders, arms &amp; abs: doesn’t change whether push, pull or legs is next)</small></label>
     <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-add-ex">+ Exercise</button><button class="btn small primary" data-action="wo-save">Save</button><button class="btn small" data-action="wo-cancel">Cancel</button>${e.id ? '<button class="link-btn" data-action="wo-delete">delete workout</button>' : ''}</div>
     <p class="card-sub" style="margin:12px 0 0">Sets × reps are optional targets. Missing an exercise? Log it once with “Something else…” and it appears here.</p></div>`;
 }
 function readWoForm(){
   const e = liftUi.edit; if (!e || !$('#wo-name')) return;
-  e.name = $('#wo-name').value; e.vary = $('#wo-vary').checked;
+  e.name = $('#wo-name').value; e.vary = $('#wo-vary').checked; e.extra = $('#wo-extra').checked;
   e.items = e.items.map((it, i) => ({ ex:$(`[data-wo-ex="${i}"]`).value, sets:+$(`[data-wo-sets="${i}"]`).value || null, reps:+$(`[data-wo-reps="${i}"]`).value || null }));
 }
 const redrawWo = () => { $('#lift-wo').outerHTML = liftWorkoutsCard(); };
@@ -5091,7 +5121,7 @@ function liftWorkoutsCard(){
   const done = doc.lifts.filter(l => l.date === todayYmd() && l.day === day);
   const rows = prog.days[day].map(([ex, n, reps], i) => {
     const d = done.find(l => l.ex === ex), def = liftDef(ex);
-    return `<li><span><b>${esc(def.name)}</b><small>${d ? `done ✓ · ${fmtSets(d.sets, setMode(def))}` : `${n} × ${reps} @ ${progWeight(ex, n, reps)} lb`}</small></span>
+    return `<li><span><b>${esc(def.name)}</b><small>${d ? `done ✓ · ${fmtSets(d.sets, setMode(def), def.secs)}` : `${n} × ${reps} @ ${progWeight(ex, n, reps)} lb`}</small></span>
       ${d ? '' : `<span class="btn-row"><button class="btn small primary" data-lift-did="${i}">Did it</button><button class="btn small" data-lift-edit="${i}">Change</button></span>`}</li>`;
   });
   const allDone = done.length >= prog.days[day].length;
@@ -5120,7 +5150,7 @@ function liftLogCard(){
   if (u.pick) return `<div class="card" id="lift-log"><div class="card-head"><h2>Pick an exercise</h2><button class="link-btn" data-action="lf-pick">back</button></div>
     <input id="lf-q" class="ex-search" type="search" placeholder="Search, e.g. curl" value="${esc(u.q ?? '')}" autocomplete="off" aria-label="Search exercises">
     <div class="ex-list" id="lf-list">${pickList(u.q ?? '')}</div></div>`;
-  return `<div class="card" id="lift-log"><div class="card-head"><h2>${u.editId ? 'Edit lift' : 'Log a lift'}</h2><span class="card-sub">${u.editId ? '<button class="link-btn" data-action="lift-edit-cancel">cancel edit</button> · ' : ''}${u.day ? `workout ${u.day} · ` : ''}${u.wo ? `${esc(doc.workouts.find(w => w.id === u.wo)?.name ?? '')} · ` : ''}${last ? `last time ${fmtDate(last.date).slice(4)}: ${fmtSets(last.sets, setMode(def))}` : 'weight × reps for each set'}</span></div>
+  return `<div class="card" id="lift-log"><div class="card-head"><h2>${u.editId ? 'Edit lift' : 'Log a lift'}</h2><span class="card-sub">${u.editId ? '<button class="link-btn" data-action="lift-edit-cancel">cancel edit</button> · ' : ''}${u.day ? `workout ${u.day} · ` : ''}${u.wo ? `${esc(doc.workouts.find(w => w.id === u.wo)?.name ?? '')} · ` : ''}${last ? `last time ${fmtDate(last.date).slice(4)}: ${fmtSets(last.sets, setMode(def), def.secs)}` : 'weight × reps for each set'}</span></div>
     <div class="field-row">
       <div class="field"><label for="lf-date">Date</label><input id="lf-date" type="date" value="${u.date || todayYmd()}"></div>
       <div class="field"><label for="lf-exbtn">Exercise</label><input type="hidden" id="lf-ex" value="${u.ex}"><button type="button" id="lf-exbtn" class="ex-btn" data-action="lf-pick">${custom ? 'Something else…' : esc(def.name)}<span aria-hidden="true">▾</span></button></div>
@@ -5129,7 +5159,7 @@ function liftLogCard(){
     </div>
     <div class="lift-sets">${u.sets.map((s, i) => `<div class="lift-set"><span class="num">${i + 1}</span>
       <input type="number" inputmode="decimal" step="2.5" data-set-lb="${i}" value="${s.lb}" placeholder="${def.assist ? 'help lbs' : def.bw ? '+ lbs' : 'lbs'}" aria-label="Set ${i + 1} weight">
-      <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-set-reps="${i}" value="${s.reps}" placeholder="reps" aria-label="Set ${i + 1} reps">
+      <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-set-reps="${i}" value="${s.reps}" placeholder="${def.secs ? 'sec' : 'reps'}" aria-label="Set ${i + 1} reps">
       ${u.sets.length > 1 ? `<button class="link-btn" data-set-del="${i}" aria-label="Remove set ${i + 1}">remove</button>` : ''}</div>`).join('')}</div>
     ${def.bw ? '<p class="card-sub" style="margin:8px 0 0">Weight is anything added (a belt or vest). Leave it empty for body weight.</p>' : ''}
     ${def.assist ? '<p class="card-sub" style="margin:8px 0 0">Weight is the help: the number you set on the machine’s stack. Less help means you’re stronger.</p>' : ''}
@@ -5142,7 +5172,7 @@ function liftRecentCard(){
   const recent = [...doc.lifts].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0).slice(0, 12);
   if (!recent.length) return '';
   return `<div class="card"><div class="card-head"><h2>Logged lately</h2><span class="card-sub">tap Edit to fix one</span></div>
-    <ul class="lift-list">${recent.map(l => `<li><span><b>${esc(liftDef(l.ex).name)}</b><small>${fmtDate(l.date)}${l.max ? ' · 1-rep max' : ''}${l.wo && doc.workouts.some(w => w.id === l.wo) ? ` · ${esc(doc.workouts.find(w => w.id === l.wo).name)}` : l.day ? ` · workout ${l.day}` : ''} · ${fmtSets(l.sets, setMode(liftDef(l.ex)))}</small></span>
+    <ul class="lift-list">${recent.map(l => `<li><span><b>${esc(liftDef(l.ex).name)}</b><small>${fmtDate(l.date)}${l.max ? ' · 1-rep max' : ''}${l.wo && doc.workouts.some(w => w.id === l.wo) ? ` · ${esc(doc.workouts.find(w => w.id === l.wo).name)}` : l.day ? ` · workout ${l.day}` : ''} · ${fmtSets(l.sets, setMode(liftDef(l.ex)), liftDef(l.ex).secs)}</small></span>
       <span class="btn-row"><button class="btn small" data-edit-lift="${l.id}">Edit</button><button class="btn small" data-del-lift="${l.id}" aria-label="Remove">✕</button></span></li>`).join('')}</ul></div>`;
 }
 // Keeps what's typed when the card redraws (adding a set, switching exercise).
@@ -5158,7 +5188,7 @@ const redrawLiftLog = () => { const el = $('#lift-log'); if (el) el.outerHTML = 
 function liftMaxCard(){
   const today = todayYmd(), rows = [];
   for (const ex of new Set(doc.lifts.map(l => l.ex))){
-    const def = liftDef(ex); if (def.bw || def.assist) continue;
+    const def = liftDef(ex); if (def.bw || def.assist || def.secs) continue;
     const singles = liftHist(ex).flatMap(l => l.sets.filter(x => x.reps === 1 && x.lb > 0).map(x => ({ lb:x.lb, date:l.date })));
     if (!singles.length) continue;
     const best = singles.reduce((a, b) => b.lb > a.lb ? b : a), before = singles.filter(x => x.date < best.date);
@@ -5194,7 +5224,7 @@ const redrawMax = () => { const el = $('#max-sheet'); if (el) el.outerHTML = max
 function liftPRCard(){
   // Working sets only: singles are max tests, and live on the 1-rep max card.
   const exs = [...new Set(doc.lifts.map(l => l.ex))].map(ex => {
-    const def = liftDef(ex), working = x => def.bw || def.assist || x.reps > 1;
+    const def = liftDef(ex), working = x => def.bw || def.assist || def.secs || x.reps > 1;
     const h = liftHist(ex).filter(l => l.sets.some(working)); if (!h.length) return null;
     let best = null;
     for (const l of h) for (const x of l.sets.filter(working)) { const v = liftScore(def, x); if (!best || v > best.v) best = { v, s:x, date:l.date }; }
@@ -5205,12 +5235,12 @@ function liftPRCard(){
   const sel = exs.find(x => x.ex === liftUi.chart) ?? null;
   // One number that's real (your best set), the estimate small underneath; grouped so it scans.
   const row = x => { const d = x.def, s = x.best.s, isNew = x.best.date > x.first && diffDays(x.best.date, todayYmd()) <= 14;
-    const set = d.assist ? `${s.lb} lb help × ${s.reps}` : d.bw ? `${s.lb ? `+${s.lb} lb × ` : ''}${s.reps} rep${s.reps === 1 ? '' : 's'}` : `${s.lb} lb × ${s.reps}`;
-    const sub = d.assist ? 'best set' : d.bw ? 'most in one set' : s.reps <= 1 ? 'a true 1-rep max' : `≈ ${x.best.v} lb for 1 rep`;
+    const set = d.secs ? (d.bw ? `${s.lb ? `+${s.lb} lb · ` : ''}${s.reps} s` : `${s.lb} lb × ${s.reps} s`) : d.assist ? `${s.lb} lb help × ${s.reps}` : d.bw ? `${s.lb ? `+${s.lb} lb × ` : ''}${s.reps} rep${s.reps === 1 ? '' : 's'}` : `${s.lb} lb × ${s.reps}`;
+    const sub = d.secs ? (d.bw ? 'longest hold' : 'heaviest carry') : d.assist ? 'best set' : d.bw ? 'most in one set' : s.reps <= 1 ? 'a true 1-rep max' : `≈ ${x.best.v} lb for 1 rep`;
     const open = x.ex === sel?.ex;
     return `<li data-lift-chart="${x.ex}" role="button" aria-expanded="${open}"${open ? ' aria-current="true"' : ''}><span><b>${esc(d.name)}</b>${isNew ? ' <span class="badge test">new PR</span>' : ''}</span>
       <span class="pr-v"><b>${set}</b><small>${sub}</small></span><span class="pr-chev" aria-hidden="true">▾</span></li>
-      ${open ? `<li class="pr-chart"><p class="card-sub" style="margin:0 0 4px">${byReps(d) ? 'Most reps in a set' : 'Estimated 1-rep max'}, best set each day</p><div class="chart" id="c-lift" data-ex="${x.ex}"></div></li>` : ''}`; };
+      ${open ? `<li class="pr-chart"><p class="card-sub" style="margin:0 0 4px">${d.secs ? (d.bw ? 'Longest hold (seconds)' : 'Heaviest carry (lb)') : byReps(d) ? 'Most reps in a set' : 'Estimated 1-rep max'}, best set each day</p><div class="chart" id="c-lift" data-ex="${x.ex}"></div></li>` : ''}`; };
   const groups = ['Push', 'Pull', 'Legs', 'Core', 'Other'].map(g => [g, exs.filter(x => (x.def.g ?? 'Other') === g)]).filter(([, xs]) => xs.length);
   return `<div class="card"><div class="card-head"><h2>Best sets${infoBtn}</h2><span class="card-sub">your best working set · tap one for its chart</span></div>${explain('e1rm')}
     ${groups.map(([g, xs]) => `<div class="pr-group">${g}</div><ul class="pr-list">${xs.map(row).join('')}</ul>`).join('')}</div>`;
@@ -5250,7 +5280,7 @@ function drawLiftChart(){
   const pts = Object.values(m), vs = pts.map(p => p.v), lo0 = Math.min(...vs), hi0 = Math.max(...vs);
   const step = byReps(def) ? Math.max(1, Math.ceil((hi0 - lo0) / 4)) : Math.max(5, round5((hi0 - lo0) / 4));
   chartLine(host, pts, { lo:Math.max(0, Math.floor(lo0 / step) * step - step), hi:Math.ceil(hi0 / step) * step + step, step,
-    tipFmt:p => `<b>${fmtDate(p.r.date)}</b><br>${byReps(def) ? `${p.v} reps` : `est. 1-rep max ${p.v} lb`}` });
+    tipFmt:p => `<b>${fmtDate(p.r.date)}</b><br>${def.secs ? prTxt(def, p.v) : byReps(def) ? `${p.v} reps` : `est. 1-rep max ${p.v} lb`}` });
 }
 
 function liftSummary(){
@@ -5361,11 +5391,16 @@ function renderBody(){
    that animates between two poses. Joints are [x, y]: h head, n neck,
    p pelvis, k/f/t knee/ankle/toe, e/w elbow/wrist; 1 is the near limb, drawn
    solid, 2 the far one, drawn faint. A toe left out sits 7 px ahead of the
-   ankle (or on it, for front-on figures). */
+   ankle (or on it, for front-on figures). hl picks what the move works: 1 the near leg,
+   2 the far leg, 3 the near arm. */
 const STAND = { h:[60,16], n:[60,27], p:[60,62], k1:[61,85], f1:[60,107], k2:[59,85], f2:[58,107], e1:[62,44], w1:[64,59], e2:[57,44], w2:[55,59] };
 const FRONT = { ...STAND, k1:[64,85], f1:[65,107], k2:[56,85], f2:[55,107], e1:[68,44], w1:[70,60], e2:[52,44], w2:[50,60] };
 const SUPINE = { h:[14,96], n:[24,100], p:[56,102], e1:[40,104], w1:[54,105], e2:[40,105], w2:[54,106] };
 const S = o => ({ ...STAND, ...o }), F = o => ({ ...FRONT, ...o }), L = o => ({ ...SUPINE, ...o });
+// Straight arms from the shoulder at an angle (0 points at the near side of the picture, 90 down);
+// the far arm mirrors it when front-on. Upper arm 17, whole arm 32.
+const ARM = (a, k = 17, n = [60, 27]) => [+(n[0] + Math.cos(a * Math.PI / 180) * k).toFixed(1), +(n[1] + Math.sin(a * Math.PI / 180) * k).toFixed(1)];
+const ARMS = (r, l = 180 - r) => ({ e1:ARM(r), w1:ARM(r, 32), e2:ARM(l), w2:ARM(l, 32) });
 const up = (P, dy) => Object.fromEntries(Object.entries(P).map(([k, [x, y]]) => [k, [x, y - dy]]));
 
 // sec is per side when `sides` is set. Before a run everything moves; holds
@@ -5422,6 +5457,20 @@ const MOVES = {
   plank: { name:'Forearm plank', cue:'Elbows under shoulders, body in one straight line. Breathe. Drop to your knees if your back sags.', sec:30, hold:true, prop:'mat', dur:3,
     a:{ h:[14,82], n:[24,86], e1:[24,106], w1:[38,107], e2:[23,106], w2:[37,108], p:[58,93], k1:[79,99], f1:[99,104], t1:[100,108], k2:[79,100], f2:[99,105], t2:[100,108] },
     b:{ h:[14,81], n:[24,85], e1:[24,106], w1:[38,107], e2:[23,106], w2:[37,108], p:[58,91], k1:[79,98], f1:[99,104], t1:[100,108], k2:[79,99], f2:[99,105], t2:[100,108] } },
+  // Shoulders: side-on, both arms sweep a full circle together (down, forward, up, back), gliding.
+  armCircle: { name:'Arm circles', cue:'Stand tall, arms straight and relaxed. Swing both arms in big, slow circles: 10 forward, then 10 backward.', sec:40, dur:.7, stops:[0],
+    seq:[90, 0, -90, -180].map(a => S({ e1:ARM(a), w1:ARM(a, 32), e2:ARM(a + 4), w2:ARM(a + 4, 32) })) },
+  wallSlide: { name:'Wall slides', cue:'Back, head and arms flat against a wall, elbows bent like a goalpost. Slide your arms up as high as you can while they stay on the wall, then back down. Slow.', sec:40, front:true, dur:1.8,
+    a:F({ e1:[77,27], w1:[77,12], e2:[43,27], w2:[43,12] }), b:F(ARMS(-62)) },
+  passThrough: { name:'Towel pass-throughs', cue:'Hold a towel or band wide, arms straight. Raise it up over your head and as far back as is comfortable, then bring it back down. Widen your grip if it pinches.', sec:30, front:true, dur:1.8,
+    a:F(ARMS(62)), b:F(ARMS(-70)),
+    gear:P => `<line x1="${P.w1[0].toFixed(1)}" y1="${P.w1[1].toFixed(1)}" x2="${P.w2[0].toFixed(1)}" y2="${P.w2[1].toFixed(1)}" class="kit-line"/>` },
+  crossBody: { name:'Cross-body shoulder stretch', cue:'Bring one arm straight across your chest. With the other hand, ease it closer by the upper arm until you feel the back of the shoulder. Keep the shoulder down.', sec:30, sides:true, hold:true, front:true, dur:4, hl:3,
+    a:F({ e1:[47,31], w1:[33,33], e2:[49,40], w2:[50,32] }), b:F({ e1:[46,31], w1:[32,32], e2:[48,40], w2:[49,31] }) },
+  doorway: { name:'Doorway chest stretch', cue:'Forearm up on a door frame, elbow at shoulder height. Step through with the same-side foot and lean until you feel the front of the chest and shoulder. Don’t force it.', sec:30, sides:true, hold:true, dur:4, hl:3,
+    props:'<rect x="40" y="2" width="5" height="108" rx="2" class="prop"/>',
+    a:{ h:[66,19], n:[64,30], p:[62,65], e1:[47,30], w1:[47,15], e2:[64,47], w2:[66,62], k1:[74,87], f1:[78,107], k2:[52,88], f2:[44,104], t2:[38,108] },
+    b:{ h:[67,19], n:[65,30], p:[63,65], e1:[48,30], w1:[48,15], e2:[65,47], w2:[67,62], k1:[75,87], f1:[78,107], k2:[53,88], f2:[44,104], t2:[38,108] } },
   rest: { name:'Rest', cue:'Shake it out and breathe. Next set coming up.', sec:20, dur:3, rest:true, a:STAND, b:up(STAND, 1) },
 };
 const ROUTINES = {
@@ -5433,6 +5482,8 @@ const ROUTINES = {
     moves:['march', 'hipStand', 'quad', 'calfRaise'] },
   strength: { name:'Strength', title:'Get <em>strong</em>', sub:'Twice a week. Strong glutes and calves protect knees and hips.', tasks:['bridge'],
     moves:[['bridge', 45], 'rest', ['bridge', 45], 'rest', ['calfRaise', 45], 'rest', ['calfRaise', 45], 'sideRaise', 'plank'] },
+  shoulders: { name:'Shoulder mobility', title:'Loose <em>shoulders</em>', sub:'Before an upper-body day, or any time they feel tight. Easy range, never pain.', tasks:[],
+    moves:['armCircle', 'wallSlide', 'passThrough', 'crossBody', 'doorway'] },
 };
 // Alternating moves put each foot down before lifting the other: knee up, stand, other knee up, stand.
 for (const m of Object.values(MOVES)) if (m.alt) m.seq = [m.a, STAND, m.b, STAND];
@@ -5524,7 +5575,7 @@ function figure(m, { size = 240, still = false, lift = null, label = m.name } = 
   const vb = m.vb ?? (m.prop === 'mat' ? [0, 46, 120, 70] : [0, 0, 120, 120]);
   return `<svg class="fig" viewBox="${vb.join(' ')}" width="${size}" height="${Math.round(size * vb[3] / vb[2])}" role="img" aria-label="${esc(label)}"${moving && id ? ` data-move="${id}"` : ''}${moving && lift ? ` data-lmove="${lift}"` : ''}>
     ${prop}${m.hang ? '' : '<line x1="2" y1="111" x2="118" y2="111" class="ground"/>'}
-    ${L.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0)) ? ' hl' : ''}"/>`).join('')}
+    ${L.map((pts, i) => `<polyline points="${pts}" class="${cls[i]}${m.hl && ((m.hl === 1 && i === 3) || (m.hl === 2 && i === 0) || (m.hl === 3 && i === 4)) ? ' hl' : ''}"/>`).join('')}
     <circle cx="${P.h[0]}" cy="${P.h[1]}" r="7" class="head"/><g class="gear">${m.gear?.(P) ?? ''}</g>
   </svg>`;
 }
@@ -5834,6 +5885,35 @@ Object.assign(LMOVES, { dbrdl:{ ...LMOVES.rdl, gear:P => bell(P.w1) }, dbbench:{
       hipadd:{ dur:1.4, front:true, props:fprop, a:front({ f1:[79, 102] }), b:front({ f1:[53, 104] }), gear:arm([60, 64], [-5, 0]) },
     };
   })(),
+  // Kneeling at a flat bench, forearms flat on it, hands over the edge: only the wrists move.
+  ...(() => { const P = lpose({ p:[34, 84.4], t:-20, f1:[12, 107], ft:180, W:[84, 89], eb:1 });
+    const props = '<rect x="58" y="91" width="30" height="5" rx="2" class="prop"/><rect x="62" y="96" width="4" height="14" class="prop"/><rect x="80" y="96" width="4" height="14" class="prop"/>';
+    // The hand drops over the edge, then the wrist curls it up as high as it goes.
+    const hand = P => { const a = 25 - 60 * Math.sin(2 * Math.PI * (P._ph ?? 0)), q = at(P.w1, a, 8);
+      return `<line x1="${P.w1[0].toFixed(1)}" y1="${P.w1[1].toFixed(1)}" x2="${q[0].toFixed(1)}" y2="${q[1].toFixed(1)}" class="kit-plat"/>` + knob(q, 3.5); };
+    return { wristcurl:{ dur:1.4, props, a:P, b:{ ...P }, gear:hand }, revwrist:{ dur:1.4, props, a:P, b:{ ...P }, gear:hand } }; })(),
+  revcurl:LMOVES.curl,
+  // A still hang: arms straight, feet off the floor.
+  deadhang:{ ...LMOVES.pullup, b:LMOVES.pullup.a },
+  plank:{ dur:3, a:MOVES.plank.a, b:MOVES.plank.b, props:'<rect x="6" y="110" width="108" height="3" rx="1.5" class="prop"/>' },
+  // Kneeling, the knees stay put: the hips and wheel roll forward together until the body is long.
+  abwheel:{ dur:2, props:'<rect x="0" y="108" width="40" height="3" rx="1.5" class="prop"/>',
+    a:lpose({ p:[32, 84.4], t:-20, f1:[6, 107], ft:180, W:[67, 103], eb:1 }),
+    b:lpose({ p:[46.8, 93.8], t:-8, f1:[6, 107], ft:180, W:[108, 103], eb:1 }),
+    gear:P => `<circle cx="${P.w1[0].toFixed(1)}" cy="${(P.w1[1] + 3).toFixed(1)}" r="5" class="kit"/>` + knob([P.w1[0], P.w1[1] + 3], 1.5) },
+  // Side-on to the cable (the stack is beside you, so the cable comes from behind the body here):
+  // hands press straight out from the chest and come back.
+  pallof:{ dur:1.6, props:'<rect x="34" y="8" width="8" height="102" rx="2" class="prop"/>' + pulley(42, 38),
+    a:lpose({ p:[60, 62], f1:[62, 107], f2:[56, 107], kb:-1, W:[68, 38], eb:-1 }),
+    b:lpose({ p:[60, 62], f1:[62, 107], f2:[56, 107], kb:-1, W:[91, 37], eb:-1 }),
+    gear:P => cable([42, 38], P.w1) + knob(P.w1, 2.5) },
+  // From the front, walking toward you: a short step each side, arms long with the dumbbells at your sides.
+  farmer:{ dur:.55, front:true, stops:[0],
+    seq:(() => { const st = lpose({ p:[60, 62], f1:[65, 107], f2:[55, 107], kb:-1, kb2:1, front:true, w:[9, 31], w2r:[-9, 31], eb:-1, eb2:1 });
+      // The stepping knee comes toward you, so the thigh looks shorter rather than bending sideways.
+      const step = (k, f, x) => ({ ...st, [k]:[x, 84], [f]:[x, 101], [f.replace('f', 't')]:[x, 101] });
+      return [st, step('k1', 'f1', 65), st, step('k2', 'f2', 55)]; })(),
+    gear:P => bellUp(P.w1) + bellUp(P.w2) },
   apullup:{ ...LMOVES.pullup, gear:P => `<rect x="${(Math.min(P.k1[0], P.k2[0]) - 7).toFixed(1)}" y="${(Math.max(P.k1[1], P.k2[1]) + 3).toFixed(1)}" width="${(Math.abs(P.k1[0] - P.k2[0]) + 14).toFixed(1)}" height="4" rx="2" class="kit-solid"/>` }, adips:{ ...LMOVES.dips, gear:kneePad },
   cablecurl:{ ...LMOVES.curl, props:STACK + pulley(104, 104), gear:P => cable([104, 104], P.w1) + `<rect x="${(P.w1[0] - 2).toFixed(1)}" y="${(P.w1[1] - 6).toFixed(1)}" width="4" height="12" rx="2" class="kit-solid"/>` },
   seatcurl:{ dur:1.4, props:SEAT(34, 84),
@@ -6778,7 +6858,7 @@ document.addEventListener('click', async e => {
   if (woBtn){
     readLiftForm();
     if (woBtn.dataset.woStart){ const w = doc.workouts.find(x => x.id === woBtn.dataset.woStart); liveStart({ wo:w.id, name:w.name, items:woPlan(w, todayYmd()) }); }
-    else { const w = doc.workouts.find(x => x.id === woBtn.dataset.woEdit); liftUi.edit = { id:w.id, name:w.name, vary:!!w.vary, items:w.items.map(it => ({ ...it })) }; redrawWo(); }
+    else { const w = doc.workouts.find(x => x.id === woBtn.dataset.woEdit); liftUi.edit = { id:w.id, name:w.name, vary:!!w.vary, extra:!!w.extra, items:w.items.map(it => ({ ...it })) }; redrawWo(); }
     return;
   }
   const lv = LV && e.target.closest('[data-lv-go], [data-lv-done], [data-lv-step], [data-lv-pick]');
@@ -6787,7 +6867,7 @@ document.addEventListener('click', async e => {
     if (lv.dataset.lvGo != null){ LV.i = +lv.dataset.lvGo; LV.swap = false; liveSave(); renderLive(); scrollTo(0, 0); return; }
     if (lv.dataset.lvStep){
       const [i, k, d] = lv.dataset.lvStep.split('|'), s = it.sets[+i];
-      s[k] = Math.max(0, (+s[k] || 0) + +d * (k === 'lb' ? 5 : 1));
+      s[k] = Math.max(0, (+s[k] || 0) + +d * (k === 'lb' || liftDef(it.ex).secs ? 5 : 1));
       // Later sets usually match: carry the change down to the ones not done yet.
       it.sets.forEach((x, j) => { if (j > +i && !x.done) x[k] = s[k]; });
       if (s.done){ liveCommit(it); save(); }
@@ -6862,7 +6942,7 @@ document.addEventListener('click', async e => {
   if (mx){
     const def = liftDef(mx.dataset.maxEx);
     if (mx.dataset.maxEx === '_new'){ toast('Pick a lift from the list'); return; }
-    if (def.bw || def.assist){ toast('Body-weight and assisted moves don’t have a 1-rep max'); return; }
+    if (def.bw || def.assist || def.secs){ toast('Body-weight, assisted and timed moves don’t have a 1-rep max'); return; }
     Object.assign(liftUi.max, { ex:mx.dataset.maxEx, pick:false, q:'' }); redrawMax(); return;
   }
   const pd = e.target.closest('[data-past-del], [data-past-addset], [data-past-setdel]');
@@ -7231,6 +7311,12 @@ document.addEventListener('click', async e => {
     case 'sheet-close': closeSheet(); break;
     case 'lf-pick': readLiftForm(); liftUi.pick = !liftUi.pick; liftUi.q = ''; redrawLiftLog(); if (liftUi.pick) setTimeout(() => $('#lf-q')?.focus(), 60); break;
     case 'lift-edit-cancel': Object.assign(liftUi, { editId:null, date:null, sets:[{ lb:'', reps:'' }] }); redrawLiftLog(); break;
+    case 'wo-extra': {
+      readLiftForm();
+      const tpl = e.target.closest('[data-tpl]').dataset.tpl, t = EXTRA_DAYS[tpl];
+      doc.workouts = [...doc.workouts, { id:'wo' + Date.now().toString(36), tpl, name:t.name, extra:true, routine:t.routine, items:t.items.map(([ex, sets, reps]) => ({ ex, sets, reps })) }];
+      await save(); renderLift(); toast(`${t.name} saved: start it from your workouts`); break;
+    }
     case 'wo-new': readLiftForm(); liftUi.edit = { id:null, name:'', items:[{ ex:'bench', sets:3, reps:8 }] }; redrawWo(); break;
     case 'wo-from-day': {
       readLiftForm();
@@ -7244,11 +7330,11 @@ document.addEventListener('click', async e => {
       const w = liftUi.edit, name = w.name.trim();
       if (!name){ toast('Name the workout'); break; }
       if (!w.items.length){ toast('Add at least one exercise'); break; }
-      const items = w.items.map(it => ({ ex:it.ex, ...(it.sets ? { sets:it.sets } : {}), ...(it.reps ? { reps:it.reps } : {}) })), vary = !!w.vary;
-      if (w.id) doc.workouts = doc.workouts.map(x => x.id === w.id ? { ...x, name, items, vary } : x);
+      const items = w.items.map(it => ({ ex:it.ex, ...(it.sets ? { sets:it.sets } : {}), ...(it.reps ? { reps:it.reps } : {}) })), vary = !!w.vary, extra = !!w.extra;
+      if (w.id) doc.workouts = doc.workouts.map(x => x.id === w.id ? { ...x, name, items, vary, extra } : x);
       else {
         const id = 'wo' + Date.now().toString(36);
-        doc.workouts = [...doc.workouts, { id, name, items, vary }];
+        doc.workouts = [...doc.workouts, { id, name, items, vary, extra }];
         // Saved from a day's lifts: those count as this workout, so the rotation knows it's done.
         if (w.from) doc.lifts = doc.lifts.map(l => l.date === w.from && !l.wo && !l.day && items.some(it => it.ex === l.ex) ? { ...l, wo:id } : l);
       }

@@ -100,7 +100,7 @@ data runs through it, so treat changes to data handling with care.
   its own `seq`; joints in a 120×120 box). Poses are converted to bone angles and animated
   by rotation (`poseAt`, `animateFigures`), so keep each bone's length the same in every
   pose: thigh 23, shin 22, upper arm 17, forearm 15. Check new moves on a filmstrip of
-  frames, not just the end poses. and `ROUTINES` (before/after a run, desk break, strength). The player
+  frames, not just the end poses. `hl` highlights what a move works (1 near leg, 2 far leg, 3 near arm). and `ROUTINES` (before/after a run, desk break, strength). The player
   (`RP`, `#routine/<id>`) times from the clock, keeps the screen awake and beeps on changes.
   Finishing ticks the matching Today tasks and appends to `doc.routines`.
 - **Lifting** (its own Lift tab, `renderLift()`, `LIFTS`, `LIFT_PROGS`): `doc.lifts` is one entry per exercise per
@@ -144,6 +144,10 @@ data runs through it, so treat changes to data handling with care.
   Progress shows "1-rep maxes" (`liftMaxCard`, singles only) and "Best sets" (`liftPRCard`, working sets only). A max
   is logged with "+ Log a 1-rep max" (`maxSheet`) as one single with `max:true`; max tests never prefill working sets
   (`lastWorking`) and don't move the push/pull/legs rotation (`nextGroup`).
+  Timed moves (`secs:true`: plank, dead hang, farmer's carry) keep seconds in `reps`: shown as "s", stepped by 5,
+  left out of volume and 1-rep maxes; a hold's best is the longest time, a carry's the heaviest weight.
+  Extra days (`w.extra`, e.g. "Shoulders, arms & abs" from `EXTRA_DAYS`) sit outside push → pull → legs: `nextGroup`
+  and `woNext` ignore them. A workout's `routine` shows a "Warm up first" link in the live workout until a set is ticked.
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.
