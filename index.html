@@ -4918,8 +4918,14 @@ function pastItems(woId, date){
   const w = doc.workouts.find(x => x.id === woId), copy = ss => ss.map(x => ({ lb:x.lb || '', reps:x.reps }));
   const done = doc.lifts.filter(l => l.date === date && (w ? l.wo === w.id : !l.wo && !l.day));
   // A day that's already logged shows just what was logged, so a skipped exercise doesn't creep back in.
+  // Lifts logged on their own that day join the workout they belong to (same exercise, or a variation of it).
+  const loose = w ? doc.lifts.filter(l => l.date === date && !l.wo && !l.day) : [], used = new Set();
+  const fam = id => liftDef(id).f;
   const items = (w && !done.length ? woPlan(w, date) : []).map(it => {
-    const got = done.find(l => l.ex === it.ex), last = liftHist(it.ex).filter(l => l.date < date).at(-1);
+    const own = loose.find(l => !used.has(l.id) && l.ex === it.ex) ?? loose.find(l => !used.has(l.id) && fam(l.ex) && fam(l.ex) === fam(it.ex));
+    if (own) used.add(own.id);
+    const got = done.find(l => l.ex === it.ex) ?? own, last = liftHist(it.ex).filter(l => l.date < date).at(-1);
+    if (own) it = { ...it, ex:own.ex };
     return { ex:it.ex, entry:got?.id ?? null, from:got ? null : last?.date ?? null,
       sets:got ? copy(got.sets) : last ? copy(last.sets) : Array.from({ length:it.sets || 3 }, () => ({ lb:'', reps:it.reps || '' })) };
   });
@@ -7037,7 +7043,7 @@ document.addEventListener('click', async e => {
       for (const { it, sets } of lifts){
         if (!sets.length){ if (it.entry) doc.lifts = doc.lifts.filter(l => l.id !== it.entry); continue; }
         n++;
-        if (it.entry && doc.lifts.some(l => l.id === it.entry)) doc.lifts = doc.lifts.map(l => l.id === it.entry ? { ...l, date:P.date, ex:it.ex, sets } : l);
+        if (it.entry && doc.lifts.some(l => l.id === it.entry)) doc.lifts = doc.lifts.map(l => l.id === it.entry ? { ...l, date:P.date, ex:it.ex, sets, ...(P.wo ? { wo:P.wo } : {}) } : l);
         else doc.lifts = [...doc.lifts, { id:liftId(), date:P.date, ex:it.ex, sets, ...(P.wo ? { wo:P.wo } : {}) }];
       }
       const name = doc.workouts.find(w => w.id === P.wo)?.name;
