@@ -786,6 +786,10 @@ body.gym main{padding-bottom:0}
 .lv-rest.go .btn{background:var(--accent-ink); color:var(--accent); border-color:var(--accent-ink)}
 .lv-eq{margin:0 0 6px; font-size:14px}
 .lv-why{margin:0 0 8px; font-size:13.5px; color:var(--muted); line-height:1.45}
+.lv-last{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:10px 0 8px; padding:10px 12px; border-radius:var(--radius-sm); background:var(--surface-2); border:1px solid var(--line)}
+.lv-last span{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.lv-last b{font-family:var(--mono); font-size:15px}
+.lv-prev{grid-column:2 / 4; margin-top:-2px; font-family:var(--mono); font-size:11px; color:var(--muted); text-align:center}
 .lv-how-btn{font-size:13.5px}
 .lv-how{margin:10px 0 0; padding:12px 14px; border-radius:var(--radius-sm); background:var(--surface-2); font-size:14px; line-height:1.5}
 .lv-how p{margin:0}
@@ -2634,6 +2638,7 @@ const EXPLAIN = {
   take: () => 'A read of this run the way a coach would give it, written by Stride from your own history (nothing leaves the app). It compares the run with your last few of a similar distance, indoors with indoors and outdoors with outdoors: faster for the same or lower heart rate means fitness is building. Then it looks inside the run (how much was easy, when it got hard, whether heart rate crept up) and ends with one thing to do next.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
+  onerm: () => 'Your 1-rep max is the heaviest weight you’ve lifted for a single rep: a true max, not an estimate. Only sets you log as 1 rep count here, so to set one, warm up with a few lighter singles, then log the heaviest one you got (weight × 1). Use a spotter or safety arms. Everyday progress (best sets of several reps) is on the Best sets card. Body-weight and assisted moves aren’t listed: they go by reps or help instead.',
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
   liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
   badges: () => 'Badges come from what you’ve already done, so older runs and lifts count too. Each one has tiers, from bronze to silver, gold and volt: the more you do, the higher it goes. The bar shows how close you are to the next tier; tap a badge to see every tier and the day you earned it. Runs live on Progress (counts, miles, longest run, steady weeks, fastest mile and 5K, early, late, cold and hot runs); lifting on Lift (lifting days, volume, steady weeks, PRs, pull-ups, run-and-lift days, and bench, squat and deadlift against your body weight, which use your latest weight from the Body tab). New ones show on Today and in the new-run scene.',
@@ -4597,6 +4602,8 @@ const setLoad = (def, s) => def.whole || def.assist ? Math.max(0, (currentWeight
 const setsVolume = (def, sets) => sets.reduce((n, s) => n + setLoad(def, s) * (+s.reps || 0), 0);
 const liftVolume = ls => Math.round(ls.reduce((n, l) => n + setsVolume(liftDef(l.ex), l.sets), 0));
 const fmtK = v => v >= 1000 ? `${+(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k` : String(Math.round(v));
+// The last ordinary session before a day. A max test (only singles) isn't what to base working sets on.
+const lastWorking = (ex, before = '9999') => liftHist(ex).filter(l => l.date < before && !l.sets.every(x => x.reps <= 1)).at(-1);
 const liftHist = ex => doc.lifts.filter(l => l.ex === ex).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 const topLb = l => Math.max(...l.sets.map(s => s.lb));
 const round5 = v => Math.round(v / 5) * 5;
@@ -4810,17 +4817,17 @@ const restFor = ex => ['squat', 'hinge', 'hpress', 'ipress', 'vpress', 'vpull', 
 const mmss = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 // Last time's weight, one step up when every set hit its reps.
 function liveItem(ex, sets, reps, day){
-  const def = liftDef(ex), last = liftHist(ex).filter(l => l.date < todayYmd()).at(-1);
+  const def = liftDef(ex), last = lastWorking(ex, todayYmd());
   let n = sets || last?.sets.length || 3, r = reps || last?.sets[0].reps || (def.bw ? 8 : 10), lb = def.bw ? 0 : '', why = 'First time: start light and find a weight you could lift a couple more reps with.';
   if (day){ lb = progWeight(ex, sets, reps); why = 'Your program’s weight for today.'; }
   else if (last){
     const w = def.assist ? Math.min(...last.sets.map(s => s.lb)) : topLb(last), top = last.sets.filter(s => def.assist ? s.lb <= w : s.lb >= w);
     lb = w;
     if (top.length >= n && top.every(s => s.reps >= r)){
-      if (def.assist){ lb = Math.max(0, w - def.inc); why = `Every rep last time (${fmtSets(last.sets, 'assist')}), so ${def.inc} lb less help.`; }
-      else if (def.bw) { r += 1; why = `Every rep last time (${fmtSets(last.sets, true)}), so one more rep each set.`; }
-      else { lb = w + def.inc; why = `Every rep last time (${fmtSets(last.sets)}), so up ${def.inc} lb.`; }
-    } else why = `Last time: ${fmtSets(last.sets, setMode(def))}. Same ${def.assist ? 'help' : 'weight'}, aim for every rep.`;
+      if (def.assist){ lb = Math.max(0, w - def.inc); why = `You got every rep last time, so try ${def.inc} lb less help.`; }
+      else if (def.bw) { r += 1; why = 'You got every rep last time, so try one more rep each set.'; }
+      else { lb = w + def.inc; why = `You got every rep last time, so try ${def.inc} lb more.`; }
+    } else why = `Same ${def.assist ? 'help' : 'weight'} as last time: aim to get every rep.`;
   }
   return { ex, why, entry:null, how:!last, sets:Array.from({ length:n }, () => ({ lb, reps:r, done:false })) };
 }
@@ -4869,6 +4876,9 @@ function renderLive(){
   }
   const it = LV.items[LV.i], def = liftDef(it.ex), how = HOWTO[it.ex], n = LV.items.length, short = id => liftDef(id).name.replace(/ \(.*\)$/, '');
   const cur = it.sets.findIndex(s => !s.done), left = it.sets.filter(s => !s.done).length;
+  // The last session before today, so you can match or beat it set by set.
+  const prevL = lastWorking(it.ex, LV.date);
+  const prevTxt = x => def.assist ? `${x.lb} help × ${x.reps}` : def.bw ? (x.lb ? `+${x.lb} × ${x.reps}` : `${x.reps} reps`) : `${x.lb} × ${x.reps}`;
   const nextI = LV.items.findIndex((x, j) => j > LV.i && x.sets.some(s => !s.done)), anyI = nextI >= 0 ? nextI : LV.items.findIndex((x, j) => j !== LV.i && x.sets.some(s => !s.done));
   const alts = def.f ? LIFTS.filter(l => l.f === def.f && l.id !== it.ex && !doc.gym.skip.includes(l.id)) : [];
   const stepper = (i, k, v, ph) => `<span class="lv-step"><button type="button" data-lv-step="${i}|${k}|-1" aria-label="Less ${k === 'lb' ? 'weight' : 'reps'}">−</button><input type="number" inputmode="${k === 'lb' ? 'decimal' : 'numeric'}" data-lv-${k}="${i}" value="${v}" placeholder="${ph}" aria-label="Set ${i + 1} ${k === 'lb' ? 'weight' : 'reps'}"><button type="button" data-lv-step="${i}|${k}|1" aria-label="More ${k === 'lb' ? 'weight' : 'reps'}">+</button></span>`;
@@ -4892,6 +4902,7 @@ function renderLive(){
           <h1 class="gym-name">${esc(def.name)}</h1>
           ${how ? `<p class="lv-eq">${how.eq}</p>` : ''}</div>
       </div>
+      ${prevL ? `<div class="lv-last"><span>Last time · ${fmtDate(prevL.date)}</span><b>${fmtSets(prevL.sets, setMode(def))}</b></div>` : ''}
       <p class="lv-why">${it.why}</p>
       <div class="gym-tools">${how ? `<button class="pill" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how-to' : 'How to do it'}</button>` : ''}<button class="pill" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button><button class="pill" data-action="lv-add-set">+ Set</button><button class="pill" data-action="lv-add-open">+ Exercise</button>${infoBtn}</div>${explain('liftLive')}
       ${how && it.how ? `<div class="lv-how"><p><b>Set up:</b> ${how.set}</p><ol>${how.cues.map(c => `<li>${c}</li>`).join('')}</ol><p class="lv-avoid"><b>Watch for:</b> ${how.avoid}</p></div>` : ''}
@@ -4900,7 +4911,8 @@ function renderLive(){
       <div class="lv-sets">
         <div class="lv-set lv-head" aria-hidden="true"><span>Set</span><span>${def.assist ? 'help lbs' : def.bw ? '+ lbs' : 'lbs'}</span><span>Reps</span><span></span></div>
         ${it.sets.map((s, i) => `<div class="lv-set${s.done ? ' done' : ''}${i === cur ? ' cur' : ''}"><span class="num">${i + 1}</span>${stepper(i, 'lb', s.lb, def.assist ? 'help' : def.bw ? 'body' : 'lbs')}${stepper(i, 'reps', s.reps, 'reps')}
-          <button class="lv-tick" data-lv-done="${i}" aria-pressed="${s.done}" aria-label="${s.done ? `Undo set ${i + 1}` : `Done set ${i + 1}`}">✓</button></div>`).join('')}
+          <button class="lv-tick" data-lv-done="${i}" aria-pressed="${s.done}" aria-label="${s.done ? `Undo set ${i + 1}` : `Done set ${i + 1}`}">✓</button>
+          ${prevL?.sets[i] ? `<small class="lv-prev">last time ${prevTxt(prevL.sets[i])}</small>` : ''}</div>`).join('')}
       </div>
       ${BARBELL.includes(it.ex) ? `<div class="lv-plates" id="lv-plates">${platesLine(it)}</div>` : ''}
       <p class="card-sub gym-foot">Swipe or use the arrows to move between exercises. Every ticked set saves straight away.</p>
@@ -4947,7 +4959,7 @@ function pastItems(woId, date){
   const items = (w && !done.length ? woPlan(w, date) : []).map(it => {
     const own = loose.find(l => !used.has(l.id) && l.ex === it.ex) ?? loose.find(l => !used.has(l.id) && fam(l.ex) && fam(l.ex) === fam(it.ex));
     if (own) used.add(own.id);
-    const got = done.find(l => l.ex === it.ex) ?? own, last = liftHist(it.ex).filter(l => l.date < date).at(-1);
+    const got = done.find(l => l.ex === it.ex) ?? own, last = lastWorking(it.ex, date);
     if (own) it = { ...it, ex:own.ex };
     return { ex:it.ex, entry:got?.id ?? null, from:got ? null : last?.date ?? null,
       sets:got ? copy(got.sets) : last ? copy(last.sets) : Array.from({ length:it.sets || 3 }, () => ({ lb:'', reps:it.reps || '' })) };
@@ -5088,7 +5100,7 @@ function pickList(q, attr = 'data-pick-ex'){
     + `<button class="ex-row" ${attr}="_new">Something else…</button>`;
 }
 function liftLogCard(){
-  const u = liftUi, custom = u.ex === '_new', def = custom ? {} : liftDef(u.ex), last = custom ? null : liftHist(u.ex).at(-1);
+  const u = liftUi, custom = u.ex === '_new', def = custom ? {} : liftDef(u.ex), last = custom ? null : lastWorking(u.ex);
   if (u.pick) return `<div class="card" id="lift-log"><div class="card-head"><h2>Pick an exercise</h2><button class="link-btn" data-action="lf-pick">back</button></div>
     <input id="lf-q" class="ex-search" type="search" placeholder="Search, e.g. curl" value="${esc(u.q ?? '')}" autocomplete="off" aria-label="Search exercises">
     <div class="ex-list" id="lf-list">${pickList(u.q ?? '')}</div></div>`;
@@ -5126,9 +5138,31 @@ function readLiftForm(){
   readWoForm();
 }
 const redrawLiftLog = () => { const el = $('#lift-log'); if (el) el.outerHTML = liftLogCard(); };
+// True 1-rep maxes: sets logged as one rep. Body-weight and assisted moves don't have one.
+function liftMaxCard(){
+  const today = todayYmd(), rows = [];
+  for (const ex of new Set(doc.lifts.map(l => l.ex))){
+    const def = liftDef(ex); if (def.bw || def.assist) continue;
+    const singles = liftHist(ex).flatMap(l => l.sets.filter(x => x.reps === 1 && x.lb > 0).map(x => ({ lb:x.lb, date:l.date })));
+    if (!singles.length) continue;
+    const best = singles.reduce((a, b) => b.lb > a.lb ? b : a), before = singles.filter(x => x.date < best.date);
+    rows.push({ def, best, isNew:before.length && best.lb > Math.max(...before.map(x => x.lb)) && diffDays(best.date, today) <= 14 });
+  }
+  rows.sort((a, b) => a.best.date < b.best.date ? 1 : -1);
+  return `<div class="card"><div class="card-head"><h2>1-rep maxes${infoBtn}</h2><span class="card-sub">the most you’ve lifted once</span></div>${explain('onerm')}
+    ${rows.length ? `<ul class="pr-list">${rows.map(r => `<li><span><b>${esc(r.def.name)}</b>${r.isNew ? ' <span class="badge test">new</span>' : ''}</span>
+      <span class="pr-v"><b>${r.best.lb} lb</b><small>${fmtDate(r.best.date)}</small></span></li>`).join('')}</ul>`
+      : '<div class="pending-box">None yet. When you test a true max, log the weight × 1 rep and it shows here.</div>'}</div>`;
+}
 function liftPRCard(){
-  const exs = [...new Set(doc.lifts.map(l => l.ex))].map(ex => { const h = liftHist(ex); return { ex, ...liftBest(ex), first:h[0].date, last:h.at(-1).date }; })
-    .sort((a, b) => a.last < b.last ? 1 : a.last > b.last ? -1 : 0);
+  // Working sets only: singles are max tests, and live on the 1-rep max card.
+  const exs = [...new Set(doc.lifts.map(l => l.ex))].map(ex => {
+    const def = liftDef(ex), working = x => def.bw || def.assist || x.reps > 1;
+    const h = liftHist(ex).filter(l => l.sets.some(working)); if (!h.length) return null;
+    let best = null;
+    for (const l of h) for (const x of l.sets.filter(working)) { const v = liftScore(def, x); if (!best || v > best.v) best = { v, s:x, date:l.date }; }
+    return { ex, def, best, first:h[0].date, last:h.at(-1).date };
+  }).filter(Boolean).sort((a, b) => a.last < b.last ? 1 : a.last > b.last ? -1 : 0);
   if (!exs.length) return `<div class="card"><div class="card-head"><h2>PRs${infoBtn}</h2><span class="card-sub">your bests, per lift</span></div>${explain('e1rm')}<div class="pending-box">Log a lift and your bests show here.</div></div>`;
   const sel = exs.find(x => x.ex === liftUi.chart) ?? exs[0];
   // One number that's real (your best set), the estimate small underneath; grouped so it scans.
@@ -5138,7 +5172,7 @@ function liftPRCard(){
     return `<li data-lift-chart="${x.ex}"${x.ex === sel.ex ? ' aria-current="true"' : ''}><span><b>${esc(d.name)}</b>${isNew ? ' <span class="badge test">new PR</span>' : ''}</span>
       <span class="pr-v"><b>${set}</b><small>${sub}</small></span></li>`; };
   const groups = ['Push', 'Pull', 'Legs', 'Core', 'Other'].map(g => [g, exs.filter(x => (x.def.g ?? 'Other') === g)]).filter(([, xs]) => xs.length);
-  return `<div class="card"><div class="card-head"><h2>Personal bests${infoBtn}</h2><span class="card-sub">best set of each lift · tap one for its chart</span></div>${explain('e1rm')}
+  return `<div class="card"><div class="card-head"><h2>Best sets${infoBtn}</h2><span class="card-sub">your best working set · tap one for its chart</span></div>${explain('e1rm')}
     ${groups.map(([g, xs]) => `<div class="pr-group">${g}</div><ul class="pr-list">${xs.map(row).join('')}</ul>`).join('')}
     <p class="card-sub" style="margin:16px 0 4px">${esc(sel.def.name)} · ${byReps(sel.def) ? 'most reps in a set' : 'estimated 1-rep max'}, best set each day</p>
     <div class="chart" id="c-lift" data-ex="${sel.ex}"></div></div>`;
@@ -5222,7 +5256,7 @@ function renderLift(){
     stats: [['Lifts · week', new Set(wk.map(l => l.date)).size, ''], ['Volume · week', fmtK(liftVolume(wk)), 'lb'], ['PRs · 30 days', prs, '']],
   }) + `<div class="wrap">${liftSummary()}${freshBadgesCard('lift')}${liftHero()}
     <div class="seg" role="tablist" aria-label="Lift sections">${LIFT_TABS.map(([k, l]) => `<button role="tab" data-lift-tab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
-    ${tab === 'progress' ? `<div class="grid two">${liftVolumeCard()}${liftPRCard()}</div><div style="margin-top:16px">${liftRecentCard()}</div>`
+    ${tab === 'progress' ? `<div class="grid two">${liftMaxCard()}${liftPRCard()}</div><div class="grid two" style="margin-top:16px">${liftVolumeCard()}${liftRecentCard()}</div>`
       : tab === 'badges' ? badgesCard('lift')
       : `<div class="grid two">${liftWorkoutsCard()}${liftRunTips()}</div>`}
   </div>`;
@@ -7044,7 +7078,7 @@ document.addEventListener('click', async e => {
     }
     case 'lift-add-set': readLiftForm(); liftUi.sets.push({ ...liftUi.sets.at(-1) }); redrawLiftLog(); break;
     case 'lift-same': {
-      readLiftForm(); const last = liftHist(liftUi.ex).at(-1);
+      readLiftForm(); const last = lastWorking(liftUi.ex);
       if (last){ liftUi.sets = last.sets.map(s => ({ lb:s.lb || '', reps:s.reps })); redrawLiftLog(); }
       break;
     }
@@ -7085,7 +7119,7 @@ document.addEventListener('click', async e => {
       openSheet(pastCard()); break;
     }
     case 'past-add-ex': {
-      readPast(); const ex = $('#past-add').value, last = liftHist(ex).filter(l => l.date < liftUi.past.date).at(-1);
+      readPast(); const ex = $('#past-add').value, last = lastWorking(ex, liftUi.past.date);
       liftUi.past.items.push({ ex, entry:null, from:last?.date ?? null, sets:last ? last.sets.map(x => ({ lb:x.lb || '', reps:x.reps })) : [{ lb:'', reps:'' }] });
       redrawPast(); break;
     }
