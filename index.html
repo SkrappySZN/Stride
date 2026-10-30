@@ -5346,6 +5346,8 @@ function renderBody(){
   $('#page-body').innerHTML = band({
     eyebrow: doc.intervals?.key ? 'Body · daily from Garmin via intervals.icu' : 'Body · weigh-ins and measurements',
     title: 'Body',
+    // The stat labels drop their "· 7-day avg" suffix to fit, so say it once here.
+    sub: Object.values(st).some(x => x.value !== '—') ? 'Numbers are 7-day averages, so one heavy evening doesn’t swing them.' : '',
     stats: Object.values(st).map(x => [x.label.split(' · ')[0], x.value, x.value === '—' ? '' : x.unit]),
     extra: `<div class="band-deltas">${Object.values(st).map(x => x.delta ? `<span>${x.label.split(' · ')[0]} ${x.delta}</span>` : '').join('')}</div>`,
   }) + `<div class="wrap">
