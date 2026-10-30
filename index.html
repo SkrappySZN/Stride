@@ -1986,11 +1986,24 @@ const feelLabel = v => v == null ? null : FEEL[Math.round(v / 25) * 25];
 const HOT_F = 80;   // heat alone adds several beats above this
 const tempTxt = r => r.tempF != null ? `${r.tempF}°F` : '';
 // Weight per day: a manual weigh-in beats Garmin's number for the same day.
+// Evening weigh-ins run a few lbs heavier (the day's food and water), so the trend counts mornings only
+// and evenings are kept to the side. Untagged weigh-ins from before this count as mornings.
+const isEve = w => w.when === 'pm';
+const eveningWeights = () => doc.profile.weights.filter(isEve).map(w => ({ date:w.date, v:w.lbs, src:'manual', note:w.note }))
+  .sort((a, b) => a.date < b.date ? -1 : 1);
 function weightSeries(){
-  const m = {};
-  for (const [d, v] of Object.entries(doc.body ?? {})) if (v.weight != null) m[d] = { date:d, v:v.weight, src:'garmin' };
-  for (const w of doc.profile.weights) m[w.date] = { date:w.date, v:w.lbs, src:'manual', note:w.note };
+  const m = {}, eve = eveningWeights();
+  // Garmin keeps one weight a day; if it matches an evening weigh-in, it's that same evening reading.
+  for (const [d, v] of Object.entries(doc.body ?? {})) if (v.weight != null && !eve.some(e => e.date === d && Math.abs(e.v - v.weight) < .05)) m[d] = { date:d, v:v.weight, src:'garmin' };
+  for (const w of doc.profile.weights) if (!isEve(w)) m[w.date] = { date:w.date, v:w.lbs, src:'manual', note:w.note };
+  // Someone who only ever weighs at night still gets a trend.
+  if (!Object.keys(m).length) for (const e of eve) m[e.date] = e;
   return Object.values(m).sort((a, b) => a.date < b.date ? -1 : 1);
+}
+// Evening → next morning pairs, newest last: how much the scale drops overnight.
+function overnightPairs(){
+  const am = Object.fromEntries(doc.profile.weights.filter(w => !isEve(w)).map(w => [w.date, w.lbs]));
+  return eveningWeights().filter(e => am[addDays(e.date, 1)] != null).map(e => ({ date:e.date, eve:e.v, morn:am[addDays(e.date, 1)] }));
 }
 const bodySeries = k => Object.entries(doc.body ?? {}).filter(([, v]) => v[k] != null).map(([date, v]) => ({ date, v:v[k] })).sort((a, b) => a.date < b.date ? -1 : 1);
 const currentWeight = () => weightSeries().at(-1)?.v ?? null;
@@ -2629,6 +2642,7 @@ const EXPLAIN = {
   recovery: () => 'How far your heart rate falls in the 2 minutes after you stop. A bigger drop means a fitter heart, and it often improves before your pace does. The watch only records it if you stop the timer and stand still for 2 minutes before saving.',
   anTE: () => 'Garmin’s 0–5 score for how much hard, out-of-breath work a run had. Easy runs should sit near 0. Above 1 means the run got harder than an easy run should be, so slow down or take walk breaks.',
   hrTrend: p => `Each dot is a run. Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why. You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
+  amPm: () => 'You weigh more at night than in the morning: the day’s food and water are still in you, often 2–4 lbs’ worth. That isn’t fat. So the trend and the 7-day average use your morning weigh-ins only (filled dots), and evening ones are the rings. The overnight drop shows how much of the day was just food and water.',
   consistency: () => 'How many runs you did each week. Fitness comes from stacking ordinary weeks, so a missed week costs you more than a slow run does.',
   effort: () => 'How hard the run felt, from 1 (very easy) to 10 (all-out). Your watch asks when you save a run, or you can tap it in on the run’s page. The same route feeling easier over time is real progress, even when the numbers haven’t moved yet.',
   jogWalk: () => 'Minutes spent jogging and walking in each run, from your watch’s run/walk detection. At very slow paces the watch can mistake a slow jog for walking, so treat this as rough.',
@@ -4341,13 +4355,15 @@ async function renderRunDetail(id){
 /* ═══ BODY ═══════════════════════════════════════════════════════════ */
 // A daily series on a real date axis, so missed days leave gaps instead of
 // squeezing the line. `smooth` draws raw days as faint dots under a 7-day mean.
-function chartDaily(host, pts, { days, unit = '', step, dec = 0, smooth = false, bars = false, gapDays = 10 }){
+function chartDaily(host, pts, { days, unit = '', step, dec = 0, smooth = false, bars = false, gapDays = 10, rings = [] }){
   const H = 200, m = { t:22, r:44, b:28, l:38 };
   const [svg, W] = svgFor(host, H);
   const end = todayYmd(), start = addDays(end, -days + 1);
   pts = pts.filter(p => p.date >= start);
+  // Side readings of the same measure (evening weigh-ins): drawn as rings, kept out of the line.
+  rings = rings.filter(p => p.date >= start);
   if (!pts.length){ host.innerHTML = '<div class="pending-box">Nothing in this range yet.</div>'; return; }
-  const vals = pts.map(p => p.v);
+  const vals = [...pts, ...rings].map(p => p.v);
   let lo = bars ? 0 : Math.floor((Math.min(...vals) - step / 2) / step) * step, hi = Math.ceil((Math.max(...vals) + step / 2) / step) * step;
   if (hi - lo < step * 2) hi = lo + step * 2;
   const x = d => m.l + (diffDays(start, d) + .5) / days * (W - m.l - m.r);
@@ -4370,6 +4386,7 @@ function chartDaily(host, pts, { days, unit = '', step, dec = 0, smooth = false,
     pts.forEach(p => el('path', { d:colPath(x(p.date) - bw / 2, y(p.v), bw, y(lo)), fill:c, class:'bar' }, svg));
   } else if (smooth){
     pts.forEach(p => el('circle', { cx:x(p.date), cy:y(p.v), r:3, fill:c, 'fill-opacity':.28 }, svg));
+    rings.forEach(p => el('circle', { cx:x(p.date), cy:y(p.v), r:3, fill:'none', stroke:c, 'stroke-opacity':.6, 'stroke-width':1.5 }, svg));
     line = pts.map(p => ({ date:p.date, v:windowAvg(pts, 7, p.date) }));
   }
   if (!bars && line.length > 1){
@@ -4390,7 +4407,8 @@ function chartDaily(host, pts, { days, unit = '', step, dec = 0, smooth = false,
     const p = pts.reduce((a, b) => Math.abs(diffDays(b.date, want)) < Math.abs(diffDays(a.date, want)) ? b : a);
     cross.setAttribute('x1', x(p.date)); cross.setAttribute('x2', x(p.date)); cross.setAttribute('opacity', .3);
     const avg = smooth ? windowAvg(pts, 7, p.date) : null;
-    return `<b>${fmtDate(p.date)}</b><br>${f(p.v)} ${unit}${avg != null ? ` · 7-day avg ${f(avg)}` : ''}${p.src === 'manual' ? ' · weigh-in' : ''}`;
+    const ring = rings.find(r => r.date === p.date);
+    return `<b>${fmtDate(p.date)}</b><br>${f(p.v)} ${unit}${avg != null ? ` · 7-day avg ${f(avg)}` : ''}${p.src === 'manual' ? ' · weigh-in' : ''}${ring ? `<br>evening ${f(ring.v)} ${unit}` : ''}`;
   };
   hit._tipOut = () => cross.setAttribute('opacity', 0);
 }
@@ -5339,22 +5357,27 @@ function renderBody(){
   const comps = [...(doc.profile.comps ?? [])].sort((a, b) => a.date < b.date ? 1 : -1);
   const fatG = bodySeries('bodyFat').at(-1);
   const has = ws.length || rhr.length || hrv.length || sleep.length;
-  const chartCard = (id, title, sub, pts) => `<div class="card"><div class="card-head"><h2>${title}</h2><span class="card-sub">${sub}</span></div>
-    ${pts.length ? `<div class="chart" id="${id}"></div>` : `<div class="pending-box">${doc.intervals?.key ? 'None from Garmin yet. Some watches only record this overnight.' : 'Comes from Garmin through intervals.icu — connect it in Setup.'}</div>`}</div>`;
+  const chartCard = (id, title, sub, pts, after = '') => `<div class="card"><div class="card-head"><h2>${title}</h2><span class="card-sub">${sub}</span></div>
+    ${pts.length ? `<div class="chart" id="${id}"></div>` : `<div class="pending-box">${doc.intervals?.key ? 'None from Garmin yet. Some watches only record this overnight.' : 'Comes from Garmin through intervals.icu — connect it in Setup.'}</div>`}${after}</div>`;
+  const eve = eveningWeights(), pairs = overnightPairs(), last = pairs.at(-1);
+  const recent = pairs.filter(p => diffDays(p.date, todayYmd()) < 30), drop = avgOf(recent.map(p => p.eve - p.morn));
+  const sgn = d => `${d > 0 ? '−' : '+'}${Math.abs(d).toFixed(1)}`;
+  const overnight = last ? `<p class="card-sub" style="margin:12px 0 0">Overnight: ${last.eve} on ${fmtDate(last.date)} evening → ${last.morn} next morning (${sgn(last.eve - last.morn)} lbs)${recent.length > 1 ? ` · ${sgn(drop)} lbs on average over ${recent.length} nights` : ''}</p>` : '';
   const vo2Now = vo2.at(-1)?.v ?? comps.find(c => c.vo2)?.vo2 ?? doc.profile.vo2;
 
   $('#page-body').innerHTML = band({
     eyebrow: doc.intervals?.key ? 'Body · daily from Garmin via intervals.icu' : 'Body · weigh-ins and measurements',
     title: 'Body',
     // The stat labels drop their "· 7-day avg" suffix to fit, so say it once here.
-    sub: Object.values(st).some(x => x.value !== '—') ? 'Numbers are 7-day averages, so one heavy evening doesn’t swing them.' : '',
+    sub: Object.values(st).some(x => x.value !== '—') ? `Numbers are 7-day averages${eve.length ? ', and weight counts only your morning weigh-ins' : ''}, so one heavy evening doesn’t swing them.` : '',
     stats: Object.values(st).map(x => [x.label.split(' · ')[0], x.value, x.value === '—' ? '' : x.unit]),
     extra: `<div class="band-deltas">${Object.values(st).map(x => x.delta ? `<span>${x.label.split(' · ')[0]} ${x.delta}</span>` : '').join('')}</div>`,
   }) + `<div class="wrap">
     ${has ? '' : `<div class="note" style="margin-bottom:16px">${WARN_SVG}<div><b>Nothing here yet.</b> ${doc.intervals?.key ? 'Garmin’s daily data arrives with the next sync — usually the morning after you wear the watch overnight.' : '<a href="#setup">Connect intervals.icu</a> and Garmin’s daily weight, resting HR, HRV and sleep fill this page on their own.'} You can also add a weigh-in below.</div></div>`}
     <div class="filter-row">${BODY_RANGES.map(([d, l]) => `<button class="pill" data-body-range="${d}" aria-pressed="${d === days}">${l}</button>`).join('')}</div>
     <div class="grid two">
-      ${chartCard('c-weight', 'Weight', 'dots are days · line is the 7-day average', ws)}
+      ${eve.length ? chartCard('c-weight', `Weight${infoBtn}`, 'dots are mornings · rings are evenings · line is the 7-day average of mornings', ws, explain('amPm') + overnight)
+        : chartCard('c-weight', 'Weight', 'dots are days · line is the 7-day average', ws)}
       ${chartCard('c-rhr', 'Resting heart rate', 'drifts down as fitness builds · lower is better', rhr)}
       ${chartCard('c-hrv', 'HRV', 'overnight · a sudden drop can mean run down', hrv)}
       ${chartCard('c-sleep', 'Sleep', 'hours per night', sleep)}
@@ -5367,10 +5390,10 @@ function renderBody(){
       <div class="card"><div class="card-head"><h2>Measurements</h2><span class="card-sub">a weigh-in, a DEXA scan, a lab test</span></div>
         <button class="btn primary goal-open" style="margin-top:0" data-action="measure-open">+ Add a weigh-in or measurement</button>
         ${comps.length || doc.profile.weights.length ? `<table class="quiet" style="margin-top:16px">
-          ${[...doc.profile.weights.map(w => ({ date:w.date, txt:`${w.lbs} lbs`, note:w.note ?? '', kind:'w' })),
-             ...comps.map(c => ({ date:c.date, txt:[c.bodyFat != null && c.bodyFat + '% fat', c.vo2 != null && 'VO2 ' + c.vo2].filter(Boolean).join(' · '), note:c.note ?? '', kind:'c' }))]
-            .sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 8)
-            .map(r => `<tr><td>${fmtDate(r.date)}</td><td>${esc(r.txt)}</td><td>${esc(r.note)} <button class="link-btn" data-del-measure="${r.kind}|${r.date}">remove</button></td></tr>`).join('')}
+          ${[...doc.profile.weights.map(w => ({ date:w.date, eve:isEve(w), txt:`${w.lbs} lbs${isEve(w) ? ' · evening' : w.when ? ' · morning' : ''}`, note:w.note ?? '', kind:'w', key:`w|${w.date}|${isEve(w) ? 'pm' : 'am'}` })),
+             ...comps.map(c => ({ date:c.date, txt:[c.bodyFat != null && c.bodyFat + '% fat', c.vo2 != null && 'VO2 ' + c.vo2].filter(Boolean).join(' · '), note:c.note ?? '', kind:'c', key:`c|${c.date}` }))]
+            .sort((a, b) => a.date !== b.date ? (a.date < b.date ? 1 : -1) : (b.eve ? 1 : 0) - (a.eve ? 1 : 0)).slice(0, 8)
+            .map(r => `<tr><td>${fmtDate(r.date)}</td><td>${esc(r.txt)}</td><td>${esc(r.note)} <button class="link-btn" data-del-measure="${r.key}">remove</button></td></tr>`).join('')}
         </table>` : ''}
         ${fatG ? `<p class="card-sub" style="margin:12px 0 0">Garmin last reported ${fatG.v}% body fat on ${fmtDate(fatG.date)}.</p>` : ''}
       </div>
@@ -5381,7 +5404,7 @@ function renderBody(){
     ${standardsCard()}
   </div>`;
 
-  if (ws.length) chartDaily($('#c-weight'), ws, { days, unit:'lbs', step: days > 90 ? 5 : 2, dec:1, smooth:true });
+  if (ws.length) chartDaily($('#c-weight'), ws, { days, unit:'lbs', step: days > 90 ? 5 : 2, dec:1, smooth:true, rings:eve });
   if (rhr.length) chartDaily($('#c-rhr'), rhr, { days, unit:'bpm', step:5 });
   if (hrv.length) chartDaily($('#c-hrv'), hrv, { days, unit:'ms', step:10 });
   if (sleep.length) chartDaily($('#c-sleep'), sleep, { days, unit:'hrs', step:2, dec:1, bars:true });
@@ -6272,7 +6295,7 @@ async function intakeSave(){
   if (a.sex) p.sex = a.sex;
   const yr = new Date().getFullYear(); if (+a.born > yr - 100 && +a.born < yr - 8) p.birthYear = +a.born;
   const h = Math.round((+a.ft || 0) * 12 + (+a.inch || 0)); if (h >= 48 && h <= 90) p.heightIn = h;
-  const lbs = +a.lbs; if (lbs > 50 && lbs < 600 && lbs !== currentWeight()) p.weights = [...p.weights.filter(w => w.date !== todayYmd()), { date:todayYmd(), lbs }].sort((x, y) => x.date < y.date ? -1 : 1);
+  const lbs = +a.lbs; if (lbs > 50 && lbs < 600 && lbs !== currentWeight()) p.weights = [...p.weights.filter(w => w.date !== todayYmd() || isEve(w)), { date:todayYmd(), lbs }].sort((x, y) => x.date < y.date ? -1 : 1);
   await autoZones();
 }
 function intakeRead(){
@@ -6841,8 +6864,8 @@ document.addEventListener('click', async e => {
   if (br){ prefs.set('bodyRange', +br.dataset.bodyRange); renderBody(); return; }
   const dm = e.target.closest('[data-del-measure]');
   if (dm){
-    const [kind, date] = dm.dataset.delMeasure.split('|');
-    if (kind === 'w') doc.profile.weights = doc.profile.weights.filter(w => w.date !== date);
+    const [kind, date, when] = dm.dataset.delMeasure.split('|');
+    if (kind === 'w') doc.profile.weights = doc.profile.weights.filter(w => w.date !== date || isEve(w) !== (when === 'pm'));
     else doc.profile.comps = (doc.profile.comps ?? []).filter(c => c.date !== date);
     await save(); renderBody(); return;
   }
@@ -7215,6 +7238,8 @@ document.addEventListener('click', async e => {
       <div class="field-row">
         <div class="field"><label for="m-date">Date</label><input id="m-date" type="date" value="${todayYmd()}"></div>
         <div class="field"><label for="m-w">Weight (lbs)</label><input id="m-w" type="number" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label for="m-when">Weighed</label><select id="m-when">
+          <option value="am">In the morning</option><option value="pm"${new Date().getHours() >= 15 ? ' selected' : ''}>In the evening</option></select></div>
         <div class="field"><label for="m-fat">Body fat %</label><input id="m-fat" type="number" step="0.1" inputmode="decimal"></div>
         <div class="field"><label for="m-vo2">VO2 max</label><input id="m-vo2" type="number" step="1" inputmode="numeric"></div>
         <div class="field" style="grid-column:1 / -1"><label for="m-note">Note</label><input id="m-note" type="text" placeholder="e.g. DEXA scan"></div>
@@ -7224,7 +7249,9 @@ document.addEventListener('click', async e => {
       const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
       if (!date || !(lbs || fat || vo2)){ toast('Enter at least one number'); break; }
       if (lbs && !(lbs > 50 && lbs < 600)){ toast('That weight looks off'); break; }
-      if (lbs) doc.profile.weights = [...doc.profile.weights.filter(w => w.date !== date), { date, lbs, ...(note ? { note } : {}) }].sort((a, b) => a.date < b.date ? -1 : 1);
+      // One morning and one evening weigh-in per day; a second of the same kind replaces the first.
+      const when = $('#m-when').value;
+      if (lbs) doc.profile.weights = [...doc.profile.weights.filter(w => w.date !== date || isEve(w) !== (when === 'pm')), { date, lbs, when, ...(note ? { note } : {}) }].sort((a, b) => a.date < b.date ? -1 : 1);
       if (fat || vo2) doc.profile.comps = [...(doc.profile.comps ?? []).filter(c => c.date !== date),
         { date, ...(fat ? { bodyFat:fat } : {}), ...(vo2 ? { vo2 } : {}), ...(note ? { note } : {}) }];
       closeSheet(); await save(); toast('Saved'); renderBody(); break;

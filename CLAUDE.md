@@ -88,7 +88,9 @@ data runs through it, so treat changes to data handling with care.
   the first time a device opens with data. Add families freely; keep `id`s and thresholds stable, since seen ids use them.
 - **Also in the doc**: `shoes`/`defaultShoe` (`run.shoeId`), `pains` (body
   map; shin/Achilles or a sharp knee adds a red check-in with `stage:'map'`),
-  `routines`, `crew`. Per-device niceties (dismissed cards, sound) live in
+  `routines`, `crew`. Weigh-ins (`profile.weights`) carry `when` ('am'/'pm', untagged = morning): `weightSeries()`
+  and everything built on it use mornings only; evenings are rings on the Body chart and the overnight drop.
+  Per-device niceties (dismissed cards, sound) live in
   `prefs` (localStorage).
 - **Fill-ins**: `enrichRuns()` runs after sync and after imports. It adds fields that older
   runs lack: `best` (fastest mile/5K, from samples) and `tempF` (Open-Meteo hourly
