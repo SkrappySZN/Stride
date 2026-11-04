@@ -70,6 +70,10 @@ data runs through it, so treat changes to data handling with care.
   min). It pulls new runs' original FIT files, plus wellness data (weight in kg →
   stored in lbs) into `doc.body[date]`. Only the API key is synced (`doc.intervals.key`).
   What's been seen is per-device, in localStorage.
+- **Weigh-in inbox** (`checkInbox`, `keyCard`): `stride_keys` holds the hash of a person's private key (Setup) and
+  the `stride_inbox_add` RPC lets that key add a weigh-in to `stride_inbox`, with no session and no way to read
+  anything. The app merges what's waiting into `profile.weights` on open and focus (`withWeight`), then deletes it.
+  Unknown `kind`s are left in place. The card says "almost ready" until the SQL has been run.
 - **Crew board**: the third table, `stride_crew`, holds one opt-in row per person: display
   name, crew code, and this week's runs/minutes/miles/streak. Nothing else. RLS lets you
   read only your own crew (via `stride_my_crew()`) and write only your own row. The

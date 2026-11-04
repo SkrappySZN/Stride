@@ -80,3 +80,66 @@ create policy stride_crew_write on public.stride_crew
 
 grant select, insert, update, delete on public.stride_crew to authenticated;
 revoke all on public.stride_crew from anon;
+
+-- ── Weigh-in inbox (added Nov 2026) ─────────────────────────────────────────
+-- A private key lets a script or Claude add weigh-ins without signing in. Only
+-- the key's hash is stored. The key can add to the inbox and nothing else: it
+-- can't read anything. The app moves what's waiting into the doc on open and
+-- deletes it, because the doc itself is written compare-and-set by the app.
+-- Safe to run again; the app says "almost ready" until these exist.
+
+create table if not exists public.stride_keys (
+  user_id    uuid        primary key references auth.users(id) on delete cascade,
+  key_hash   text        not null unique check (key_hash ~ '^[0-9a-f]{64}$'),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.stride_inbox (
+  id         bigint      generated always as identity primary key,
+  user_id    uuid        not null references auth.users(id) on delete cascade,
+  kind       text        not null check (kind in ('weight')),
+  data       jsonb       not null,
+  created_at timestamptz not null default now(),
+  constraint stride_inbox_size check (pg_column_size(data) < 2000)
+);
+create index if not exists stride_inbox_user on public.stride_inbox (user_id);
+
+alter table public.stride_keys  enable row level security;
+alter table public.stride_inbox enable row level security;
+
+drop policy if exists stride_keys_own  on public.stride_keys;
+drop policy if exists stride_inbox_read on public.stride_inbox;
+drop policy if exists stride_inbox_del  on public.stride_inbox;
+create policy stride_keys_own on public.stride_keys
+  for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy stride_inbox_read on public.stride_inbox
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy stride_inbox_del on public.stride_inbox
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+revoke all on public.stride_keys, public.stride_inbox from anon, authenticated;
+grant select, insert, update, delete on public.stride_keys to authenticated;
+grant select, delete on public.stride_inbox to authenticated;
+
+-- The one way in with a key. Security definer because the caller has no session;
+-- it answers false for an unknown key and writes only to that key's owner.
+create or replace function public.stride_inbox_add(p_key text, p_date date, p_lbs numeric, p_when text default 'am', p_note text default null)
+  returns boolean language plpgsql security definer set search_path = public
+  as $$
+declare uid uuid;
+begin
+  select user_id into uid from public.stride_keys
+    where key_hash = encode(sha256(convert_to(coalesce(p_key, ''), 'UTF8')), 'hex');
+  if uid is null then return false; end if;
+  if p_lbs is null or p_lbs <= 50 or p_lbs >= 600 then raise exception 'weight out of range'; end if;
+  if p_when is null or p_when not in ('am', 'pm') then raise exception 'when must be am or pm'; end if;
+  if p_date is null or p_date < current_date - 400 or p_date > current_date + 1 then raise exception 'date out of range'; end if;
+  if char_length(coalesce(p_note, '')) > 80 then raise exception 'note too long'; end if;
+  if (select count(*) from public.stride_inbox where user_id = uid) >= 200 then raise exception 'inbox full'; end if;
+  insert into public.stride_inbox (user_id, kind, data) values (uid, 'weight',
+    jsonb_strip_nulls(jsonb_build_object('date', p_date, 'lbs', p_lbs, 'when', p_when, 'note', nullif(trim(p_note), ''))));
+  return true;
+end $$;
+revoke all on function public.stride_inbox_add(text, date, numeric, text, text) from public;
+grant execute on function public.stride_inbox_add(text, date, numeric, text, text) to anon, authenticated;

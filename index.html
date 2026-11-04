@@ -1953,7 +1953,7 @@ async function syncInit(fromLink){
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden'){ if (pushTimer) pushRow().catch(() => {}); }
-  else refreshFromRemote().then(() => checkIntervals());
+  else refreshFromRemote().then(() => { checkInbox(); checkIntervals(); });
 });
 
 /* two-way choice, for sync conflicts */
@@ -1989,6 +1989,8 @@ const tempTxt = r => r.tempF != null ? `${r.tempF}°F` : '';
 // Evening weigh-ins run a few lbs heavier (the day's food and water), so the trend counts mornings only
 // and evenings are kept to the side. Untagged weigh-ins from before this count as mornings.
 const isEve = w => w.when === 'pm';
+// One morning and one evening weigh-in per day; a second of the same kind replaces the first.
+const withWeight = (list, w) => [...list.filter(x => x.date !== w.date || isEve(x) !== isEve(w)), w].sort((a, b) => a.date < b.date ? -1 : 1);
 const eveningWeights = () => doc.profile.weights.filter(isEve).map(w => ({ date:w.date, v:w.lbs, src:'manual', note:w.note }))
   .sort((a, b) => a.date < b.date ? -1 : 1);
 function weightSeries(){
@@ -4035,6 +4037,77 @@ function crewCard(){
     <table class="quiet crew">${rows.map(r => `<tr${r.user_id === SESSION.user_id ? ' class="me"' : ''}><td>${esc(r.name)}${r.streak >= 2 ? ` <span class="badge">${r.streak} wk streak</span>` : ''}</td>
       <td>${r.runs} run${r.runs === 1 ? '' : 's'}</td><td>${r.minutes} min · ${Number(r.miles).toFixed(1)} mi</td></tr>`).join('')}</table>
     <p class="card-sub" style="margin:12px 0 0">Share the code with friends so they can join. <button class="link-btn" data-action="crew-copy">Copy invite</button> · <button class="link-btn" data-action="crew-leave">Leave crew</button></p>
+  </div>`;
+}
+
+/* ── Inbox: weigh-ins added from outside the app ────────────────────
+   A private key lets Claude or a script add weigh-ins without signing in. Only its
+   hash is stored and it can't read anything (stride_inbox_add). They wait in
+   stride_inbox and are merged here, since only the app writes the doc. */
+const KEY = { user:null, state:'idle', has:false, at:0, fresh:'' };
+let inboxBusy = false;
+async function checkInbox(){
+  if (inboxBusy || !signedIn() || SYNC.status === 'conflict') return;
+  inboxBusy = true;
+  try {
+    if (!await ensureToken()) return;
+    const r = await sb(`/rest/v1/stride_inbox?user_id=eq.${SESSION.user_id}&select=id,kind,data&order=id`);
+    if (!r.ok) return;   // 404 until the SQL has been run
+    const rows = (await r.json()).filter(x => x.kind === 'weight');
+    if (!rows.length) return;
+    for (const { data:d } of rows){
+      const lbs = +d.lbs;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || !(lbs > 50 && lbs < 600)) continue;
+      doc.profile.weights = withWeight(doc.profile.weights, { date:d.date, lbs, when:d.when === 'pm' ? 'pm' : 'am', ...(d.note ? { note:String(d.note) } : {}) });
+    }
+    await save();   // saved first: a failed delete only merges the same entries again
+    await sb(`/rest/v1/stride_inbox?id=in.(${rows.map(x => x.id).join(',')})`, { method:'DELETE' });
+    toast(rows.length > 1 ? `${rows.length} weigh-ins added` : 'Weigh-in added');
+    if (['', '#today', '#body'].includes(location.hash)) render();
+  } catch {} finally { inboxBusy = false; }
+}
+async function keyLoad(force = false){
+  if (!signedIn() || KEY.state === 'loading') return;
+  if (!force && Date.now() - KEY.at < 60e3) return;
+  KEY.state = 'loading'; KEY.at = Date.now();
+  try {
+    const r = await sb(`/rest/v1/stride_keys?user_id=eq.${SESSION.user_id}&select=created_at`);
+    if (r.status === 404){ KEY.state = 'missing'; return; }
+    if (!r.ok) throw new Error();
+    KEY.has = (await r.json()).length > 0; KEY.state = 'ok';
+  } catch { KEY.state = 'error'; }
+  finally { const c = $('#key-card'); if (c) c.outerHTML = keyCard(); }
+}
+async function keyMake(){
+  const key = 'stride_' + [...crypto.getRandomValues(new Uint8Array(32))].map(x => x.toString(16).padStart(2, '0')).join('');
+  const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key)))].map(x => x.toString(16).padStart(2, '0')).join('');
+  if (!await ensureToken()){ toast('Sign in again first'); return; }
+  const r = await sb('/rest/v1/stride_keys?on_conflict=user_id', { method:'POST', body:JSON.stringify({ user_id:SESSION.user_id, key_hash:hash, created_at:new Date().toISOString() }), headers:{ Prefer:'resolution=merge-duplicates,return=minimal' } });
+  if (!r.ok){ toast('Couldn’t make a key'); return; }
+  KEY.has = true; KEY.fresh = key; KEY.state = 'ok';
+  const c = $('#key-card'); if (c) c.outerHTML = keyCard();
+}
+async function keyOff(){
+  if (!await ensureToken()){ toast('Sign in again first'); return; }
+  const r = await sb(`/rest/v1/stride_keys?user_id=eq.${SESSION.user_id}`, { method:'DELETE' });
+  if (!r.ok){ toast('Couldn’t turn it off'); return; }
+  KEY.has = false; KEY.fresh = ''; toast('Key turned off');
+  const c = $('#key-card'); if (c) c.outerHTML = keyCard();
+}
+function keyCard(){
+  if (!syncOn() || !signedIn()) return '';
+  if (KEY.user !== SESSION.user_id) Object.assign(KEY, { user:SESSION.user_id, state:'idle', has:false, at:0, fresh:'' });
+  const head = sub => `<div class="card-head"><h2>Add weigh-ins by message</h2><span class="card-sub">${sub}</span></div>`;
+  if (KEY.state === 'missing') return `<div class="card" id="key-card">${head('almost ready')}<p class="card-sub" style="margin:0">This needs a one-time database update. It’ll appear once that’s done.</p></div>`;
+  if (KEY.state !== 'ok'){ keyLoad(); return `<div class="card" id="key-card">${head(KEY.state === 'error' ? 'couldn’t load — try again soon' : 'loading…')}</div>`; }
+  return `<div class="card" id="key-card">${head('optional')}
+    <p class="card-sub" style="margin:0 0 12px">A private key lets Claude or a script add weigh-ins for you without signing in. It can only add weigh-ins: it can’t see or change anything else. They show up here the next time you open Stride.</p>
+    ${KEY.fresh ? `<div class="field"><label for="key-show">Your key. Copy it now: it won’t be shown again.</label><input id="key-show" readonly value="${esc(KEY.fresh)}"></div>
+      <div class="btn-row" style="margin:12px 0"><button class="btn small primary" data-action="key-copy">Copy key</button></div>` : ''}
+    <div class="btn-row">${KEY.has
+      ? `<button class="btn small" data-action="key-make">Replace key</button><button class="btn small" data-action="key-off">Turn off</button>`
+      : `<button class="btn small" data-action="key-make">Create a key</button>`}</div>
+    ${KEY.has ? '<p class="card-sub" style="margin:12px 0 0">A key is on. Replacing it or turning it off stops the old one working straight away.</p>' : ''}
   </div>`;
 }
 
@@ -6408,6 +6481,7 @@ function renderSetup(){
           <a class="btn" href="#moves" style="text-decoration:none">Preview all moves</a></div>
         ${accountCard()}
         ${intervalsCard()}
+        ${keyCard()}
         <div class="card"><div class="card-head"><h2>Zones & thresholds${infoBtn}</h2><span class="card-sub">changing these re-scores every run</span></div>${explain('zones')}
           <div class="field-row">
             <div class="field"><label for="s-lthr">Lactate threshold HR</label><input id="s-lthr" type="number" value="${p.lthr}"></div>
@@ -7249,9 +7323,8 @@ document.addEventListener('click', async e => {
       const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
       if (!date || !(lbs || fat || vo2)){ toast('Enter at least one number'); break; }
       if (lbs && !(lbs > 50 && lbs < 600)){ toast('That weight looks off'); break; }
-      // One morning and one evening weigh-in per day; a second of the same kind replaces the first.
       const when = $('#m-when').value;
-      if (lbs) doc.profile.weights = [...doc.profile.weights.filter(w => w.date !== date || isEve(w) !== (when === 'pm')), { date, lbs, when, ...(note ? { note } : {}) }].sort((a, b) => a.date < b.date ? -1 : 1);
+      if (lbs) doc.profile.weights = withWeight(doc.profile.weights, { date, lbs, when, ...(note ? { note } : {}) });
       if (fat || vo2) doc.profile.comps = [...(doc.profile.comps ?? []).filter(c => c.date !== date),
         { date, ...(fat ? { bodyFat:fat } : {}), ...(vo2 ? { vo2 } : {}), ...(note ? { note } : {}) }];
       closeSheet(); await save(); toast('Saved'); renderBody(); break;
@@ -7406,6 +7479,9 @@ document.addEventListener('click', async e => {
     case 'install-app': if (installPrompt){ installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; installPrompt = null; if (outcome !== 'accepted') renderSetup(); } break;
     case 'icu-connect': connectIntervals(); break;
     case 'icu-check': checkIntervals({ manual:true }); break;
+    case 'key-make': keyMake().catch(() => toast('Couldn’t make a key')); break;
+    case 'key-off': keyOff().catch(() => toast('Couldn’t turn it off')); break;
+    case 'key-copy': try { await navigator.clipboard.writeText(KEY.fresh); toast('Key copied'); } catch { $('#key-show')?.select(); toast('Select it and copy'); } break;
     case 'icu-off': delete doc.intervals; try { localStorage.removeItem(ICUKEY); } catch {} await save(); render(); toast('Disconnected from intervals.icu'); break;
     case 'reset-ask': $('#reset-confirm').classList.add('show'); break;
     case 'reset-no': $('#reset-confirm').classList.remove('show'); break;
@@ -7569,7 +7645,7 @@ lastRoute = location.hash;
 render();
 arrive();
 paintSync();
-syncInit(fromLink).finally(() => checkIntervals().finally(() => { enrichRuns(); crewPush().catch(() => {}); maybeMoment(); }));
+syncInit(fromLink).finally(() => { checkInbox(); return checkIntervals().finally(() => { enrichRuns(); crewPush().catch(() => {}); maybeMoment(); }); });
 </script>
 </body>
 </html>
