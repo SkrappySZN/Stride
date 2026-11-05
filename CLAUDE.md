@@ -150,6 +150,7 @@ data runs through it, so treat changes to data handling with care.
   Progress shows "1-rep maxes" (`liftMaxCard`, singles only) and "Best sets" (`liftPRCard`, working sets only). A max
   is logged with "+ Log a 1-rep max" (`maxSheet`) as one single with `max:true`; max tests never prefill working sets
   (`lastWorking`) and don't move the push/pull/legs rotation (`nextGroup`).
+  A custom exercise whose name matches a built-in one moves to the built-in id on load (`adoptBuiltIns`, in `normalize()`).
   Timed moves (`secs:true`: plank, dead hang, farmer's carry) keep seconds in `reps`: shown as "s", stepped by 5,
   left out of volume and 1-rep maxes; a hold's best is the longest time, a carry's the heaviest weight.
   Extra days (`w.extra`, e.g. "Shoulders, arms & abs" from `EXTRA_DAYS`) sit outside push → pull → legs: `nextGroup`
