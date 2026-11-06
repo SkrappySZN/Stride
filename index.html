@@ -5473,12 +5473,21 @@ function foodCard(){
 const redrawFood = () => { const c = $('#food-card'); if (c) c.outerHTML = foodCard(); };
 function foodSheet(){
   const date = foodUi.date ?? todayYmd();
-  const saved = [...doc.foods].sort((a, b) => a.name.localeCompare(b.name));
+  const saved = [...doc.foods].sort((a, b) => a.name.localeCompare(b.name)), have = new Set(saved.map(f => f.name.toLowerCase()));
+  // Things eaten lately that aren't saved, newest first: one tap to add again, or keep them for good.
+  const recent = [];
+  for (const f of [...doc.food].sort((a, b) => a.date < b.date ? 1 : -1)){
+    const k = f.name.toLowerCase();
+    if (!have.has(k) && !recent.some(r => r.name.toLowerCase() === k)) recent.push(f);
+  }
   return `<h2 class="sheet-title">Add food</h2>
     <div class="field"><label for="fd-date">Day</label><input id="fd-date" type="date" max="${todayYmd()}" value="${date}"></div>
     ${saved.length ? `<div class="section-label" style="margin-top:14px">Your foods · tap to add</div><div class="ex-list">${saved.map(f => `<div style="display:flex;align-items:center;gap:12px">
       <button class="ex-row" style="flex:1" data-food-quick="${f.id}">${esc(f.name)}<small>${Math.round(f.cal)} cal · ${Math.round(f.pro)} g</small></button>
       <button class="link-btn" data-food-unsave="${f.id}" aria-label="Forget ${esc(f.name)}">forget</button></div>`).join('')}</div>` : ''}
+    ${recent.length ? `<div class="section-label" style="margin-top:14px">Recent · tap to add</div><div class="ex-list">${recent.slice(0, 15).map(f => `<div style="display:flex;align-items:center;gap:12px">
+      <button class="ex-row" style="flex:1" data-food-quick="${f.id}">${esc(f.name)}<small>${Math.round(f.cal)} cal · ${Math.round(f.pro)} g</small></button>
+      <button class="link-btn" data-food-keep="${f.id}" aria-label="Save ${esc(f.name)} to your foods">save</button></div>`).join('')}</div>` : ''}
     <div class="section-label" style="margin-top:14px">Something else</div>
     <div class="field-row">
       <div class="field" style="grid-column:1 / -1"><label for="fd-name">What</label><input id="fd-name" type="text" maxlength="60" placeholder="e.g. Chipotle burrito"></div>
@@ -7008,13 +7017,18 @@ document.addEventListener('click', async e => {
   if (ps){ welcomeUi.start = ps.dataset.pickStart; renderWelcome(); return; }
   const br = e.target.closest('[data-body-range]');
   if (br){ prefs.set('bodyRange', +br.dataset.bodyRange); renderBody(); return; }
-  const fq = e.target.closest('[data-food-quick], [data-food-unsave], [data-food-del], [data-food-day]');
+  const fq = e.target.closest('[data-food-quick], [data-food-keep], [data-food-unsave], [data-food-del], [data-food-day]');
   if (fq){
     const d = fq.dataset;
     if (d.foodQuick){
-      const f = doc.foods.find(x => x.id === d.foodQuick), date = $('#fd-date')?.value || todayYmd();
+      const f = doc.foods.find(x => x.id === d.foodQuick) ?? doc.food.find(x => x.id === d.foodQuick), date = $('#fd-date')?.value || todayYmd();
       if (!f || date > todayYmd()) return;
       addFood(date, f); foodUi.date = date; closeSheet(); await save(); toast(`Added ${f.name}`); redrawFood(); return;
+    }
+    if (d.foodKeep){
+      const f = doc.food.find(x => x.id === d.foodKeep), date = $('#fd-date')?.value;
+      if (f && !doc.foods.some(x => x.name.toLowerCase() === f.name.toLowerCase())) doc.foods = [...doc.foods, { id:foodId(), name:f.name, cal:f.cal, pro:f.pro }];
+      await save(); openSheet(foodSheet()); if (date && $('#fd-date')) $('#fd-date').value = date; return;
     }
     if (d.foodUnsave){ doc.foods = doc.foods.filter(x => x.id !== d.foodUnsave); await save(); openSheet(foodSheet()); return; }
     if (d.foodDel){ doc.food = doc.food.filter(x => x.id !== d.foodDel); await save(); redrawFood(); return; }
