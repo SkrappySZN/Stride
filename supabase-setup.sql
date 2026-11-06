@@ -158,7 +158,7 @@ begin
   select user_id into uid from public.stride_keys
     where key_hash = encode(sha256(convert_to(coalesce(p_key, ''), 'UTF8')), 'hex');
   if uid is null then return false; end if;
-  if char_length(trim(coalesce(p_name, ''))) not between 1 and 60 then raise exception 'name must be 1–60 characters'; end if;
+  if char_length(trim(coalesce(p_name, ''))) not between 1 and 60 then raise exception 'name must be 1 to 60 characters'; end if;
   if p_cal is null or p_cal < 0 or p_cal > 5000 then raise exception 'calories out of range'; end if;
   if p_pro is null or p_pro < 0 or p_pro > 400 then raise exception 'protein out of range'; end if;
   if p_date is null or p_date < current_date - 400 or p_date > current_date + 1 then raise exception 'date out of range'; end if;
