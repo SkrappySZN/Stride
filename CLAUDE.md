@@ -70,9 +70,10 @@ data runs through it, so treat changes to data handling with care.
   min). It pulls new runs' original FIT files, plus wellness data (weight in kg →
   stored in lbs) into `doc.body[date]`. Only the API key is synced (`doc.intervals.key`).
   What's been seen is per-device, in localStorage.
-- **Weigh-in inbox** (`checkInbox`, `keyCard`): `stride_keys` holds the hash of a person's private key (Setup) and
-  the `stride_inbox_add` RPC lets that key add a weigh-in to `stride_inbox`, with no session and no way to read
-  anything. The app merges what's waiting into `profile.weights` on open and focus (`withWeight`), then deletes it.
+- **Inbox** (`checkInbox`, `keyCard`): `stride_keys` holds the hash of a person's private key (Setup). The
+  `stride_inbox_add` (weigh-in) and `stride_food_add` RPCs let that key add to `stride_inbox`, with no session and no
+  way to read anything. The app merges what's waiting into `profile.weights` (`withWeight`) or `doc.food` (id `ib<row id>`,
+  so a repeat merge can't double it) on open and focus, then deletes it.
   Unknown `kind`s are left in place. The card says "almost ready" until the SQL has been run.
 - **Crew board**: the third table, `stride_crew`, holds one opt-in row per person: display
   name, crew code, and this week's runs/minutes/miles/streak. Nothing else. RLS lets you
@@ -90,6 +91,9 @@ data runs through it, so treat changes to data handling with care.
   → Gold → Volt by position (`medalOf`). New ones show via `badgeHits()` in the new-run scene, Today's checkpoint card
   and the top of Lift, sharing `prefs` 'seenMilestones' with goals; `badgesInit()` quietly marks what's already earned
   the first time a device opens with data. Add families freely; keep `id`s and thresholds stable, since seen ids use them.
+- **Food** (`foodCard` on Body, `foodSheet`): `doc.food` is one entry per thing eaten (`{ id, date, name, cal, pro }`),
+  `doc.foods` the person's saved foods (one tap to add), `profile.calTarget`/`proTarget` their own targets; Stride never
+  suggests targets.
 - **Also in the doc**: `shoes`/`defaultShoe` (`run.shoeId`), `pains` (body
   map; shin/Achilles or a sharp knee adds a red check-in with `stage:'map'`),
   `routines`, `crew`. Weigh-ins (`profile.weights`) carry `when` ('am'/'pm', untagged = morning): `weightSeries()`

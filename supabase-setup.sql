@@ -97,7 +97,7 @@ create table if not exists public.stride_keys (
 create table if not exists public.stride_inbox (
   id         bigint      generated always as identity primary key,
   user_id    uuid        not null references auth.users(id) on delete cascade,
-  kind       text        not null check (kind in ('weight')),
+  kind       text        not null,
   data       jsonb       not null,
   created_at timestamptz not null default now(),
   constraint stride_inbox_size check (pg_column_size(data) < 2000)
@@ -143,3 +143,29 @@ begin
 end $$;
 revoke all on function public.stride_inbox_add(text, date, numeric, text, text) from public;
 grant execute on function public.stride_inbox_add(text, date, numeric, text, text) to anon, authenticated;
+
+-- ── Food in the inbox (added Nov 2026) ──────────────────────────────────────
+-- The same key can also add a food entry (name, calories, protein). Safe to run again.
+
+alter table public.stride_inbox drop constraint if exists stride_inbox_kind_check;
+alter table public.stride_inbox add constraint stride_inbox_kind_check check (kind in ('weight', 'food'));
+
+create or replace function public.stride_food_add(p_key text, p_date date, p_name text, p_cal numeric, p_pro numeric)
+  returns boolean language plpgsql security definer set search_path = public
+  as $$
+declare uid uuid;
+begin
+  select user_id into uid from public.stride_keys
+    where key_hash = encode(sha256(convert_to(coalesce(p_key, ''), 'UTF8')), 'hex');
+  if uid is null then return false; end if;
+  if char_length(trim(coalesce(p_name, ''))) not between 1 and 60 then raise exception 'name must be 1–60 characters'; end if;
+  if p_cal is null or p_cal < 0 or p_cal > 5000 then raise exception 'calories out of range'; end if;
+  if p_pro is null or p_pro < 0 or p_pro > 400 then raise exception 'protein out of range'; end if;
+  if p_date is null or p_date < current_date - 400 or p_date > current_date + 1 then raise exception 'date out of range'; end if;
+  if (select count(*) from public.stride_inbox where user_id = uid) >= 200 then raise exception 'inbox full'; end if;
+  insert into public.stride_inbox (user_id, kind, data) values (uid, 'food',
+    jsonb_build_object('date', p_date, 'name', trim(p_name), 'cal', round(p_cal), 'pro', round(p_pro)));
+  return true;
+end $$;
+revoke all on function public.stride_food_add(text, date, text, numeric, numeric) from public;
+grant execute on function public.stride_food_add(text, date, text, numeric, numeric) to anon, authenticated;

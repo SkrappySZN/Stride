@@ -1592,13 +1592,13 @@ function freshDoc(){
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
     // refDays/refInfo held sport days, a retired feature; kept so older docs stay valid.
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], liftProg: null, workouts: [], gym: { skip: [] },
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], food: [], foods: [], liftProg: null, workouts: [], gym: { skip: [] },
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
-    profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, zonesAuto:null, ...(d.profile ?? freshDoc().profile) } });
+  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], food:[], foods:[], liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
+    profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, ...(d.profile ?? freshDoc().profile) } });
 }
 // A custom exercise that has since become a built-in one (same name): its logs move to the built-in id.
 function adoptBuiltIns(n){
@@ -2655,6 +2655,7 @@ const EXPLAIN = {
   recovery: () => 'How far your heart rate falls in the 2 minutes after you stop. A bigger drop means a fitter heart, and it often improves before your pace does. The watch only records it if you stop the timer and stand still for 2 minutes before saving.',
   anTE: () => 'Garmin’s 0–5 score for how much hard, out-of-breath work a run had. Easy runs should sit near 0. Above 1 means the run got harder than an easy run should be, so slow down or take walk breaks.',
   hrTrend: p => `Each dot is a run. Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why. You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
+  food: () => 'What you ate each day, added up: calories (energy) and protein (what your muscles rebuild from). Set your own daily targets with “Targets”. Losing weight means eating a bit under what you burn; protein near your target helps you keep muscle while you do. Save the things you eat often and they’re one tap to add.',
   amPm: () => 'You weigh more at night than in the morning: the day’s food and water are still in you, often 2–4 lbs’ worth. That isn’t fat. So the trend and the 7-day average use your morning weigh-ins only (filled dots), and evening ones are the rings. The overnight drop shows how much of the day was just food and water.',
   consistency: () => 'How many runs you did each week. Fitness comes from stacking ordinary weeks, so a missed week costs you more than a slow run does.',
   effort: () => 'How hard the run felt, from 1 (very easy) to 10 (all-out). Your watch asks when you save a run, or you can tap it in on the run’s page. The same route feeling easier over time is real progress, even when the numbers haven’t moved yet.',
@@ -4051,8 +4052,8 @@ function crewCard(){
   </div>`;
 }
 
-/* ── Inbox: weigh-ins added from outside the app ────────────────────
-   A private key lets Claude or a script add weigh-ins without signing in. Only its
+/* ── Inbox: weigh-ins and food added from outside the app ──────────
+   A private key lets Claude or a script add weigh-ins and food without signing in. Only its
    hash is stored and it can't read anything (stride_inbox_add). They wait in
    stride_inbox and are merged here, since only the app writes the doc. */
 const KEY = { user:null, state:'idle', has:false, at:0, fresh:'' };
@@ -4064,16 +4065,23 @@ async function checkInbox(){
     if (!await ensureToken()) return;
     const r = await sb(`/rest/v1/stride_inbox?user_id=eq.${SESSION.user_id}&select=id,kind,data&order=id`);
     if (!r.ok) return;   // 404 until the SQL has been run
-    const rows = (await r.json()).filter(x => x.kind === 'weight');
+    const rows = (await r.json()).filter(x => x.kind === 'weight' || x.kind === 'food');
     if (!rows.length) return;
-    for (const { data:d } of rows){
+    for (const { id, kind, data:d } of rows){
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date)) continue;
+      if (kind === 'food'){
+        // The row id keeps a merge that runs twice (a failed delete) from adding it twice.
+        if (d.name && !doc.food.some(f => f.id === 'ib' + id)) doc.food = [...doc.food, { id:'ib' + id, date:d.date, name:String(d.name), cal:Math.round(+d.cal || 0), pro:Math.round(+d.pro || 0) }];
+        continue;
+      }
       const lbs = +d.lbs;
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || !(lbs > 50 && lbs < 600)) continue;
+      if (!(lbs > 50 && lbs < 600)) continue;
       doc.profile.weights = withWeight(doc.profile.weights, { date:d.date, lbs, when:d.when === 'pm' ? 'pm' : 'am', ...(d.note ? { note:String(d.note) } : {}) });
     }
     await save();   // saved first: a failed delete only merges the same entries again
     await sb(`/rest/v1/stride_inbox?id=in.(${rows.map(x => x.id).join(',')})`, { method:'DELETE' });
-    toast(rows.length > 1 ? `${rows.length} weigh-ins added` : 'Weigh-in added');
+    const nf = rows.filter(x => x.kind === 'food').length, nw = rows.length - nf;
+    toast([nw && `${nw} weigh-in${nw > 1 ? 's' : ''}`, nf && `${nf} food entr${nf > 1 ? 'ies' : 'y'}`].filter(Boolean).join(' and ') + ' added');
     if (['', '#today', '#body'].includes(location.hash)) render();
   } catch {} finally { inboxBusy = false; }
 }
@@ -4108,11 +4116,11 @@ async function keyOff(){
 function keyCard(){
   if (!syncOn() || !signedIn()) return '';
   if (KEY.user !== SESSION.user_id) Object.assign(KEY, { user:SESSION.user_id, state:'idle', has:false, at:0, fresh:'' });
-  const head = sub => `<div class="card-head"><h2>Add weigh-ins by message</h2><span class="card-sub">${sub}</span></div>`;
+  const head = sub => `<div class="card-head"><h2>Add weigh-ins and food by message</h2><span class="card-sub">${sub}</span></div>`;
   if (KEY.state === 'missing') return `<div class="card" id="key-card">${head('almost ready')}<p class="card-sub" style="margin:0">This needs a one-time database update. It’ll appear once that’s done.</p></div>`;
   if (KEY.state !== 'ok'){ keyLoad(); return `<div class="card" id="key-card">${head(KEY.state === 'error' ? 'couldn’t load — try again soon' : 'loading…')}</div>`; }
   return `<div class="card" id="key-card">${head('optional')}
-    <p class="card-sub" style="margin:0 0 12px">A private key lets Claude or a script add weigh-ins for you without signing in. It can only add weigh-ins: it can’t see or change anything else. They show up here the next time you open Stride.</p>
+    <p class="card-sub" style="margin:0 0 12px">A private key lets Claude or a script add weigh-ins and food for you without signing in. It can only add those: it can’t see or change anything else. They show up here the next time you open Stride.</p>
     ${KEY.fresh ? `<div class="field"><label for="key-show">Your key. Copy it now: it won’t be shown again.</label><input id="key-show" readonly value="${esc(KEY.fresh)}"></div>
       <div class="btn-row" style="margin:12px 0"><button class="btn small primary" data-action="key-copy">Copy key</button></div>` : ''}
     <div class="btn-row">${KEY.has
@@ -5436,6 +5444,54 @@ function renderLift(){
 }
 
 const BODY_RANGES = [[30, '30 days'], [90, '90 days'], [365, '1 year']];
+/* ── Food: calories and protein per day ─────────────────────────────
+   doc.food holds one entry per thing eaten ({ id, date, name, cal, pro }); doc.foods the
+   person's saved foods, one tap to add. Targets are the person's own (profile.calTarget,
+   proTarget): Stride doesn't suggest them. Entries can also arrive through the inbox. */
+const foodId = () => 'fd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const foodDay = date => doc.food.filter(f => f.date === date);
+const foodSum = list => ({ cal:Math.round(list.reduce((a, f) => a + (+f.cal || 0), 0)), pro:Math.round(list.reduce((a, f) => a + (+f.pro || 0), 0)) });
+const foodUi = { date:null };
+function foodCard(){
+  const today = todayYmd(), date = foodUi.date && foodUi.date <= today ? foodUi.date : today, list = foodDay(date), t = foodSum(list), p = doc.profile;
+  const n = v => v.toLocaleString();
+  const meter = (label, v, goal, unit) => `<div class="field"><div class="s-l">${label}</div><div class="display num" style="font-size:28px">${n(v)}<small style="text-transform:none">${unit}</small></div>
+    ${goal ? `<div class="pbar"><i style="width:${Math.min(100, Math.round(v / goal * 100))}%"></i></div><div class="card-sub">of ${n(goal)}${unit}${v < goal ? ` · ${n(goal - v)}${unit} to go` : ''}</div>` : ''}</div>`;
+  const week = Array.from({ length:7 }, (_, i) => addDays(today, -i)).map(d => ({ d, list:foodDay(d) })).filter(x => x.list.length).map(x => ({ d:x.d, ...foodSum(x.list) }));
+  return `<div class="card" id="food-card"><div class="card-head"><h2>Food${infoBtn}</h2>
+      <span class="card-sub"><button class="link-btn" data-food-day="-1" aria-label="Day before">‹</button> ${date === today ? 'Today' : fmtDate(date)} ${date < today ? '<button class="link-btn" data-food-day="1" aria-label="Day after">›</button>' : ''}</span></div>
+    ${explain('food')}
+    <div class="field-row">${meter('Calories', t.cal, p.calTarget, '')}${meter('Protein', t.pro, p.proTarget, ' g')}</div>
+    ${list.length ? `<table class="quiet" style="margin-top:12px">${list.map(f => `<tr><td>${esc(shortName(f.name, 28))}</td><td class="num" style="white-space:nowrap">${n(Math.round(+f.cal || 0))}</td><td class="num" style="white-space:nowrap">${Math.round(+f.pro || 0)} g</td>
+      <td style="text-align:right;padding-left:12px"><button class="link-btn" data-food-del="${f.id}">remove</button></td></tr>`).join('')}</table>` : `<p class="card-sub" style="margin:12px 0 0">Nothing logged ${date === today ? 'yet today' : 'that day'}.</p>`}
+    <div class="btn-row" style="margin-top:14px"><button class="btn primary" data-action="food-open">+ Add food</button><button class="btn" data-action="food-targets">Targets</button></div>
+    ${week.length > 1 ? `<table class="quiet" style="margin-top:16px"><tr><th>Last 7 days</th><th>Calories</th><th>Protein</th></tr>
+      ${week.map(x => `<tr><td>${fmtDate(x.d)}</td><td class="num">${n(x.cal)}</td><td class="num" style="white-space:nowrap">${x.pro} g</td></tr>`).join('')}
+      <tr><td><b>Average</b></td><td class="num"><b>${n(Math.round(avgOf(week.map(x => x.cal))))}</b></td><td class="num"><b>${Math.round(avgOf(week.map(x => x.pro)))} g</b></td></tr></table>` : ''}
+  </div>`;
+}
+const redrawFood = () => { const c = $('#food-card'); if (c) c.outerHTML = foodCard(); };
+function foodSheet(){
+  const date = foodUi.date ?? todayYmd();
+  const saved = [...doc.foods].sort((a, b) => a.name.localeCompare(b.name));
+  return `<h2 class="sheet-title">Add food</h2>
+    <div class="field"><label for="fd-date">Day</label><input id="fd-date" type="date" max="${todayYmd()}" value="${date}"></div>
+    ${saved.length ? `<div class="section-label" style="margin-top:14px">Your foods · tap to add</div><div class="ex-list">${saved.map(f => `<div style="display:flex;align-items:center;gap:12px">
+      <button class="ex-row" style="flex:1" data-food-quick="${f.id}">${esc(f.name)}<small>${Math.round(f.cal)} cal · ${Math.round(f.pro)} g</small></button>
+      <button class="link-btn" data-food-unsave="${f.id}" aria-label="Forget ${esc(f.name)}">forget</button></div>`).join('')}</div>` : ''}
+    <div class="section-label" style="margin-top:14px">Something else</div>
+    <div class="field-row">
+      <div class="field" style="grid-column:1 / -1"><label for="fd-name">What</label><input id="fd-name" type="text" maxlength="60" placeholder="e.g. Chipotle burrito"></div>
+      <div class="field"><label for="fd-cal">Calories</label><input id="fd-cal" type="number" inputmode="numeric" min="0"></div>
+      <div class="field"><label for="fd-pro">Protein (g)</label><input id="fd-pro" type="number" inputmode="numeric" min="0"></div>
+    </div>
+    <label class="card-sub" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input id="fd-save" type="checkbox" checked> Save it to your foods</label>
+    <button class="btn primary big sheet-save" data-action="add-food">Add</button>`;
+}
+function addFood(date, f){
+  doc.food = [...doc.food, { id:foodId(), date, name:f.name, cal:Math.round(+f.cal || 0), pro:Math.round(+f.pro || 0) }];
+}
+
 function renderBody(){
   const days = prefs.get('bodyRange', 90);
   const st = bodyStats();
@@ -5468,6 +5524,8 @@ function renderBody(){
       ${chartCard('c-hrv', 'HRV', 'overnight · a sudden drop can mean run down', hrv)}
       ${chartCard('c-sleep', 'Sleep', 'hours per night', sleep)}
     </div>
+    <div class="section-label">Food</div>
+    ${foodCard()}
     <div class="section-label">Fitness & composition</div>
     <div class="grid two">
       <div class="card"><div class="card-head"><h2>VO2 max</h2><span class="card-sub">${vo2.length ? 'Garmin’s estimate · moves slowly' : 'Garmin’s estimate'}</span></div>
@@ -6950,6 +7008,18 @@ document.addEventListener('click', async e => {
   if (ps){ welcomeUi.start = ps.dataset.pickStart; renderWelcome(); return; }
   const br = e.target.closest('[data-body-range]');
   if (br){ prefs.set('bodyRange', +br.dataset.bodyRange); renderBody(); return; }
+  const fq = e.target.closest('[data-food-quick], [data-food-unsave], [data-food-del], [data-food-day]');
+  if (fq){
+    const d = fq.dataset;
+    if (d.foodQuick){
+      const f = doc.foods.find(x => x.id === d.foodQuick), date = $('#fd-date')?.value || todayYmd();
+      if (!f || date > todayYmd()) return;
+      addFood(date, f); foodUi.date = date; closeSheet(); await save(); toast(`Added ${f.name}`); redrawFood(); return;
+    }
+    if (d.foodUnsave){ doc.foods = doc.foods.filter(x => x.id !== d.foodUnsave); await save(); openSheet(foodSheet()); return; }
+    if (d.foodDel){ doc.food = doc.food.filter(x => x.id !== d.foodDel); await save(); redrawFood(); return; }
+    foodUi.date = addDays(foodUi.date ?? todayYmd(), +d.foodDay); if (foodUi.date >= todayYmd()) foodUi.date = null; redrawFood(); return;
+  }
   const dm = e.target.closest('[data-del-measure]');
   if (dm){
     const [kind, date, when] = dm.dataset.delMeasure.split('|');
@@ -7333,6 +7403,27 @@ document.addEventListener('click', async e => {
         <div class="field" style="grid-column:1 / -1"><label for="m-note">Note</label><input id="m-note" type="text" placeholder="e.g. DEXA scan"></div>
       </div>
       <button class="btn primary big sheet-save" data-action="add-measure">Save</button>`); break;
+    case 'food-open': openSheet(foodSheet()); break;
+    case 'add-food': {
+      const date = $('#fd-date').value, name = $('#fd-name').value.trim(), cal = $('#fd-cal').value, pro = $('#fd-pro').value;
+      if (!date || date > todayYmd()){ toast('Pick a day up to today'); break; }
+      if (!name || (cal === '' && pro === '')){ toast('Enter what it was and its calories or protein'); break; }
+      if (!(+cal >= 0 && +cal <= 5000) || !(+pro >= 0 && +pro <= 400)){ toast('Those numbers look off'); break; }
+      addFood(date, { name, cal, pro });
+      if ($('#fd-save').checked && !doc.foods.some(f => f.name.toLowerCase() === name.toLowerCase()))
+        doc.foods = [...doc.foods, { id:foodId(), name, cal:Math.round(+cal || 0), pro:Math.round(+pro || 0) }];
+      foodUi.date = date; closeSheet(); await save(); toast('Added'); redrawFood(); break;
+    }
+    case 'food-targets': openSheet(`<h2 class="sheet-title">Daily targets</h2><p class="card-sub" style="margin:0 0 12px">Your own numbers, from a coach, a dietitian or a plan you follow. Leave one empty to just count it.</p>
+      <div class="field-row"><div class="field"><label for="ft-cal">Calories</label><input id="ft-cal" type="number" inputmode="numeric" value="${doc.profile.calTarget ?? ''}"></div>
+        <div class="field"><label for="ft-pro">Protein (g)</label><input id="ft-pro" type="number" inputmode="numeric" value="${doc.profile.proTarget ?? ''}"></div></div>
+      <button class="btn primary big sheet-save" data-action="save-food-targets">Save</button>`); break;
+    case 'save-food-targets': {
+      const cal = $('#ft-cal').value, pro = $('#ft-pro').value;
+      if ((cal !== '' && !(+cal >= 500 && +cal <= 8000)) || (pro !== '' && !(+pro >= 10 && +pro <= 500))){ toast('Those numbers look off'); break; }
+      doc.profile.calTarget = cal === '' ? null : Math.round(+cal); doc.profile.proTarget = pro === '' ? null : Math.round(+pro);
+      closeSheet(); await save(); toast('Targets saved'); redrawFood(); break;
+    }
     case 'add-measure': {
       const date = $('#m-date').value, lbs = +$('#m-w').value, fat = +$('#m-fat').value, vo2 = +$('#m-vo2').value, note = $('#m-note').value.trim();
       if (!date || !(lbs || fat || vo2)){ toast('Enter at least one number'); break; }
