@@ -94,6 +94,8 @@ data runs through it, so treat changes to data handling with care.
 - **Food** (`foodCard` on Body, `foodSheet`): `doc.food` is one entry per thing eaten (`{ id, date, name, cal, pro }`),
   `doc.foods` the person's saved foods (one tap to add), `profile.calTarget`/`proTarget` their own targets; Stride never
   suggests targets.
+- **Bike** (`bikeCard` on Today, `bikeSetupCard`, `bikeDays`): opt-in `doc.bike` `{ perWeek, min, lo, hi, ceil }`; `doc.rides` `{ id, date, min, avgHr, maxHr, name }`
+  from intervals.icu (summary numbers only, id `ir…`) or by hand (`mr…`). Suggests rest days; never touches the run plan or its gate.
 - **Also in the doc**: `shoes`/`defaultShoe` (`run.shoeId`), `pains` (body
   map; shin/Achilles or a sharp knee adds a red check-in with `stage:'map'`),
   `routines`, `crew`. Weigh-ins (`profile.weights`) carry `when` ('am'/'pm', untagged = morning): `weightSeries()`

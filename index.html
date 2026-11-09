@@ -898,6 +898,7 @@ table.runs td.r-shoe{max-width:150px; overflow:hidden; text-overflow:ellipsis; t
 .bm-dot.l1, .bm-key.l1{fill:color-mix(in srgb, var(--warn) 55%, transparent); background:color-mix(in srgb, var(--warn) 55%, transparent)}
 .bm-dot.l2, .bm-key.l2{fill:var(--warn); background:var(--warn)}
 .bm-dot.l3, .bm-key.l3{fill:var(--crit); background:var(--crit)}
+.bm-label{text-align:center; font-weight:600; font-size:14px; min-height:20px; margin:8px 0 6px}
 .bm-key{display:inline-block; width:10px; height:10px; border-radius:50%}
 
 table.crew tr.me td{font-weight:750}
@@ -1592,12 +1593,12 @@ function freshDoc(){
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
     // refDays/refInfo held sport days, a retired feature; kept so older docs stay valid.
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], food: [], foods: [], liftProg: null, workouts: [], gym: { skip: [] },
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], food: [], foods: [], rides: [], bike: null, liftProg: null, workouts: [], gym: { skip: [] },
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], food:[], foods:[], liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
+  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, ...(d.profile ?? freshDoc().profile) } });
 }
 // A custom exercise that has since become a built-in one (same name): its logs move to the built-in id.
@@ -2655,6 +2656,7 @@ const EXPLAIN = {
   recovery: () => 'How far your heart rate falls in the 2 minutes after you stop. A bigger drop means a fitter heart, and it often improves before your pace does. The watch only records it if you stop the timer and stand still for 2 minutes before saving.',
   anTE: () => 'Garmin’s 0–5 score for how much hard, out-of-breath work a run had. Easy runs should sit near 0. Above 1 means the run got harder than an easy run should be, so slow down or take walk breaks.',
   hrTrend: p => `Each dot is a run. Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why. You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
+  bike: () => 'Easy bike sessions add heart-and-lung work without the pounding of running. They’re your own target (set it in Setup), and they never change your run plan or its weekly check. Rides from your watch come in through intervals.icu; you can also log one by hand. The heart rate range is where to stay, and the ceiling is the number to ease off at.',
   steps: () => 'Steps your watch counted each day, from Garmin. Days you take the watch off read low, and days it’s off entirely stay blank. The line underneath estimates how many came from running (your cadence × your running time), so you can see how much you move outside your runs too.',
   food: () => 'What you ate each day, added up: calories (energy) and protein (what your muscles rebuild from). Set your own daily targets with “Targets”. Losing weight means eating a bit under what you burn; protein near your target helps you keep muscle while you do. Save the things you eat often and they’re one tap to add.',
   amPm: () => 'You weigh more at night than in the morning: the day’s food and water are still in you, often 2–4 lbs’ worth. That isn’t fat. So the trend and the 7-day average use your morning weigh-ins only (filled dots), and evening ones are the rings. The overnight drop shows how much of the day was just food and water.',
@@ -2822,6 +2824,48 @@ function todayNotes(today){
   return notes.map(n => `<div class="note">${WARN_SVG}<div>${n}</div></div>`).join('');
 }
 
+/* ── Bike: easy sessions alongside the run plan ─────────────────────
+   doc.bike ({ perWeek, min, lo, hi, ceil }) is opt-in, set in Setup. doc.rides holds
+   { id, date, min, avgHr, maxHr, name }, from intervals.icu (id ir…) or by hand (id mr…).
+   Rides never touch the run plan or its weekly gate; bikeDays only suggests rest days. */
+const ridesOn = d => doc.rides.filter(r => r.date === d);
+const ridesInWeek = ws => doc.rides.filter(r => weekStart(r.date) === ws);
+const bikeTarget = () => { const b = doc.bike; return [b.min ? `${b.min} min` : '', b.lo && b.hi ? `HR ${b.lo}–${b.hi}` : '', b.ceil ? `ceiling ${b.ceil}` : ''].filter(Boolean).join(' · '); };
+function bikeDays(days){
+  const out = new Set(), left = {};
+  if (!doc.bike) return out;
+  for (const d of days){
+    const ws = weekStart(d.date);
+    left[ws] ??= Math.max(0, doc.bike.perWeek - ridesInWeek(ws).length);
+    if (d.kind === 'rest' && d.note !== 'Paused' && !ridesOn(d.date).length && left[ws] > 0){ out.add(d.date); left[ws]--; }
+  }
+  return out;
+}
+function bikeCard(){
+  const b = doc.bike;
+  if (!b) return '';
+  const done = ridesInWeek(weekStart(todayYmd())).length, last = [...doc.rides].sort((x, y) => x.date < y.date ? 1 : -1)[0];
+  const range = r => r.avgHr == null || !b.lo || !b.hi ? '' : r.avgHr < b.lo ? ' · under your range' : r.avgHr > b.hi ? ' · over your range' : ' · in range';
+  return `<div class="card"><div class="card-head"><h2>Bike${infoBtn}</h2><span class="card-sub">this week</span></div>${explain('bike')}
+    <div class="next-run-big display num">${done}<span style="font-size:.45em"> of ${b.perWeek}</span></div>
+    ${bikeTarget() ? `<div class="card-sub">Each one: ${esc(bikeTarget())}</div>` : ''}
+    ${last ? `<p class="card-sub" style="margin:12px 0 0">Last ride: ${fmtDate(last.date)} · ${last.min} min${last.avgHr != null ? ` · avg HR ${Math.round(last.avgHr)}${range(last)}` : ''}${String(last.id).startsWith('mr') ? ` <button class="link-btn" data-ride-del="${last.id}">remove</button>` : ''}</p>` : ''}
+    <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="ride-open">+ Log a ride</button></div></div>`;
+}
+function bikeSetupCard(){
+  const b = doc.bike ?? {};
+  return `<div class="card"><div class="card-head"><h2>Bike sessions${infoBtn}</h2><span class="card-sub">${doc.bike ? 'on' : 'optional'}</span></div>${explain('bike')}
+    <p class="card-sub" style="margin:0 0 12px">Add easy rides to your week. They show on Today, and Stride suggests them on rest days.</p>
+    <div class="field-row">
+      <div class="field"><label for="bk-per">Rides a week</label><input id="bk-per" type="number" inputmode="numeric" value="${b.perWeek ?? ''}"></div>
+      <div class="field"><label for="bk-min">Minutes each</label><input id="bk-min" type="number" inputmode="numeric" value="${b.min ?? ''}"></div>
+      <div class="field"><label for="bk-lo">Heart rate from</label><input id="bk-lo" type="number" inputmode="numeric" value="${b.lo ?? ''}"></div>
+      <div class="field"><label for="bk-hi">Heart rate to</label><input id="bk-hi" type="number" inputmode="numeric" value="${b.hi ?? ''}"></div>
+      <div class="field"><label for="bk-ceil">Ceiling</label><input id="bk-ceil" type="number" inputmode="numeric" value="${b.ceil ?? ''}"></div>
+    </div>
+    <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="bike-save">Save</button>${doc.bike ? '<button class="btn small" data-action="bike-off">Turn off</button>' : ''}</div></div>`;
+}
+
 function renderToday(){
   const today = todayYmd(), now = new Date();
   const dateLine = `${DOW_LONG[now.getDay()]} · ${MON_LONG[now.getMonth()]} ${now.getDate()}`;
@@ -2853,7 +2897,7 @@ function renderToday(){
       ${doc.runs.length ? journeyCard('j-today') : ''}${coachCard()}${goalsTodayCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid two" style="margin-top:16px">${routineCard()}${weatherCard()}</div>
-      <div class="grid" style="margin-top:16px">${todayNotes(today)}</div></div>`;
+      <div class="grid" style="margin-top:16px">${bikeCard()}${todayNotes(today)}</div></div>`;
     drawJourney($('#j-today'));
     return;
   }
@@ -2879,11 +2923,11 @@ function renderToday(){
     copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''}`;
     tasks = tasksFor(today, dayTasks('run'));
   } else {
-    title = 'Rest <em>day</em>';
-    copy = (ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
+    title = bikeDays(days).has(today) ? 'Easy <em>bike</em>' : 'Rest <em>day</em>';
+    copy = bikeDays(days).has(today) ? `No run today. ${bikeTarget() || 'Keep it easy'}, or rest if your legs need it.` : (ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
       : t.note === 'Week’s runs are in' ? 'This week’s runs are in. Walk, stretch, recover.'
       : 'Mobility only today.');
-    tasks = tasksFor(today, dayTasks('rest', ranYesterday));
+    tasks = (bikeDays(days).has(today) ? taskHTML(`${today}|bike`, 'Easy bike', esc(bikeTarget())) : '') + tasksFor(today, dayTasks('rest', ranYesterday));
   }
 
   // Next run
@@ -2924,11 +2968,11 @@ function renderToday(){
     <div class="verdict">${statusIcon(g.verdict[0])}<span><strong>${g.verdict[1]}</strong> ${g.verdict[2]}</span></div>
   </div>`;
 
-  const TAG = { run:['run', 'Run'], done:['done', 'Done'], rest:['rest', 'Rest'] };
+  const TAG = { run:['run', 'Run'], done:['done', 'Done'], rest:['rest', 'Rest'] }, bd = bikeDays(days);
   const strip = `<div class="card">
     <div class="card-head"><h2>Next 7 days</h2></div>
     <div class="days">${days.map((d, i) => {
-      const dd = parseYmd(d.date), [k, l] = TAG[d.kind];
+      const dd = parseYmd(d.date), [k, l] = d.kind === 'rest' && ridesOn(d.date).length ? ['done', 'Bike'] : bd.has(d.date) ? ['rest', 'Bike'] : TAG[d.kind];
       return `<div class="day${i === 0 ? ' today' : ''}" ${d.note ? `data-tip="${esc(d.note)}"` : ''}>
         <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div><div class="d-tag tag-${k}">${l}</div></div>`;
     }).join('')}</div>
@@ -2947,7 +2991,7 @@ function renderToday(){
   }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
     ${journeyCard('j-today')}${coachCard()}${goalsTodayCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
-    <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
+    <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${bikeCard()}${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
   drawJourney($('#j-today'));
 }
@@ -4540,6 +4584,7 @@ function bodyTodayCard(){
 const PAIN_AREAS = {
   hipF:'Hip / groin', quad:'Thigh, front', knee:'Knee', shin:'Shin', ankle:'Ankle', foot:'Foot',
   back:'Lower back', glute:'Glute', ham:'Hamstring', calf:'Calf', achilles:'Achilles', heel:'Heel / sole',
+  neck:'Neck', shoulder:'Shoulder', upperarm:'Upper arm', forearm:'Forearm / wrist', chest:'Chest', abs:'Abs', upperback:'Upper back',
 };
 const PAIN_LEVELS = { 1:'Mild', 2:'Moderate', 3:'Sharp' };
 // Zone bands down each leg: [area, y0, y1]. x0/x1 are the leg's edges.
@@ -4562,9 +4607,17 @@ function bodyMapSvg(){
       ${legs.map(([x0, x1]) => `<rect x="${x0}" y="102" width="${x1 - x0}" height="132" rx="7" class="bm-base"/><rect x="${x0 - (view === 'front' ? 1 : 0)}" y="232" width="${x1 - x0 + 2}" height="13" rx="5" class="bm-base"/>`).join('')}
       <text x="50" y="258" text-anchor="middle" class="bm-cap">${view === 'front' ? 'Front' : 'Back'}</text>`;
     if (view === 'back') s += zoneRect(34, 80, 66, 103, 'back', 'center');
+    // Viewer-left arm is the person's right from the front, their left from behind, like the legs.
+    const armA = view === 'front' ? 'right' : 'left', armB = view === 'front' ? 'left' : 'right';
+    const upper = [['neck', 'center', 44, 26, 56, 34], ['shoulder', armA, 17, 31, 33, 43], ['shoulder', armB, 67, 31, 83, 43],
+      ['upperarm', armA, 17, 44, 27, 69], ['upperarm', armB, 73, 44, 83, 69], ['forearm', armA, 17, 70, 27, 105], ['forearm', armB, 73, 70, 83, 105],
+      ...(view === 'front' ? [['chest', 'center', 34, 38, 66, 62], ['abs', 'center', 34, 63, 66, 100]] : [['upperback', 'center', 34, 38, 66, 79]])];
+    for (const [area, side, x0, y0, x1, y1] of upper) s += zoneRect(x0, y0, x1, y1, area, side);
     for (const [x0, x1, side] of legs) for (const [area, y0, y1] of zones) s += zoneRect(x0, y0, x1, y1, area, side);
     // Recent aches as dots, sized and coloured by how bad.
     for (const p of recent){
+      const u = upper.find(q => q[0] === p.area && q[1] === p.side);
+      if (u){ s += `<circle cx="${(u[2] + u[4]) / 2}" cy="${(u[3] + u[5]) / 2}" r="${3 + p.level}" class="bm-dot l${p.level}"/>`; continue; }
       const z = zones.find(q => q[0] === p.area); if (!z && p.area !== 'back') continue;
       const leg = legs.find(l => l[2] === p.side), cx = p.area === 'back' ? 50 : leg ? (leg[0] + leg[1]) / 2 : null;
       if (cx == null || (p.area === 'back' && view !== 'back')) continue;
@@ -4575,11 +4628,20 @@ function bodyMapSvg(){
   };
   function zoneRect(x0, y0, x1, y1, area, side){
     const on = painUi.area === area && painUi.side === side;
-    return `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="3" class="bm-zone${on ? ' on' : ''}" data-pain-zone="${area}|${side}" tabindex="0" role="button" aria-label="${sideName(area, side)}"><title>${sideName(area, side)}</title></rect>`;
+    return `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="3" class="bm-zone${on ? ' on' : ''}" data-pain-zone="${area}|${side}" tabindex="0" role="button" aria-label="${sideName(area, side)}"></rect>`;
   }
   return `<svg viewBox="0 0 230 262" class="bodymap" role="group" aria-label="Body map">${fig(5, 'front')}${fig(125, 'back')}</svg>`;
 }
 
+const BM_HINT = 'Point at or tap a spot to see its name';
+// Names the spot under the pointer in plain text, so the highlight is never a guess.
+function bmLabel(e){
+  const label = $('#bm-label'), z = e.target.closest?.('[data-pain-zone]');
+  if (!label || (e.type !== 'mouseout' && !z)) return;
+  const [area, side] = (z && e.type !== 'mouseout' ? z.dataset.painZone : painUi.area ? `${painUi.area}|${painUi.side}` : '').split('|');
+  label.textContent = area ? sideName(area, side) : BM_HINT;
+}
+['mouseover', 'mouseout', 'focusin'].forEach(t => document.addEventListener(t, bmLabel));
 function painCard(){
   const pains = [...(doc.pains ?? [])].sort((a, b) => a.at < b.at ? 1 : -1), recent = pains.filter(p => diffDays(p.date, todayYmd()) <= 30);
   // The same spot three times in two weeks deserves more than guessing.
@@ -4588,6 +4650,7 @@ function painCard(){
   return `<div class="card" id="pain-map"><div class="card-head"><h2>Aches & pains</h2><span class="card-sub">tap where it hurts</span></div>
     <div class="pain-grid">
       <div>${bodyMapSvg()}
+        <div class="bm-label" id="bm-label" aria-live="polite">${painUi.area ? esc(sideName(painUi.area, painUi.side)) : BM_HINT}</div>
         <div class="legend" style="justify-content:center"><span><i class="bm-key l1"></i>Mild</span><span><i class="bm-key l2"></i>Moderate</span><span><i class="bm-key l3"></i>Sharp</span><span class="card-sub">last 30 days</span></div></div>
       <div>
         ${painUi.msg ? `<div class="response show${painUi.msg.alarm ? ' alarm' : ''}" style="margin:0 0 14px">${painUi.msg.html}</div>` : ''}
@@ -4604,6 +4667,10 @@ function painCard(){
 }
 function painResponse(p){
   const where = sideName(p.area, p.side).toLowerCase();
+  if (p.area === 'chest') return { alarm:true, html:`<b>Don’t wait on chest pain.</b> Pressure, tightness, or pain that spreads to your arm or jaw, or comes with shortness of breath, dizziness or sweating, needs emergency care now: call 911. A sore muscle after chest day feels different: it hurts when you press on it or move your arm. If you’re not sure, get it checked.` };
+  if (['neck', 'shoulder', 'upperarm', 'forearm', 'abs', 'upperback'].includes(p.area)) return { alarm:p.level === 3, html: p.level === 3
+    ? `<b>Sharp ${where} pain: leave that lift out until it settles.</b> If it’s still sharp in a couple of days, or you get numbness or weakness, get it looked at.`
+    : `Logged. Dull and achy is usually normal soreness. If it’s still there in 48 hours, go lighter or swap the lifts that bother it.` };
   if (painRed(p)) return { alarm:true, html:`<b>Stop running and get it looked at.</b> ${p.area === 'knee' ? 'A sharp knee' : p.area === 'shin' ? 'Shin pain' : 'Achilles pain'} is one of the plan’s hard stops, so it’s paused until a doctor or physical therapist has checked it. Walking is fine if it doesn’t hurt.` };
   if (p.area === 'knee') return { alarm:false, html:`<b>Don’t run through knee pain</b> the way you would tight muscles — joints don’t loosen up as they warm. If it shows up earlier in your next run, swells, catches or makes you limp, get it checked.` };
   if (p.area === 'calf' && p.level >= 2) return { alarm:true, html:`<b>One calf sore${p.level === 3 ? ' and sharp' : ''} is the early warning.</b> If it’s clearly worse than the other side or pulls during a run, stop the run. Repeat this week instead of moving up.` };
@@ -6576,6 +6643,7 @@ function renderSetup(){
         ${accountCard()}
         ${intervalsCard()}
         ${keyCard()}
+        ${bikeSetupCard()}
         <div class="card"><div class="card-head"><h2>Zones & thresholds${infoBtn}</h2><span class="card-sub">changing these re-scores every run</span></div>${explain('zones')}
           <div class="field-row">
             <div class="field"><label for="s-lthr">Lactate threshold HR</label><input id="s-lthr" type="number" value="${p.lthr}"></div>
@@ -6818,6 +6886,7 @@ async function importFit(name, buf){
    unless it actually found a run. */
 const ICU = 'https://intervals.icu/api/v1';
 const ICU_RUNS = ['Run', 'TrailRun', 'VirtualRun'];
+const ICU_RIDES = ['Ride', 'VirtualRide', 'MountainBikeRide', 'GravelRide', 'EBikeRide'];
 const ICUKEY = 'stride.icu';
 const icuUi = { status:'idle', msg:'' };
 let icuBusy = false;
@@ -6887,6 +6956,16 @@ async function checkIntervals({ manual = false } = {}){
     }
     // Daily body data Garmin sends to intervals.icu: weight, resting HR, HRV, sleep, VO2 max.
     let bodyChanged = false;
+    // Rides need only the summary numbers, no file. Reach back once per device for earlier ones.
+    if (doc.bike){
+      const rl = loc.ridesBack ? list : await (await icuGet(`/athlete/0/activities?oldest=${addDays(todayYmd(), -60)}&newest=${addDays(todayYmd(), 1)}`, key)).json();
+      for (const a of rl){
+        if (!ICU_RIDES.includes(a.type) || !a.start_date_local || doc.rides.some(r => r.id === 'ir' + a.id)) continue;
+        doc.rides = [...doc.rides, { id:'ir' + a.id, date:a.start_date_local.slice(0, 10), min:Math.round((a.moving_time || a.elapsed_time || 0) / 60), avgHr:a.average_heartrate ?? null, maxHr:a.max_heartrate ?? null, name:a.name || 'Ride' }];
+        bodyChanged = true;
+      }
+      loc.ridesBack = true;
+    }
     try {
       // stepsBack: steps were added later, so reach back once more for the days already imported without them.
       const wFrom = loc.wellnessAt && loc.stepsBack ? addDays(ymd(new Date(loc.wellnessAt)), -3) : addDays(todayYmd(), -180);
@@ -7031,6 +7110,8 @@ document.addEventListener('click', async e => {
   if (ps){ welcomeUi.start = ps.dataset.pickStart; renderWelcome(); return; }
   const br = e.target.closest('[data-body-range]');
   if (br){ prefs.set('bodyRange', +br.dataset.bodyRange); renderBody(); return; }
+  const rdel = e.target.closest('[data-ride-del]');
+  if (rdel){ doc.rides = doc.rides.filter(r => r.id !== rdel.dataset.rideDel); await save(); render(); return; }
   const fq = e.target.closest('[data-food-quick], [data-food-keep], [data-food-unsave], [data-food-del], [data-food-day]');
   if (fq){
     const d = fq.dataset;
@@ -7431,6 +7512,31 @@ document.addEventListener('click', async e => {
         <div class="field" style="grid-column:1 / -1"><label for="m-note">Note</label><input id="m-note" type="text" placeholder="e.g. DEXA scan"></div>
       </div>
       <button class="btn primary big sheet-save" data-action="add-measure">Save</button>`); break;
+    case 'ride-open': openSheet(`<h2 class="sheet-title">Log a ride</h2>
+      <div class="field-row"><div class="field"><label for="rd-date">Day</label><input id="rd-date" type="date" max="${todayYmd()}" value="${todayYmd()}"></div>
+        <div class="field"><label for="rd-min">Minutes</label><input id="rd-min" type="number" inputmode="numeric"></div>
+        <div class="field"><label for="rd-hr">Average heart rate (optional)</label><input id="rd-hr" type="number" inputmode="numeric"></div></div>
+      <button class="btn primary big sheet-save" data-action="add-ride">Save</button>`); break;
+    case 'add-ride': {
+      const date = $('#rd-date').value, min = +$('#rd-min').value, hr = +$('#rd-hr').value;
+      if (!date || date > todayYmd()){ toast('Pick a day up to today'); break; }
+      if (!(min >= 1 && min <= 600)){ toast('Enter how many minutes'); break; }
+      if (hr && !(hr >= 40 && hr <= 230)){ toast('That heart rate looks off'); break; }
+      doc.rides = [...doc.rides, { id:'mr' + foodId(), date, min:Math.round(min), avgHr:hr || null, maxHr:null, name:'Ride' }];
+      closeSheet(); await save(); toast('Ride logged'); render(); break;
+    }
+    case 'bike-save': {
+      const n = id => $(id).value === '' ? null : Math.round(+$(id).value), perWeek = n('#bk-per'), min = n('#bk-min'), lo = n('#bk-lo'), hi = n('#bk-hi'), ceil = n('#bk-ceil');
+      if (!(perWeek >= 1 && perWeek <= 7)){ toast('Enter rides a week, 1 to 7'); break; }
+      if (min != null && !(min >= 5 && min <= 300)){ toast('Those minutes look off'); break; }
+      if ([lo, hi, ceil].some(v => v != null && !(v >= 60 && v <= 220)) || (lo != null && hi != null && lo > hi)){ toast('Those heart rates look off'); break; }
+      const first = !doc.bike;
+      doc.bike = { perWeek, min, lo, hi, ceil };
+      await save(); toast('Bike sessions saved'); render();
+      if (first) checkIntervals({ manual:true });
+      break;
+    }
+    case 'bike-off': doc.bike = null; await save(); toast('Bike sessions off. Your rides are kept'); render(); break;
     case 'food-open': openSheet(foodSheet()); break;
     case 'add-food': {
       const date = $('#fd-date').value, name = $('#fd-name').value.trim(), cal = $('#fd-cal').value, pro = $('#fd-pro').value;
