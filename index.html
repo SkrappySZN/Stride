@@ -2847,6 +2847,18 @@ function bikeDays(days){
   }
   return out;
 }
+// A status, not a checkbox: only a recorded ride counts, so there's nothing to tick.
+function bikeRow(date, suggested){
+  const done = ridesOn(date);
+  if (doc.bike && done.length){
+    const r = done.at(-1);
+    return `<li><div class="task" aria-pressed="true" style="cursor:default"><span class="box">${CHECK}</span>
+      <span><div class="t-main" style="text-decoration:none;opacity:1">Bike done</div><div class="t-sub">${r.min} min${r.avgHr != null ? ` · avg HR ${Math.round(r.avgHr)}` : ''}</div></span></div></li>`;
+  }
+  if (!suggested) return '';
+  return `<li><div class="task" style="cursor:default"><span><div class="t-main">Easy bike</div><div class="t-sub">${esc(bikeTarget())}</div></span>
+    <button class="btn small" style="margin-left:auto" data-action="ride-open">Log a ride</button></div></li>`;
+}
 function bikeCard(){
   const b = doc.bike;
   if (!b) return '';
@@ -2929,11 +2941,12 @@ function renderToday(){
     copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''}`;
     tasks = tasksFor(today, dayTasks('run'));
   } else {
-    title = bikeDays(days).has(today) ? 'Easy <em>bike</em>' : 'Rest <em>day</em>';
-    copy = bikeDays(days).has(today) ? `No run today. ${bikeTarget() || 'Keep it easy'}, or rest if your legs need it.` : (ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
+    const biked = doc.bike && ridesOn(today).length > 0;
+    title = biked ? 'Bike <em>done</em>' : bikeDays(days).has(today) ? 'Easy <em>bike</em>' : 'Rest <em>day</em>';
+    copy = biked ? 'That’s today’s training. Stretch and recover.' : bikeDays(days).has(today) ? `No run today. ${bikeTarget() || 'Keep it easy'}, or rest if your legs need it.` : (ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
       : t.note === 'Week’s runs are in' ? 'This week’s runs are in. Walk, stretch, recover.'
       : 'Mobility only today.');
-    tasks = (bikeDays(days).has(today) ? taskHTML(`${today}|bike`, 'Easy bike', esc(bikeTarget())) : '') + tasksFor(today, dayTasks('rest', ranYesterday));
+    tasks = bikeRow(today, bikeDays(days).has(today)) + tasksFor(today, dayTasks('rest', ranYesterday));
   }
 
   // Next run
