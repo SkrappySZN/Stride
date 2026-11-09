@@ -2655,6 +2655,7 @@ const EXPLAIN = {
   recovery: () => 'How far your heart rate falls in the 2 minutes after you stop. A bigger drop means a fitter heart, and it often improves before your pace does. The watch only records it if you stop the timer and stand still for 2 minutes before saving.',
   anTE: () => 'Garmin’s 0–5 score for how much hard, out-of-breath work a run had. Easy runs should sit near 0. Above 1 means the run got harder than an easy run should be, so slow down or take walk breaks.',
   hrTrend: p => `Each dot is a run. Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why. You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
+  steps: () => 'Steps your watch counted each day, from Garmin. Days you take the watch off read low, and days it’s off entirely stay blank. The line underneath estimates how many came from running (your cadence × your running time), so you can see how much you move outside your runs too.',
   food: () => 'What you ate each day, added up: calories (energy) and protein (what your muscles rebuild from). Set your own daily targets with “Targets”. Losing weight means eating a bit under what you burn; protein near your target helps you keep muscle while you do. Save the things you eat often and they’re one tap to add.',
   amPm: () => 'You weigh more at night than in the morning: the day’s food and water are still in you, often 2–4 lbs’ worth. That isn’t fat. So the trend and the 7-day average use your morning weigh-ins only (filled dots), and evening ones are the rings. The overnight drop shows how much of the day was just food and water.',
   consistency: () => 'How many runs you did each week. Fitness comes from stacking ordinary weeks, so a missed week costs you more than a slow run does.',
@@ -5501,10 +5502,20 @@ function addFood(date, f){
   doc.food = [...doc.food, { id:foodId(), date, name:f.name, cal:Math.round(+f.cal || 0), pro:Math.round(+f.pro || 0) }];
 }
 
+// Average steps over the last 7 full days, and roughly how many came from runs (cadence × running time).
+function stepsLine(){
+  const today = todayYmd(), week = bodySeries('steps').filter(p => p.date < today && diffDays(p.date, today) <= 7);
+  if (!week.length) return '';
+  const fromRuns = d => doc.runs.filter(r => r.date === d && r.cadence && r.runSec).reduce((a, r) => a + r.cadence * r.runSec / 60, 0);
+  const avg = avgOf(week.map(p => p.v)), run = avgOf(week.map(p => fromRuns(p.date)));
+  const round = v => (Math.round(v / 100) * 100).toLocaleString();
+  return `<p class="card-sub" style="margin:12px 0 0">Last 7 days: about ${round(avg)} a day${run >= 50 ? `, about ${round(run)} of those from runs` : ''}.</p>`;
+}
+
 function renderBody(){
   const days = prefs.get('bodyRange', 90);
   const st = bodyStats();
-  const ws = weightSeries(), rhr = bodySeries('rhr'), hrv = bodySeries('hrv'), sleep = bodySeries('sleepH'), vo2 = bodySeries('vo2');
+  const ws = weightSeries(), rhr = bodySeries('rhr'), hrv = bodySeries('hrv'), sleep = bodySeries('sleepH'), vo2 = bodySeries('vo2'), steps = bodySeries('steps');
   const comps = [...(doc.profile.comps ?? [])].sort((a, b) => a.date < b.date ? 1 : -1);
   const fatG = bodySeries('bodyFat').at(-1);
   const has = ws.length || rhr.length || hrv.length || sleep.length;
@@ -5532,6 +5543,7 @@ function renderBody(){
       ${chartCard('c-rhr', 'Resting heart rate', 'drifts down as fitness builds · lower is better', rhr)}
       ${chartCard('c-hrv', 'HRV', 'overnight · a sudden drop can mean run down', hrv)}
       ${chartCard('c-sleep', 'Sleep', 'hours per night', sleep)}
+      ${chartCard('c-steps', `Steps${infoBtn}`, 'per day', steps, explain('steps') + stepsLine())}
     </div>
     <div class="section-label">Food</div>
     ${foodCard()}
@@ -5561,6 +5573,7 @@ function renderBody(){
   if (rhr.length) chartDaily($('#c-rhr'), rhr, { days, unit:'bpm', step:5 });
   if (hrv.length) chartDaily($('#c-hrv'), hrv, { days, unit:'ms', step:10 });
   if (sleep.length) chartDaily($('#c-sleep'), sleep, { days, unit:'hrs', step:2, dec:1, bars:true });
+  if (steps.length) chartDaily($('#c-steps'), steps, { days, unit:'steps', step:2000, bars:true });
   if (vo2.length > 1) chartDaily($('#c-vo2'), vo2, { days:Math.max(days, 90), unit:'', step:2, gapDays:60 });
 }
 
@@ -6875,21 +6888,22 @@ async function checkIntervals({ manual = false } = {}){
     // Daily body data Garmin sends to intervals.icu: weight, resting HR, HRV, sleep, VO2 max.
     let bodyChanged = false;
     try {
-      const wFrom = loc.wellnessAt ? addDays(ymd(new Date(loc.wellnessAt)), -3) : addDays(todayYmd(), -180);
+      // stepsBack: steps were added later, so reach back once more for the days already imported without them.
+      const wFrom = loc.wellnessAt && loc.stepsBack ? addDays(ymd(new Date(loc.wellnessAt)), -3) : addDays(todayYmd(), -180);
       const wl = await (await icuGet(`/athlete/0/wellness?oldest=${wFrom}&newest=${todayYmd()}`, key)).json();
       doc.body ??= {};
       for (const w of wl){
         const rec = {
           weight: w.weight ? Math.round(w.weight * 2.20462 * 10) / 10 : null,   // the API is metric
           rhr: w.restingHR ?? null, hrv: w.hrv != null ? Math.round(w.hrv) : null,
-          sleepH: w.sleepSecs ? Math.round(w.sleepSecs / 360) / 10 : null, sleepScore: w.sleepScore ?? null,
+          sleepH: w.sleepSecs ? Math.round(w.sleepSecs / 360) / 10 : null, sleepScore: w.sleepScore ?? null, steps: w.steps ?? null,
           vo2: w.vo2max ?? null, bodyFat: w.bodyFat ?? null,
         };
         for (const k of Object.keys(rec)) if (rec[k] == null) delete rec[k];
         if (!w.id || !Object.keys(rec).length) continue;
         if (stableStringify(doc.body[w.id] ?? {}) !== stableStringify(rec)){ doc.body[w.id] = rec; bodyChanged = true; }
       }
-      loc.wellnessAt = new Date().toISOString();
+      loc.wellnessAt = new Date().toISOString(); loc.stepsBack = true;
     } catch (err){ if (err.auth) throw err; }
     setIcuLocal({ ...loc, seen:[...seen].slice(-500), lastChecked:new Date().toISOString() });
     icuUi.status = 'idle';

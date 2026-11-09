@@ -68,7 +68,7 @@ data runs through it, so treat changes to data handling with care.
   `saveLocal()`, never `save()`.
 - **intervals.icu import**: `checkIntervals()` runs on open and on focus (at most every 5
   min). It pulls new runs' original FIT files, plus wellness data (weight in kg →
-  stored in lbs) into `doc.body[date]`. Only the API key is synced (`doc.intervals.key`).
+  stored in lbs, steps) into `doc.body[date]`. Only the API key is synced (`doc.intervals.key`).
   What's been seen is per-device, in localStorage.
 - **Inbox** (`checkInbox`, `keyCard`): `stride_keys` holds the hash of a person's private key (Setup). The
   `stride_inbox_add` (weigh-in) and `stride_food_add` RPCs let that key add to `stride_inbox`, with no session and no
