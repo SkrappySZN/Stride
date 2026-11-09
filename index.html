@@ -1589,7 +1589,7 @@ function freshDoc(){
   return {
     v: 1,
     planStart: SEED.planStart ?? weekStart(todayYmd()),
-    profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, heightIn:null }),
+    profile: structuredClone(SEED.profile ?? { lthr:170, guardHr:185, zones:{ easy:145, mod:160 }, weights:[], zonesSet:false, sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null }),
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
     // refDays/refInfo held sport days, a retired feature; kept so older docs stay valid.
@@ -1599,7 +1599,7 @@ function freshDoc(){
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
   return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
-    profile: { weights:[], comps:[], sex:null, birthYear:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, ...(d.profile ?? freshDoc().profile) } });
+    profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, ...(d.profile ?? freshDoc().profile) } });
 }
 // A custom exercise that has since become a built-in one (same name): its logs move to the built-in id.
 function adoptBuiltIns(n){
@@ -2082,7 +2082,13 @@ function pendingCheckin(){
 /* ── Standards: where you sit for your age, sex and size ─────────────
    Published reference ranges, not diagnosis. Each row names its source so
    nobody mistakes a population table for a verdict. */
-const ageNow = () => doc.profile.birthYear ? new Date().getFullYear() - doc.profile.birthYear : null;
+// Month and day are optional. With only the year, age ticks over on January 1; with a month, on the 1st of it.
+const ageNow = () => {
+  const { birthYear:y, birthMonth:bm, birthDay:bd } = doc.profile;
+  if (!y) return null;
+  const n = new Date(), m = n.getMonth() + 1, before = bm && (m < bm || (m === bm && bd && n.getDate() < bd));
+  return n.getFullYear() - y - (before ? 1 : 0);
+};
 const fmtHeight = h => `${Math.floor(h / 12)}′${h % 12}″`;
 // Garmin's VO2 max categories (Cooper Institute norms): age ceiling, then the
 // lower bounds of Fair, Good, Excellent and Superior.
@@ -6659,6 +6665,8 @@ function renderSetup(){
           <div class="field-row">
             <div class="field"><label for="s-sex">Sex</label><select id="s-sex"><option value="">—</option><option value="m"${p.sex === 'm' ? ' selected' : ''}>Male</option><option value="f"${p.sex === 'f' ? ' selected' : ''}>Female</option></select></div>
             <div class="field"><label for="s-born">Birth year</label><input id="s-born" type="number" inputmode="numeric" placeholder="e.g. 2000" value="${p.birthYear ?? ''}"></div>
+            <div class="field"><label for="s-bm">Birth month (optional)</label><select id="s-bm"><option value="">—</option>${MON_LONG.map((mn, i) => `<option value="${i + 1}"${p.birthMonth === i + 1 ? ' selected' : ''}>${mn}</option>`).join('')}</select></div>
+            <div class="field"><label for="s-bd">Birth day (optional)</label><input id="s-bd" type="number" inputmode="numeric" min="1" max="31" value="${p.birthDay ?? ''}"></div>
             <div class="field"><label for="s-ft">Height (ft)</label><input id="s-ft" type="number" inputmode="numeric" value="${p.heightIn ? Math.floor(p.heightIn / 12) : ''}"></div>
             <div class="field"><label for="s-in">Height (in)</label><input id="s-in" type="number" inputmode="numeric" value="${p.heightIn ? p.heightIn % 12 : ''}"></div>
           </div>
@@ -7439,7 +7447,10 @@ document.addEventListener('click', async e => {
       const yr = new Date().getFullYear();
       if (born && !(born > yr - 100 && born < yr - 8)){ toast('That birth year looks off'); break; }
       if (h && !(h >= 48 && h <= 90)){ toast('That height looks off'); break; }
-      Object.assign(doc.profile, { sex, birthYear:born, heightIn:h });
+      // A day means nothing without its month. 2000 is a leap year, so Feb 29 passes.
+      const bm = +$('#s-bm').value || null, bd = bm ? Math.round(+$('#s-bd').value) || null : null;
+      if (bd && new Date(2000, bm - 1, bd).getMonth() !== bm - 1){ toast('That birth day looks off'); break; }
+      Object.assign(doc.profile, { sex, birthYear:born, birthMonth:bm, birthDay:bd, heightIn:h });
       await save(); toast('Saved'); render(); break;
     }
     case 'add-weight': {

@@ -107,7 +107,7 @@ data runs through it, so treat changes to data handling with care.
   history at the start point rounded to ~1 km; no key). `undefined` means not tried yet.
 - **Standards**: `standardRows()` (Body tab) and `bestsCard()` (Progress) compare against
   published norms: BMI, ACE body fat, Garmin/Cooper VO2 max, WHO activity minutes, and an
-  approximate age grade. They need `profile.sex`, `birthYear` and `heightIn` (Setup → About you).
+  approximate age grade. They need `profile.sex`, `birthYear` and `heightIn` (Setup → About you); optional `birthMonth`/`birthDay` make `ageNow()` exact.
 - **Routines**: `MOVES` (each a stick figure looping through poses `a`, `b`, optional `c`, or
   its own `seq`; joints in a 120×120 box). Poses are converted to bone angles and animated
   by rotation (`poseAt`, `animateFigures`), so keep each bone's length the same in every
