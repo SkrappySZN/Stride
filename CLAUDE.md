@@ -178,6 +178,7 @@ data runs through it, so treat changes to data handling with care.
 - **Self-setting numbers**: `autoZones()` sets the zones from the watch's threshold in
   the FIT files, or from age until a run brings one (`profile.zonesAuto`). It never
   overrides `zonesSet`. `goalIdeas()` suggests goals from the person's own runs.
+- **All outdoor** (`allOutdoor()`, `trWord`, Setup): per person, `profile.allOutdoor` drops the test route: `isTest` is then true for every outdoor run, and copy goes through `trWord(route, outdoor)`.
 - **Coach notes** (`coachNotes`): rules over the data (gaps, heat, test-route HR trend,
   drift, too-hard runs, effort versus HR, ramp, recovery, cadence and stride, weight).
   The top three show on Today and Progress. Add a rule as one more `add(priority, tone,

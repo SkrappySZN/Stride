@@ -1233,14 +1233,21 @@ const PLANS = {
     goal:null, weeks:[],
   },
 };
-const activePlan = () => PLANS[doc.planId] ?? PLANS.build;
+// Per person (Setup): no test route. Every outdoor run without idle time counts toward the heart-rate trend.
+const allOutdoor = () => !!doc.profile.allOutdoor;
+const trWord = (route, outdoor) => allOutdoor() ? outdoor : route;
+const activePlan = () => {
+  const pl = PLANS[doc.planId] ?? PLANS.build;
+  if (!allOutdoor() || !pl.weeks.length) return pl;
+  return { ...pl, weeks:pl.weeks.map(w => w.detail ? { ...w, detail:w.detail.replace(/\.? *Keep one run a week on the test route/, '') || 'Conversational pace the whole way' } : w) };
+};
 const planLen = () => activePlan().weeks.length;
 const coached = () => planLen() > 0;
 
 const PROTOCOL = p => [
-  ['p1','Start where the test route starts','Not from home if there’s a hill on the way — a climb contaminates every average'],
+  ...(allOutdoor() ? [] : [['p1','Start where the test route starts','Not from home if there’s a hill on the way — a climb contaminates every average']]),
   ['p2','Warm up','5 min brisk walk, then 10 leg swings per side'],
-  ['p3','Run the flat test route',`Under ~50 ft total gain. Walk break if HR passes ~${p.zones.mod}`],
+  allOutdoor() ? ['p3','Run',`Walk break if HR passes ~${p.zones.mod}`] : ['p3','Run the flat test route',`Under ~50 ft total gain. Walk break if HR passes ~${p.zones.mod}`],
   ['p4','Stop the timer at the finish','Don’t hit Save yet'],
   ['p5','Stand still for 2 minutes','This is how the watch captures recovery HR'],
   ['p6','Save, then walk home','That’s the cooldown'],
@@ -1599,7 +1606,7 @@ function freshDoc(){
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
   return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
-    profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, ...(d.profile ?? freshDoc().profile) } });
+    profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, allOutdoor:false, ...(d.profile ?? freshDoc().profile) } });
 }
 // A custom exercise that has since become a built-in one (same name): its logs move to the built-in id.
 function adoptBuiltIns(n){
@@ -1989,7 +1996,7 @@ const INDOOR_SUBS = ['treadmill', 'indoorrunning', '1', '45'];
 const isTreadmill = r => r.indoorOverride ?? (INDOOR_SUBS.includes(String(r.subSport ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')) || (r.source === 'fit' && !r.startLL));
 // Wrist-estimated treadmill distance can be 5–10% off, so no PBs or time goals from it.
 const timedRun = r => !isTreadmill(r);
-const isTest = r => !isTreadmill(r) && (r.testOverride ?? (!!r.routeId && !!doc.routes.find(x => x.id === r.routeId)?.isTest));
+const isTest = r => !isTreadmill(r) && (allOutdoor() || (r.testOverride ?? (!!r.routeId && !!doc.routes.find(x => x.id === r.routeId)?.isTest)));
 const isClean = r => isTest(r) && (r.idleSec ?? 0) <= IDLE_TOLERANCE;
 const hrMetric = r => r.jogHr ?? r.avgHr;
 // Garmin's feel scale, 0–100 in steps of 25.
@@ -2477,7 +2484,7 @@ function chartHrTrend(host, runs){
     const kind = r.jogHr != null ? 'jogging HR' : 'avg HR (whole run)';
     const hit = el('circle', { cx, cy, r:14, fill:'transparent', style:'cursor:pointer' }, svg);
     hit.addEventListener('click', () => { location.hash = 'runs/' + r.id; });
-    tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${Math.round(v)} bpm ${kind} · ${pace} /mi${r.tempF != null ? ` · ${r.tempF}°F` : ''}<br>${ok ? '✓ Clean test-route run' : '✕ Excluded: ' + exclusionReasons(r).join(' · ')}`);
+    tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${Math.round(v)} bpm ${kind} · ${pace} /mi${r.tempF != null ? ` · ${r.tempF}°F` : ''}<br>${ok ? trWord('✓ Clean test-route run', '✓ Counts toward your trend') : '✕ Excluded: ' + exclusionReasons(r).join(' · ')}`);
   });
 }
 
@@ -2658,10 +2665,10 @@ const tasksFor = (date, ids) => ids.map(id => taskHTML(`${date}|${id}`, ...TASKS
 // Plain-English answers behind the "?" buttons. Tooltips don't exist on a
 // phone, so anything a newcomer needs to understand lives here instead.
 const EXPLAIN = {
-  jogHr: p => `Your average heart rate while jogging (walk breaks left out) on your test route. If the same pace costs fewer beats over the weeks, you’re getting fitter. Hot evenings push it up a few beats, so don’t panic over one warm run.`,
+  jogHr: p => `Your average heart rate while jogging (walk breaks left out) on ${trWord('your test route', 'your outdoor runs')}. If the same pace costs fewer beats over the weeks, you’re getting fitter. Hot evenings push it up a few beats, so don’t panic over one warm run.`,
   recovery: () => 'How far your heart rate falls in the 2 minutes after you stop. A bigger drop means a fitter heart, and it often improves before your pace does. The watch only records it if you stop the timer and stand still for 2 minutes before saving.',
   anTE: () => 'Garmin’s 0–5 score for how much hard, out-of-breath work a run had. Easy runs should sit near 0. Above 1 means the run got harder than an easy run should be, so slow down or take walk breaks.',
-  hrTrend: p => `Each dot is a run. Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why. You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
+  hrTrend: p => `Each dot is a run. ${allOutdoor() ? 'Filled dots are your outdoor runs with the timer handled properly. Routes and hills vary, so judge the overall drift, not one run. Hollow dots had the timer left running; tap one to see why.' : 'Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why.'} You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
   bike: () => 'Easy bike sessions add heart-and-lung work without the pounding of running. They’re your own target (set it in Setup), and they never change your run plan or its weekly check. Rides from your watch come in through intervals.icu; you can also log one by hand. The heart rate range is where to stay, and the ceiling is the number to ease off at.',
   steps: () => 'Steps your watch counted each day, from Garmin. Days you take the watch off read low, and days it’s off entirely stay blank. The line underneath estimates how many came from running (your cadence × your running time), so you can see how much you move outside your runs too.',
   food: () => 'What you ate each day, added up: calories (energy) and protein (what your muscles rebuild from). Set your own daily targets with “Targets”. Losing weight means eating a bit under what you burn; protein near your target helps you keep muscle while you do. Save the things you eat often and they’re one tap to add.',
@@ -2675,10 +2682,10 @@ const EXPLAIN = {
   drift: () => 'How much your heart rate rose from the first half of the jog to the second at the same pace. Under about 5 bpm means your body is coping well and you’re ready to go a little longer.',
   gate: () => 'Each Sunday night the plan looks back at the week: did you get your runs in, were your legs fine at 48 hours, and did you stay under your heart-rate limits? All green moves you up a week; otherwise you repeat it. Repeating a week is normal and keeps you healthy.',
   zones: () => 'Your threshold is the heart rate where running stops feeling sustainable. Garmin estimates it after a few runs. Every zone, limit and chart in Stride is set from it, so it’s worth getting right.',
-  treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the test-route trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
+  treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the outdoor trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
   take: () => 'A read of this run the way a coach would give it, written by Stride from your own history (nothing leaves the app). It compares the run with your last few of a similar distance, indoors with indoors and outdoors with outdoors: faster for the same or lower heart rate means fitness is building. Then it looks inside the run (how much was easy, when it got hard, whether heart rate crept up) and ends with one thing to do next.',
-  coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends on your test route, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
-  journey: () => 'Your training as one road. Each dot is a run (bigger = longer; volt = a clean test-route run; ringed = treadmill). Diamonds are milestones you’ve passed. The dashed road ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. Tap a run to open it.',
+  coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
+  journey: () => 'Your training as a timeline, left to right. Each dot is a run, and bigger means longer. Diamonds are milestones you’ve passed. The dashed line ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. It shows when things happened, not how fit you are; the charts further down show that. Tap a run to open it.',
   onerm: () => 'Your 1-rep max is the heaviest weight you’ve lifted for a single rep: a true max, not an estimate. Log one with “+ Log a 1-rep max”: pick the lift and enter the heaviest weight you got for one full rep. Warm up with a few lighter singles first, and use a spotter or safety arms. Max tests never change the weights Stride suggests for your normal sets. Everyday progress (best sets of several reps) is on the Best sets card. Body-weight and assisted moves aren’t listed: they go by reps or help instead.',
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
   liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
@@ -2720,7 +2727,7 @@ function guideSteps(){
     <li><span><b>Your runs come in on their own.</b>Connect intervals.icu once in <a href="#setup">Setup</a> and every run your watch records shows up here a few minutes after it syncs. You can also drop in FIT files.</span></li>
     <li><span><b>${coached() ? 'Today tells you what to do.' : 'Today shows your week.'}</b>${coached() ? 'Run, rest or stretch. Each Sunday the plan looks at how the week went and moves you up a week or repeats it.' : 'Your recent runs, your body numbers and anything worth a look.'}</span></li>
     <li><span><b>Progress answers one question: is the same run costing fewer heartbeats?</b>That’s the clearest sign you’re getting fitter, and it shows up weeks before you get faster.</span></li>
-    <li><span><b>Repeat one flat route.</b>Stride compares runs on your “test route” so the heart-rate trend is fair. Stop the timer at the finish and stand still for 2 minutes before saving, so the watch records your recovery.</span></li>
+    <li><span>${trWord('<b>Repeat one flat route.</b>Stride compares runs on your “test route” so the heart-rate trend is fair. ', '<b>Handle the timer.</b>')}Stop the timer at the finish and stand still for 2 minutes before saving, so the watch records your recovery.</span></li>
     <li><span><b>Tell it how your legs feel.</b>The day after a run, tap how your legs are. Ordinary soreness is fine. Sharp pain, shin pain or one calf much worse than the other pauses the plan until it’s checked. Keep runs easy: walk if your heart rate passes ${p.zones.mod}.</span></li>
   </ol>`;
 }
@@ -2826,7 +2833,7 @@ function todayNotes(today){
     notes.push(`<b>These are placeholder heart-rate zones.</b> ${glt ? `Your watch puts your threshold at ${glt} bpm. ` : ''}<a href="#setup">Set your own in Setup</a> — every number here is anchored to them.`);
   }
   for (const sh of activeShoes()){ const mi = shoeMiles(sh); if (mi >= sh.limit * .9) notes.push(`<b>Your ${esc(sh.name)} have ${Math.round(mi)} miles on them.</b> ${mi >= sh.limit ? 'Time for a new pair' : 'Start looking for the next pair'} — worn cushioning passes more of each landing to your calves and knees. <a href="#runs">Shoes</a>`); }
-  if (!testRoute() && doc.runs.some(r => r.source === 'fit')) notes.push('<b>No test route set yet.</b> Open a run on a flat route you’ll repeat and tap “Make this the test route” — it’s what makes the heart-rate trend fair.');
+  if (!allOutdoor() && !testRoute() && doc.runs.some(r => r.source === 'fit')) notes.push('<b>No test route set yet.</b> Open a run on a flat route you’ll repeat and tap “Make this the test route” — it’s what makes the heart-rate trend fair.');
   return notes.map(n => `<div class="note">${WARN_SVG}<div>${n}</div></div>`).join('');
 }
 
@@ -2968,14 +2975,14 @@ function renderToday(){
         ${s.mi >= 12 ? `<div>Fuel<b>Every 30–45 min after hour 1</b></div>` : ''}
       </div>` : `<div class="kv">
         <div>Pace<b>Easy enough to talk</b></div>
-        <div>Route<b>Flat test route</b></div>
+        <div>Route<b>${trWord('Flat test route', 'Your usual route')}</b></div>
         <div>Walk break if HR<b class="num">&gt; ${doc.profile.zones.mod}</b></div>
         <div>Ceiling<b class="num">${doc.profile.lthr} bpm</b></div>
       </div>`}
       ${isMarathon() ? '' : `<details class="protocol" style="margin-top:18px"${nr.date === today ? ' open' : ''}>
-        <summary><span class="eyebrow" style="color:var(--ink-2)">Run protocol · 6 steps</span><svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <summary><span class="eyebrow" style="color:var(--ink-2)">Run protocol · ${PROTOCOL(doc.profile).length} steps</span><svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></summary>
         <ul class="task-list">${PROTOCOL(doc.profile).map(([id, mm, sub], i) => taskHTML(`${nr.date}|${id}`, `${i + 1}. ${mm}`, sub)).join('')}</ul>
-        <p class="card-sub" style="margin:12px 0 0">Auto-pause off. Same time of day where you can. Uploads that break steps 1, 4 or 5 get flagged and kept out of the trend lines.</p>
+        <p class="card-sub" style="margin:12px 0 0">Auto-pause off. Same time of day where you can. ${trWord('Uploads that break steps 1, 4 or 5 get flagged and kept out of the trend lines.', 'Uploads with the timer left running get flagged and kept out of the trend lines.')}</p>
       </details>`}
     </div>`;
   }
@@ -3076,6 +3083,13 @@ function journeyCard(id){
   return `<div class="card journey"><div class="card-head"><h2>The journey${infoBtn}</h2><span class="card-sub">day ${day} · ${runs.length} runs · ${mi.toFixed(1)} mi</span></div>
     ${explain('journey')}
     <div class="chart journey-map" id="${id}"></div>
+    <div class="legend" style="margin-top:6px">
+      <span><i class="dotf" style="background:var(--fig-hl)"></i>${trWord('Test-route run', 'Run outside')}</span>
+      ${trWord('<span><i class="dotf" style="background:var(--ink)"></i>Other run</span>', '')}
+      <span><i class="ring" style="border-color:var(--series-1)"></i>Treadmill run</span>
+      <span><i style="transform:rotate(45deg);background:none;border:1.5px solid var(--fig-hl);border-radius:1px"></i>Milestone</span>
+      <span class="card-sub">Bigger dot = longer run</span>
+    </div>
     ${ch && coached() ? `<div class="journey-foot"><span class="j-ch">Chapter ${ch.n}</span> <b>${esc(ch.phase)}</b> <span class="card-sub">${esc(planWeekObj(planState().at(-1).planWeek)?.session ?? '')}</span></div>` : ''}
   </div>`;
 }
@@ -3086,8 +3100,8 @@ function drawJourney(host){
   const [svg, W] = svgFor(host, H);
   const span = Math.max(14, diffDays(start, horizon) + 1);
   const X = d => m.l + diffDays(start, d) / span * (W - m.l - m.r);
-  const mid = H * .56, amp = H * .17, turns = narrow ? 1.6 : 2.3;
-  const Y = x => mid + amp * Math.sin((x - m.l) / (W - m.l - m.r) * Math.PI * turns + .5);
+  // A straight road: height would read as a trend, and this only shows time.
+  const mid = H * .56, Y = () => mid;
   const lit = css('--fig-hl'), quiet = css('--axis'), ink = css('--ink'), muted = css('--muted');
   // Chapters: alternating faint bands, the current one named in volt.
   chapters.forEach((c, i) => {
@@ -3123,7 +3137,7 @@ function drawJourney(host){
     const rad = Math.min(cap, 3 + Math.min(5, (r.distMi ?? 0) * 1.6)), tread = isTreadmill(r);
     el('circle', { cx:x, cy:y, r:rad, fill:tread ? css('--surface') : isClean(r) ? lit : ink, stroke:tread ? css('--series-1') : css('--surface'), 'stroke-width':tread ? 2 : 1.5, class:'j-run' }, svg);
     const hit = el('circle', { cx:x, cy:y, r:Math.max(10, rad + 4), fill:'transparent', style:'cursor:pointer', 'data-goto':'runs/' + r.id }, svg);
-    tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${fmtMi(r.distMi)} mi · ${fmtDur(r.timerSec)} · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${tread ? ' · treadmill' : isClean(r) ? ' · test route' : ''}`);
+    tipOn(hit, `<b>${fmtDate(r.date)}</b><br>${fmtMi(r.distMi)} mi · ${fmtDur(r.timerSec)} · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${tread ? ' · treadmill' : isClean(r) ? trWord(' · test route', '') : ''}`);
   });
   // You are here.
   const ty = Y(tx);
@@ -3196,7 +3210,8 @@ async function arrivalMoment(r){
   const firstClean = runs.find(isClean);
   if (isClean(r) && firstClean && firstClean !== r){
     const d = Math.round(hrMetric(r) - hrMetric(firstClean));
-    lines.push(d < 0 ? `<b>${-d} bpm lower</b> than your first test-route run — same route, less heart.` : d > 0 ? `${d} bpm higher than your first test-route run${r.tempF >= HOT_F ? ` — it was ${r.tempF}°F, heat adds beats` : ''}.` : 'Same heart rate as your first test-route run.');
+    const firstRun = trWord('your first test-route run', 'your first outdoor run');
+    lines.push(d < 0 ? `<b>${-d} bpm lower</b> than ${firstRun}${trWord(' — same route, less heart', '')}.` : d > 0 ? `${d} bpm higher than ${firstRun}${r.tempF >= HOT_F ? ` — it was ${r.tempF}°F, heat adds beats` : ''}.` : `Same heart rate as ${firstRun}.`);
   }
   if (isTreadmill(r)) lines.push('Treadmill run — counted, but kept out of your street heart-rate trend.');
   if (prior.length && r.distMi > Math.max(...prior.map(x => x.distMi ?? 0)) + .02) lines.push('<b>Your longest run yet.</b>');
@@ -3304,8 +3319,8 @@ function coachNotes(){
   const clean = runs.filter(isClean);
   if (clean.length >= 4){
     const a = avgOf(clean.slice(0, 2).map(hrMetric)), b = avgOf(clean.slice(-2).map(hrMetric)), d = Math.round(b - a);
-    if (d <= -3) add(8, 'good', `<b>Jogging heart rate is down ${-d} bpm on your test route</b> since ${fmtDate(clean[0].date).slice(4)}. The aerobic base is building.`);
-    else if (d >= 4 && warm.length < 2) add(6, 'warn', `<b>Test-route heart rate is up ${d} bpm.</b> Tired, under-slept, or ramping too fast? Keep the next week easy.`);
+    if (d <= -3) add(8, 'good', `<b>Jogging heart rate is down ${-d} bpm ${trWord('on your test route', 'on your outdoor runs')}</b> since ${fmtDate(clean[0].date).slice(4)}. The aerobic base is building.`);
+    else if (d >= 4 && warm.length < 2) add(6, 'warn', `<b>${trWord('Test-route heart', 'Outdoor heart')} rate is up ${d} bpm.</b> Tired, under-slept, or ramping too fast? Keep the next week easy.`);
   }
   // Drift says whether you're ready to go longer.
   if (last.drift != null && last.drift >= 8) add(6, 'warn', `<b>Heart rate climbed ${last.drift} bpm</b> from the first half of your last run to the second. Hold distance steady until that drops under about 5.`);
@@ -3368,7 +3383,7 @@ function renderProgress(){
     ? `<div class="k-val display num">${Math.round(hrMetric(lastClean))}<span class="k-unit">bpm</span></div>
        <span class="k-dir">↓ Lower is better</span>
        <div class="k-foot">${lastClean.jogHr != null ? 'Jogging only' : 'Whole-run average'} at <b>${fmtDur(lastClean.jogPaceSec ?? lastClean.avgPaceSec)} /mi</b>, ${fmtDate(lastClean.date)}.${clean.length > 1 ? delta(hrMetric(lastClean), hrMetric(firstClean), true) : ' The baseline — the same pace should cost fewer beats every few weeks.'}</div>`
-    : `<div class="k-val display num">—</div><div class="k-foot">No clean test-route run yet. Run the protocol on the flat route.</div>`;
+    : `<div class="k-val display num">—</div><div class="k-foot">${trWord('No clean test-route run yet. Run the protocol on the flat route.', 'No outdoor run yet.')}</div>`;
   const kpiRec = rec.length
     ? `<div class="k-val display num">${rec.at(-1).recoveryHr}<span class="k-unit">bpm</span></div>
        <span class="k-dir">↑ Higher is better</span>
@@ -3399,23 +3414,23 @@ function renderProgress(){
     eyebrow: `Since ${fmtDate(runs[0].date).slice(4)}${firstClean ? ` · baseline ${fmtDate(firstClean.date).slice(4)}` : ''}`,
     title: 'Pro<em>gress</em>',
     sub: 'Same effort, fewer heartbeats. That’s the whole game.',
-    stats: [['Runs', runs.length], ['Clean on test route', clean.length], ['Miles', totMi.toFixed(1)], ['Hours jogging', (totJog / 3600).toFixed(1)]],
+    stats: [['Runs', runs.length], [trWord('Clean on test route', 'Outdoor runs'), clean.length], ['Miles', totMi.toFixed(1)], ['Hours jogging', (totJog / 3600).toFixed(1)]],
   }) + `<div class="wrap">
     ${journeyCard('j-progress')}${coachCard()}
     <div class="section-label">Goals & milestones</div>
     ${goalsCard()}
     <div class="section-label">Getting fitter?</div>
     <div class="grid kpis">
-      <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · test route${infoBtn}</div>${explain('jogHr')}${kpiHr}</div>
+      <div class="card kpi"><div class="eyebrow">${lastClean?.jogHr != null ? 'Jogging HR' : 'Avg HR'} · ${trWord('test route', 'outdoor runs')}${infoBtn}</div>${explain('jogHr')}${kpiHr}</div>
       <div class="card kpi"><div class="eyebrow">Recovery HR · 2-min drop${infoBtn}</div>${explain('recovery')}${kpiRec}</div>
       <div class="card kpi"><div class="eyebrow">Hard-effort score (anaerobic TE)${infoBtn}</div>${explain('anTE')}${kpiTe}</div>
     </div>
     <div class="card" style="margin-top:16px">
-      <div class="card-head"><div><h2>Heart rate on the test route${infoBtn}</h2>
-        <div class="card-sub">Same route, same effort: lower over time means fitter.</div></div></div>
+      <div class="card-head"><div><h2>Heart rate ${trWord('on the test route', 'on outdoor runs')}${infoBtn}</h2>
+        <div class="card-sub">${trWord('Same route, same effort: lower over time means fitter.', 'Lower over time at a similar pace means fitter.')}</div></div></div>
       ${explain('hrTrend')}
       <div class="legend">
-        <span><i class="dotf" style="background:var(--series-1)"></i>Clean test-route run</span>
+        <span><i class="dotf" style="background:var(--series-1)"></i>${trWord('Clean test-route run', 'Outdoor run')}</span>
         <span><i class="ring"></i>Excluded — hover for why</span>
         <span><i style="background:var(--series-1-wash);border:1px solid var(--series-1)"></i>Easy zone (&lt; ${p.zones.easy})</span>
         ${runs.some(r => r.tempF >= HOT_F) ? `<span><i class="ring" style="border-color:var(--warn)"></i>${HOT_F}°F or hotter — heat adds beats</span>` : ''}
@@ -3486,7 +3501,7 @@ function renderProgress(){
   if (effRuns.length) chartColumns($('#c-eff'), {
     cats: effRuns, series: [{ key:'effort', color:css('--series-1') }], max: 10, ticks: [0, 2, 4, 6, 8, 10],
     labelFmt: c => c.effort, onClick: openRun,
-    tipFmt: c => `<b>${fmtDate(c.date)}</b><br>Effort ${c.effort}/10${c.feel != null ? ` · felt ${feelLabel(c.feel).toLowerCase()}` : ''}${c.tempF != null ? ` · ${c.tempF}°F` : ''}${isTest(c) ? ' · test route' : ''}`,
+    tipFmt: c => `<b>${fmtDate(c.date)}</b><br>Effort ${c.effort}/10${c.feel != null ? ` · felt ${feelLabel(c.feel).toLowerCase()}` : ''}${c.tempF != null ? ` · ${c.tempF}°F` : ''}${isTest(c) ? trWord(' · test route', '') : ''}`,
   });
   chartColumns($('#c-jog'), {
     cats: recent.map(r => ({ ...r, jogM:(r.runSec ?? 0) / 60, walkM:(r.walkSec ?? 0) / 60 })),
@@ -3981,7 +3996,7 @@ function recap(ws){
   if (first) for (let w = weekStart(first); w < ws; w = addDays(w, 7)) prevMi.push(sortedRuns().filter(r => r.date >= w && r.date <= addDays(w, 6)).reduce((a, r) => a + (r.distMi ?? 0), 0));
   const ms = milestones().filter(x => inWk(x.date));
   const headline = !runs.length ? 'No runs this week.'
-    : hrDelta != null && hrDelta <= -2 ? `Heart rate down ${-hrDelta} bpm on the test route — that’s fitness.`
+    : hrDelta != null && hrDelta <= -2 ? `Heart rate down ${-hrDelta} bpm ${trWord('on the test route', 'on your outdoor runs')} — that’s fitness.`
     : prevMi.length && mi > Math.max(...prevMi) + 0.05 ? 'Your biggest week yet.'
     : ms.length ? `New milestone: ${ms.at(-1).label}.`
     : runs.length >= 3 ? 'Three runs in. That’s the habit.' : `A lighter week: ${runs.length === 1 ? 'one run' : 'two runs'}.`;
@@ -4002,7 +4017,7 @@ function recapCard({ compact = false } = {}){
       ${stat('Runs', R.runs.length)}${stat('Miles', R.mi.toFixed(1))}${stat('Minutes', Math.round(R.min))}${stat('Longest', R.longest ? fmtMi(R.longest) : '—', R.longest ? 'mi' : '')}
     </div>
     <div class="card-sub" style="margin-top:12px">${[
-      R.hr != null && `Test-route HR ${Math.round(R.hr)}${R.hrDelta != null ? ` (${R.hrDelta > 0 ? '+' : ''}${R.hrDelta} vs the 4 weeks before)` : ''}`,
+      R.hr != null && `${trWord('Test-route', 'Outdoor')} HR ${Math.round(R.hr)}${R.hrDelta != null ? ` (${R.hrDelta > 0 ? '+' : ''}${R.hrDelta} vs the 4 weeks before)` : ''}`,
       R.effort != null && `effort ${R.effort.toFixed(1)}/10 on average`,
       R.strength && `${R.strength} strength session${R.strength > 1 ? 's' : ''}`,
       R.stretches && `${R.stretches} stretch routine${R.stretches > 1 ? 's' : ''}`,
@@ -4244,7 +4259,7 @@ function renderRunsList(){
   const dotColor = { crit:'var(--crit)', warn:'var(--warn)', wait:'var(--axis)' };
   const last30 = runs.filter(r => diffDays(r.date, todayYmd()) < 30);
   page.innerHTML = band({
-    eyebrow: `${runs.length} run${runs.length === 1 ? '' : 's'} · ${runs.filter(isClean).length} clean on the test route`,
+    eyebrow: `${runs.length} run${runs.length === 1 ? '' : 's'} · ${runs.filter(isClean).length} ${trWord('clean on the test route', 'outdoors')}`,
     title: 'Runs',
     stats: [['Last 30 days', last30.length, 'runs'], ['Miles · 30 days', last30.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)], ['All-time miles', runs.reduce((a, r) => a + (r.distMi ?? 0), 0).toFixed(1)]],
   }) + `<div class="wrap">
@@ -4252,7 +4267,7 @@ function renderRunsList(){
     <div class="card runs-table-card">
     <ul class="run-cards">${rows.map(r => `<li><a href="#runs/${r.id}">
           <div class="rc-main">${fmtDate(r.date)} · ${fmtMi(r.distMi)} mi</div>
-          <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? '<span class="badge test">Test</span>' : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
+          <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? `<span class="badge test">${trWord('Test', 'Outside')}</span>` : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
           <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}${shoeOf(r) ? ` · ${esc(shortName(shoeOf(r).name))}` : ''}</div>
         </a></li>`).join('')}</ul>
     <div class="table-wrap"><table class="runs">
@@ -4261,7 +4276,7 @@ function renderRunsList(){
         const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
         return `<tr data-run="${r.id}" tabindex="0">
           <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">${r.source === 'fit' ? fmtTime(r.start) + ' · FIT' : 'from notes'}</div></td>
-          <td style="text-align:right">${isTest(r) ? '<span class="badge test">Test</span>' : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : '<span class="badge">Other</span>'}</td>
+          <td style="text-align:right">${isTest(r) ? `<span class="badge test">${trWord('Test', 'Outside')}</span>` : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : '<span class="badge">Other</span>'}</td>
           <td class="r-shoe" title="${esc(shoeOf(r)?.name ?? '')}">${shoeOf(r) ? esc(shoeOf(r).name) : '<span class="r-sub">—</span>'}</td>
           <td>${fmtMi(r.distMi)}</td>
           <td>${fmtDur(r.runSec)} / ${fmtDur(r.walkSec)}</td>
@@ -4400,6 +4415,7 @@ async function renderRunDetail(id){
 
   let routeCtl;
   if (isTreadmill(r)) routeCtl = `<span class="badge tread">Treadmill</span> <button class="btn small" data-action="not-indoor">It was outside</button>`;
+  else if (allOutdoor()) routeCtl = '';
   else if (isTest(r)) routeCtl = `<span class="badge test">Test route</span> <button class="btn small" data-action="not-test">Not the test route</button>`;
   else if (r.startLL && !tr) routeCtl = `<button class="btn small primary" data-action="make-test">Make this the test route</button>`;
   else if (r.startLL && tr) routeCtl = `<button class="btn small" data-action="count-test">Count as test route</button> <button class="btn small" data-action="make-test">Replace the test route with this one</button>`;
@@ -4462,7 +4478,7 @@ async function renderRunDetail(id){
       <div class="col">
         <div class="card"><div class="card-head"><h2>Fair to compare?</h2><span class="card-sub">${isClean(r) ? 'yes, counts toward your trend' : 'kept out of your trend'}</span></div>
           ${flags.length ? `<ul class="status-list">${flags.map(([st, mm, sub]) => `<li class="status-row">${statusIcon(st)}<span><div class="s-main">${esc(mm)}</div><div class="s-sub">${esc(sub)}</div></span></li>`).join('')}</ul>`
-            : `<div class="verdict" style="margin:0">${statusIcon('good')}<span><strong>Clean.</strong> Test route, no idle time, recovery HR captured.</span></div>`}
+            : `<div class="verdict" style="margin:0">${statusIcon('good')}<span><strong>Clean.</strong> ${trWord('Test route, no', 'No')} idle time, recovery HR captured.</span></div>`}
         </div>
         ${s?.path?.length ? `<div class="card"><div class="card-head"><h2>Route</h2><span class="card-sub">${r.gainFt ?? '—'} ft gain · ${r.minElevFt ?? '—'}–${r.maxElevFt ?? '—'} ft</span></div>${routeSvg(s.path)}</div>` : ''}
         <div class="card"><div class="card-head"><h2>Form</h2><span class="card-sub">stored, not progress</span></div>
@@ -6663,6 +6679,9 @@ function renderSetup(){
         ${intervalsCard()}
         ${keyCard()}
         ${bikeSetupCard()}
+        <div class="card"><div class="card-head"><h2>Heart rate trend</h2><span class="card-sub">which runs count</span></div>
+          <label class="card-sub" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" data-action="all-outdoor"${doc.profile.allOutdoor ? ' checked' : ''}> Count all my outdoor runs (no test route)</label>
+          <p class="card-sub" style="margin:10px 0 0">Stride normally compares only runs on one flat route, which is the fairest test. This counts every outdoor run instead. It’s simpler, but hills will add some noise. Treadmill runs stay separate.</p></div>
         <div class="card"><div class="card-head"><h2>Zones & thresholds${infoBtn}</h2><span class="card-sub">changing these re-scores every run</span></div>${explain('zones')}
           <div class="field-row">
             <div class="field"><label for="s-lthr">Lactate threshold HR</label><input id="s-lthr" type="number" value="${p.lthr}"></div>
@@ -6893,8 +6912,8 @@ async function importFit(name, buf){
 
   let makeTest = null;
   if (seed?.testOverride && !testRoute() && run.startLL){ makeTestRoute(run); sub += ' · set as your test route'; }
-  else if (!testRoute() && run.startLL && (run.gainFt ?? 99) <= 50) makeTest = run.id;
-  else if (isTest(run)) sub += ' · test route ✓';
+  else if (!allOutdoor() && !testRoute() && run.startLL && (run.gainFt ?? 99) <= 50) makeTest = run.id;
+  else if (!allOutdoor() && isTest(run)) sub += ' · test route ✓';
   const fl = flagsFor(run).filter(f => f[0] === 'warn' || f[0] === 'crit');
   return { status: fl.length ? 'warn' : 'good', title, sub: sub + (fl.length ? ` · ${fl.map(f => esc(f[1])).join(', ')}` : ''), runId:run.id, makeTest };
 }
@@ -7561,6 +7580,7 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'bike-off': doc.bike = null; await save(); toast('Bike sessions off. Your rides are kept'); render(); break;
+    case 'all-outdoor': doc.profile.allOutdoor = e.target.checked; await save(); render(); break;
     case 'food-open': openSheet(foodSheet()); break;
     case 'add-food': {
       const date = $('#fd-date').value, name = $('#fd-name').value.trim(), cal = $('#fd-cal').value, pro = $('#fd-pro').value;
