@@ -5849,7 +5849,7 @@ function renderBody(){
       ${chartCard('c-steps', `Steps${infoBtn}`, 'per day', steps, explain('steps') + stepsLine())}
     </div>
     <div class="section-label">Food</div>
-    <div class="grid two">${foodCard()}${burnCard()}</div>
+    <div class="grid two" style="align-items:start">${foodCard()}${burnCard()}</div>
     <div class="section-label">Fitness & composition</div>
     <div class="grid two">
       <div class="card"><div class="card-head"><h2>VO2 max</h2><span class="card-sub">${vo2.length ? 'Garmin’s estimate · moves slowly' : 'Garmin’s estimate'}</span></div>
