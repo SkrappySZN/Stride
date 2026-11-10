@@ -97,6 +97,8 @@ data runs through it, so treat changes to data handling with care.
 - **What you burn** (`burnEstimate`, `burnCard`, next to Food on Body): average logged intake (days with food, last 4 weeks,
   today left out) minus the weight-trend slope × 3,500. Morning weigh-ins, plus evenings less the person's own overnight
   drop. Needs 14 food days and 4 weigh-ins over 10+ days; until then it shows progress. Never suggests a target.
+  `profile.garminBurn` `{ cal, at }` is the watch's own daily average, typed in from Garmin Connect (intervals.icu doesn't
+  pass it on), shown beside it for comparison.
 - **Readiness** (`readiness`, `readinessCard` on Today): last night's HRV and resting HR (from intervals.icu wellness)
   against the median of the previous 4 weeks, plus sleep hours. Green/amber/red advice; shows only when last night came
   in, never touches the plan.

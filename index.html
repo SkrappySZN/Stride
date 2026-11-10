@@ -1656,7 +1656,7 @@ function freshDoc(){
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
   return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, planHistory:[], lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
-    profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, allOutdoor:false, quietLegs:false, ...(d.profile ?? freshDoc().profile) } });
+    profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, allOutdoor:false, quietLegs:false, garminBurn:null, ...(d.profile ?? freshDoc().profile) } });
 }
 // A custom exercise that has since become a built-in one (same name): its logs move to the built-in id.
 function adoptBuiltIns(n){
@@ -2743,7 +2743,7 @@ const EXPLAIN = {
   bike: () => 'Easy bike sessions add heart-and-lung work without the pounding of running. They’re your own target (set it in Setup), and they never change your run plan or its weekly check. Rides from your watch come in through intervals.icu; you can also log one by hand. The heart rate range is where to stay, and the ceiling is the number to ease off at.',
   steps: () => 'Steps your watch counted each day, from Garmin. Days you take the watch off read low, and days it’s off entirely stay blank. The line underneath estimates how many came from running (your cadence × your running time), so you can see how much you move outside your runs too.',
   food: () => 'What you ate each day, added up: calories (energy) and protein (what your muscles rebuild from). Set your own daily targets with “Targets”. Losing weight means eating a bit under what you burn; protein near your target helps you keep muscle while you do. Save the things you eat often and they’re one tap to add.',
-  burn: () => 'How many calories your body actually uses in a day, worked out from your own numbers instead of a formula: what you logged eating over the last few weeks, and which way your weight moved. About 3,500 calories is a pound, so if you ate 2,000 a day and lost a pound a week, you burn about 2,500. It counts only days with food logged, so log everything you eat and drink on those days. A forgotten meal makes the burn look lower than it is. Evening weigh-ins count too, less your usual overnight drop.',
+  burn: () => 'How many calories your body actually uses in a day, worked out from your own numbers instead of a formula: what you logged eating over the last few weeks, and which way your weight moved. About 3,500 calories is a pound, so if you ate 2,000 a day and lost a pound a week, you burn about 2,500. It counts only days with food logged, so log everything you eat and drink on those days. A forgotten meal makes the burn look lower than it is. Evening weigh-ins count too, less your usual overnight drop. You can also add your watch’s own daily estimate to compare: watches guess from heart rate and movement, and are often a few hundred calories off.',
   readiness: () => 'How rested your body is this morning, compared with your own normal over the last four weeks. It looks at last night’s HRV (lower than usual can mean you’re run down or fighting something), your resting heart rate (higher than usual means the same), and how long you slept. It needs your watch on overnight. One off night isn’t a problem; it’s a nudge to keep the day easy, not a diagnosis.',
   sleep: () => 'How long you slept each night, from your watch through intervals.icu. It needs the watch on overnight; nights without it stay blank. Garmin’s sleep score (0–100) weighs how long you slept, how much was deep and REM sleep, and how restless you were: 80 and up is good. Most adults recover best on 7–9 hours, and runners building mileage feel it most when they get less.',
   amPm: () => 'You weigh more at night than in the morning: the day’s food and water are still in you, often 2–4 lbs’ worth. That isn’t fat. So the trend and the 7-day average use your morning weigh-ins only (filled dots), and evening ones are the rings. The overnight drop shows how much of the day was just food and water.',
@@ -5794,7 +5794,13 @@ function burnCard(){
       <p class="card-sub" style="margin:12px 0 0">Your weight is ${Math.abs(wk) < .1 ? 'holding steady' : `${wk < 0 ? 'dropping' : 'rising'} about ${lbsWk(wk)}`}.${atTarget != null ? ` At your target of ${p.calTarget.toLocaleString()}, you’d ${Math.abs(atTarget) < .1 ? 'hold steady' : `${atTarget < 0 ? 'lose' : 'gain'} about ${lbsWk(atTarget)}`}.` : ''}
       ${b.rough ? ' Rough for now: the first weeks include water weight, so this settles over the next couple of weeks.' : ''}</p>`;
   }
-  return `<div class="card" id="burn-card"><div class="card-head"><h2>What you burn${infoBtn}</h2><span class="card-sub">from your own food log and weight</span></div>${explain('burn')}${body}</div>`;
+  // Garmin's own daily estimate, typed in from Garmin Connect (intervals.icu doesn't pass it on), to compare.
+  const g = p.garminBurn, gap = g && b.ready ? g.cal - b.burn : null;
+  const garmin = g ? `<p class="card-sub" style="margin:12px 0 0">Your watch says about <b>${g.cal.toLocaleString()}</b> cal/day (Garmin’s average, added ${fmtDate(g.at)}).${gap != null
+      ? ` ${Math.abs(gap) < 100 ? 'That’s close to what your weight shows.' : `That’s about ${r50(Math.abs(gap))} ${gap > 0 ? 'more' : 'less'} than your weight shows, so ${gap > 0 ? 'eating back what the watch says would slow your progress' : 'you burn a bit more than it thinks'}.`}`
+      : ' Once your own number is ready, you’ll see how they compare.'} <button class="link-btn" data-action="garmin-burn">${g ? 'update' : ''}</button></p>`
+    : `<p class="card-sub" style="margin:12px 0 0"><button class="link-btn" data-action="garmin-burn">+ Compare with your watch’s number</button></p>`;
+  return `<div class="card" id="burn-card"><div class="card-head"><h2>What you burn${infoBtn}</h2><span class="card-sub">from your own food log and weight</span></div>${explain('burn')}${body}${garmin}</div>`;
 }
 
 // Last night from Garmin (hours and its 0–100 sleep score), and the week's average.
@@ -7872,6 +7878,16 @@ document.addEventListener('click', async e => {
       <div class="field-row"><div class="field"><label for="ft-cal">Calories</label><input id="ft-cal" type="number" inputmode="numeric" value="${doc.profile.calTarget ?? ''}"></div>
         <div class="field"><label for="ft-pro">Protein (g)</label><input id="ft-pro" type="number" inputmode="numeric" value="${doc.profile.proTarget ?? ''}"></div></div>
       <button class="btn primary big sheet-save" data-action="save-food-targets">Save</button>`); break;
+    case 'garmin-burn': openSheet(`<h2 class="sheet-title">Your watch’s number</h2><p class="card-sub" style="margin:0 0 12px">In Garmin Connect, open Calories Burned (under Health Stats), pick <b>4 Weeks</b>, and type the “Avg Total” here. Garmin doesn’t send this to Stride on its own.</p>
+      <div class="field"><label for="gb-cal">Calories burned per day</label><input id="gb-cal" type="number" inputmode="numeric" value="${doc.profile.garminBurn?.cal ?? ''}" placeholder="e.g. 2870"></div>
+      <button class="btn primary big sheet-save" data-action="save-garmin-burn">Save</button>
+      ${doc.profile.garminBurn ? '<button class="btn big" style="margin-top:8px;width:100%" data-action="clear-garmin-burn">Remove it</button>' : ''}`); break;
+    case 'save-garmin-burn': {
+      const v = +$('#gb-cal').value;
+      if (!(v >= 1000 && v <= 8000)){ toast('Enter Garmin’s daily average, e.g. 2870'); break; }
+      doc.profile.garminBurn = { cal:Math.round(v), at:todayYmd() }; closeSheet(); await save(); render(); break;
+    }
+    case 'clear-garmin-burn': doc.profile.garminBurn = null; closeSheet(); await save(); render(); break;
     case 'save-food-targets': {
       const cal = $('#ft-cal').value, pro = $('#ft-pro').value;
       if ((cal !== '' && !(+cal >= 500 && +cal <= 8000)) || (pro !== '' && !(+pro >= 10 && +pro <= 500))){ toast('Those numbers look off'); break; }
