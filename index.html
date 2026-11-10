@@ -569,8 +569,10 @@ textarea.felt{
 }
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .toast.has-undo{pointer-events:auto}
-.toast-undo{margin-left:10px; background:none; border:0; color:var(--accent); font:inherit; font-weight:800; text-transform:uppercase; letter-spacing:.04em; cursor:pointer; padding:6px 4px}
-:root:not([data-theme="dark"]) .toast-undo{color:inherit; text-decoration:underline}
+/* In gym mode the thumb bar fills the bottom, so messages drop from the top instead. */
+body.gym .toast{bottom:auto; top:calc(64px + env(safe-area-inset-top)); transform:translateX(-50%) translateY(-20px)}
+body.gym .toast.show{transform:translateX(-50%) translateY(0)}
+.toast-undo{margin-left:10px; background:none; border:0; color:inherit; text-decoration:underline; text-underline-offset:3px; font:inherit; font-weight:800; text-transform:uppercase; letter-spacing:.04em; cursor:pointer; padding:6px 4px}
 @media (max-width:720px){
   .toast{bottom:92px}
   .detail-head h1{font-size:44px}
@@ -713,7 +715,7 @@ body.gym main{padding-bottom:0}
 .gym-title{display:flex; flex-direction:column; align-items:center; min-width:0}
 .gym-title b{font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%}
 .gym-title span{font-family:var(--mono); font-size:12px; color:var(--muted)}
-.gym-count{text-align:right; font-family:var(--mono); font-size:13px; color:var(--muted)}
+.gym-count{text-align:right; font-family:var(--mono); font-size:13px; color:var(--muted); background:none; border:1px solid var(--line); border-radius:20px; padding:9px 12px; cursor:pointer}
 .gym-dots{display:flex; gap:5px; max-width:640px; margin:0 auto; padding:10px 16px 0}
 .gym-dots button{flex:1; height:6px; padding:0; border:0; border-radius:3px; background:var(--line); cursor:pointer}
 .gym-dots .some{background:color-mix(in srgb, var(--accent) 45%, var(--line))}
@@ -2786,7 +2788,7 @@ function guideSteps(){
 }
 function intakeNudge(){
   if (doc.intake || !doc.planId || prefs.get('intakeNudgeHidden', false)) return '';
-  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Tailor Stride to you</h2><button class="link-btn" data-action="hide-intake-nudge">Not now</button></div>
+  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Tailor Stride to you</h2><button class="link-btn" data-action="hide-intake-nudge">Hide</button></div>
     <p class="card-sub" style="margin:0 0 12px">Six quick questions: your goal, what you can run now, and anything that niggles. Stride picks the right starting week and the stretches that matter for you.</p>
     <a class="btn primary" href="#intake">Answer them · 1 min</a></div>`;
 }
@@ -2869,25 +2871,33 @@ function checkinCards(){
   return html ? `<div class="grid" style="margin-bottom:16px">${html}</div>` : '';
 }
 
+// A workout left with "Leave for now" waits on Today too, so it isn't forgotten.
+function liveChip(){
+  if (!LV?.away || LV.date !== todayYmd()) return '';
+  const n = LV.items.reduce((a, it) => a + it.sets.filter(x => x.done).length, 0);
+  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>${esc(LV.name)} in progress</h2><span class="card-sub">${n} set${n === 1 ? '' : 's'} logged</span></div>
+    <div class="btn-row"><button class="btn primary" data-action="lv-resume">Resume</button><button class="btn" data-action="lv-finish-away">Finish it</button></div></div>`;
+}
 function todayNotes(today){
-  const notes = [];
+  const notes = [], hidden = prefs.get('hiddenNotes', []);
   const recent = sortedRuns().filter(r => diffDays(r.date, today) <= 7);
   if (coached()) for (let i = 1; i < recent.length; i++){
     if (diffDays(recent[i - 1].date, recent[i].date) === 1){
-      notes.push(`<b>${DOW[parseYmd(recent[i - 1].date).getDay()]} and ${DOW[parseYmd(recent[i].date).getDay()]} were back-to-back.</b> The plan wants a rest or walk day between runs — the schedule keeps a gap from here.`);
+      notes.push(['b2b' + recent[i].date, `<b>${DOW[parseYmd(recent[i - 1].date).getDay()]} and ${DOW[parseYmd(recent[i].date).getDay()]} were back-to-back.</b> The plan wants a rest or walk day between runs — the schedule keeps a gap from here.`]);
       break;
     }
   }
   const manual = doc.runs.filter(r => r.source === 'manual').length;
-  if (manual) notes.push(`<b>${manual} run${manual > 1 ? 's are' : ' is'} from your notes, not FIT files.</b> <a href="#setup">Upload ${manual > 1 ? 'them' : 'it'}</a> for jogging-only HR, zones and time above ${doc.profile.lthr}.`);
-  if (!doc.runs.length) notes.push(`<b>No runs yet.</b> ${doc.intervals?.key ? 'Your next run will appear here once your watch syncs.' : `<a href="#setup">Connect intervals.icu</a> so runs arrive on their own, or upload a FIT file.`}${syncOn() && !SESSION ? ' Sign in under Setup to keep your runs on every device.' : ''}`);
+  if (manual) notes.push(['manual', `<b>${manual} run${manual > 1 ? 's are' : ' is'} from your notes, not FIT files.</b> <a href="#setup">Upload ${manual > 1 ? 'them' : 'it'}</a> for jogging-only HR, zones and time above ${doc.profile.lthr}.`]);
+  if (!doc.runs.length) notes.push([null, `<b>No runs yet.</b> ${doc.intervals?.key ? 'Your next run will appear here once your watch syncs.' : `<a href="#setup">Connect intervals.icu</a> so runs arrive on their own, or upload a FIT file.`}${syncOn() && !SESSION ? ' Sign in under Setup to keep your runs on every device.' : ''}`]);
   if (!doc.profile.zonesSet && !doc.profile.zonesAuto){
     const glt = sortedRuns().reverse().find(r => r.garminLthr)?.garminLthr;
-    notes.push(`<b>These are placeholder heart-rate zones.</b> ${glt ? `Your watch puts your threshold at ${glt} bpm. ` : ''}<a href="#setup">Set your own in Setup</a> — every number here is anchored to them.`);
+    notes.push(['zones', `<b>These are placeholder heart-rate zones.</b> ${glt ? `Your watch puts your threshold at ${glt} bpm. ` : ''}<a href="#setup">Set your own in Setup</a> — every number here is anchored to them.`]);
   }
-  for (const sh of activeShoes()){ const mi = shoeMiles(sh); if (mi >= sh.limit * .9) notes.push(`<b>Your ${esc(sh.name)} have ${Math.round(mi)} miles on them.</b> ${mi >= sh.limit ? 'Time for a new pair' : 'Start looking for the next pair'} — worn cushioning passes more of each landing to your calves and knees. <a href="#runs">Shoes</a>`); }
-  if (!allOutdoor() && !testRoute() && doc.runs.some(r => r.source === 'fit')) notes.push('<b>No test route set yet.</b> Open a run on a flat route you’ll repeat and tap “Make this the test route” — it’s what makes the heart-rate trend fair.');
-  return notes.map(n => `<div class="note">${WARN_SVG}<div>${n}</div></div>`).join('');
+  for (const sh of activeShoes()){ const mi = shoeMiles(sh); if (mi >= sh.limit * .9) notes.push([`shoe-${sh.id}-${mi >= sh.limit ? 2 : 1}`, `<b>Your ${esc(sh.name)} have ${Math.round(mi)} miles on them.</b> ${mi >= sh.limit ? 'Time for a new pair' : 'Start looking for the next pair'} — worn cushioning passes more of each landing to your calves and knees. <a href="#runs">Shoes</a>`]); }
+  if (!allOutdoor() && !testRoute() && doc.runs.some(r => r.source === 'fit')) notes.push(['testroute', '<b>No test route set yet.</b> Open a run on a flat route you’ll repeat and tap “Make this the test route” — it’s what makes the heart-rate trend fair.']);
+  return notes.filter(([k]) => !k || !hidden.includes(k))
+    .map(([k, n]) => `<div class="note">${WARN_SVG}<div>${n}${k ? ` <button class="link-btn" data-hide-note="${k}">Hide</button>` : ''}</div></div>`).join('');
 }
 
 /* ── Bike: easy sessions alongside the run plan ─────────────────────
@@ -2971,7 +2981,7 @@ function renderToday(){
       eyebrow: `${dateLine} · just tracking`, title, sub,
       stats: [['Runs this week', weekRuns.length], ['Miles', weekMi.toFixed(1)], ['Jogging', Math.round(weekRuns.reduce((a, r) => a + (r.runSec ?? 0), 0) / 60), 'min']],
       extra: red ? `<button class="btn small" data-action="clear-red">I’ve been cleared to run</button>` : '',
-    }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
+    }) + `<div class="wrap">${liveChip()}${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
       ${doc.runs.length ? journeyCard('j-today') : ''}${coachCard()}${goalsTodayCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid two" style="margin-top:16px">${readinessCard(todayRuns.length ? 'done' : 'rest')}${routineCard()}${weatherCard()}</div>
@@ -3068,7 +3078,7 @@ function renderToday(){
     stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), `/${pwo.runs?.length ?? 3}`],
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>${cta}`,
-  }) + `<div class="wrap">${finished ? planDoneCard() : ''}${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
+  }) + `<div class="wrap">${liveChip()}${finished ? planDoneCard() : ''}${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
     ${journeyCard('j-today')}${coachCard()}${goalsTodayCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
     <div class="grid today-grid" style="margin-top:16px"><div class="col">${red ? '' : readinessCard(t.kind)}${next}${weatherCard()}</div><div class="col">${bikeCard()}${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
@@ -5258,7 +5268,7 @@ function renderLive(){
   $('#page-lift').innerHTML = `<div class="gym-top">
       <button class="gym-x gym-end" data-action="lv-menu" aria-label="End or leave the workout">End</button>
       <div class="gym-title"><b>${esc(LV.name)}</b><span class="num" id="lv-clock">${mmss((Date.now() - LV.started) / 1000)}</span></div>
-      <span class="gym-count num">${LV.i + 1}/${n}</span>
+      <button class="gym-count num" data-action="lv-list" aria-label="All exercises in this workout">${LV.i + 1}/${n} ☰</button>
     </div>
     <div class="gym-dots">${LV.items.map((x, j) => { const d = x.sets.every(s => s.done), some = x.sets.some(s => s.done);
       return `<button class="${d ? 'done' : some ? 'some' : ''}" data-lv-go="${j}"${j === LV.i ? ' aria-current="step"' : ''} aria-label="${esc(liftDef(x.ex).name)}${d ? ', done' : ''}"></button>`; }).join('')}</div>
@@ -5302,7 +5312,10 @@ function renderLive(){
 }
 /* A sheet slides up from the bottom for short tasks (logging a set, the
    workout menu), so the page underneath keeps its place. */
+let sheetDirty = false, sheetWarned = 0;
+document.addEventListener('input', e => { if (e.target.closest?.('#sheet')) sheetDirty = true; });
 function openSheet(html){
+  sheetDirty = false;
   let el = $('#sheet');
   if (!el){ document.body.insertAdjacentHTML('beforeend', '<div id="sheet" class="sheet" role="dialog" aria-modal="true"><div class="sheet-panel"></div></div>'); el = $('#sheet'); }
   clearTimeout(el._t); el.querySelector('.sheet-panel').innerHTML = `<div class="sheet-grab" aria-hidden="true"></div>${html}`;
@@ -5310,6 +5323,7 @@ function openSheet(html){
   void el.offsetHeight; el.classList.add('open');
 }
 function closeSheet(){
+  sheetDirty = false;
   const el = $('#sheet'); if (!el?.classList.contains('open')) return;
   el.classList.remove('open'); clearTimeout(el._t); el._t = setTimeout(() => { el.querySelector('.sheet-panel').innerHTML = ''; }, 260);
 }
@@ -7375,7 +7389,7 @@ document.addEventListener('click', async e => {
   const lv = LV && e.target.closest('[data-lv-go], [data-lv-done], [data-lv-step], [data-lv-pick]');
   if (lv){
     const it = LV.items[LV.i];
-    if (lv.dataset.lvGo != null){ LV.i = +lv.dataset.lvGo; LV.swap = false; liveSave(); renderLive(); scrollTo(0, 0); return; }
+    if (lv.dataset.lvGo != null){ closeSheet(); LV.i = +lv.dataset.lvGo; LV.swap = false; liveSave(); renderLive(); scrollTo(0, 0); return; }
     if (lv.dataset.lvStep){
       const [i, k, d] = lv.dataset.lvStep.split('|'), s = it.sets[+i];
       s[k] = Math.max(0, (+s[k] || 0) + +d * (k === 'lb' || liftDef(it.ex).secs ? 5 : 1));
@@ -7399,7 +7413,9 @@ document.addEventListener('click', async e => {
       const prior = Math.max(0, ...doc.lifts.filter(l => l.ex === it.ex && l.id !== it.entry).flatMap(l => l.sets.map(x => liftScore(def, x))));
       const v = liftScore(def, { lb:+s.lb || 0, reps:+s.reps });
       s.done = true;
-      if (prior && v > prior){ toast(`New PR · ${def.name}: ${prTxt(def, v, s)}`); if (!LV.prs.includes(def.name)) LV.prs.push(def.name); }
+      const undo = async () => { if (!LV || !LV.items.includes(it)) return; s.done = false; LV.rest = null; LV.i = LV.items.indexOf(it); liveCommit(it); liveSave(); await save(); renderLive(); };
+      if (prior && v > prior){ toast(`New PR · ${def.name}: ${prTxt(def, v, s)}`, undo); if (!LV.prs.includes(def.name)) LV.prs.push(def.name); }
+      else toast(`Set ${+lv.dataset.lvDone + 1} saved`, undo);
       const more = LV.items.some(x => x.sets.some(y => !y.done));
       LV.rest = more ? { end:Date.now() + restFor(it.ex) * 1000, dur:restFor(it.ex) } : null;
       navigator.vibrate?.(35);
@@ -7468,7 +7484,13 @@ document.addEventListener('click', async e => {
   }
   const pe = e.target.closest('[data-pick-ex]');
   if (pe){ Object.assign(liftUi, { ex:pe.dataset.pickEx, pick:false, day:null, wo:null, name:pe.dataset.pickEx === '_new' ? (liftUi.q ?? '').trim() : liftUi.name, q:'' }); redrawLiftLog(); return; }
-  if (e.target.id === 'sheet'){ closeSheet(); return; }
+  const hn = e.target.closest('[data-hide-note]');
+  if (hn){ prefs.set('hiddenNotes', [...prefs.get('hiddenNotes', []), hn.dataset.hideNote].slice(-50)); render(); toast('Hidden'); return; }
+  if (e.target.id === 'sheet'){
+    // Typed something? One stray tap outside shouldn't throw it away.
+    if (sheetDirty && Date.now() - sheetWarned > 3000){ sheetWarned = Date.now(); toast('Tap outside again to discard what you typed'); return; }
+    closeSheet(); return;
+  }
   const lc = e.target.closest('[data-lift-chart]');
   if (lc){ liftUi.chart = liftUi.chart === lc.dataset.liftChart ? null : lc.dataset.liftChart; readLiftForm(); renderLift(); return; }
   const dl = e.target.closest('[data-del-lift]');
@@ -7630,10 +7652,13 @@ document.addEventListener('click', async e => {
       try { if (navigator.share) await navigator.share({ text:msg }); else { await navigator.clipboard.writeText(msg); toast('Invite copied'); } } catch {}
       break;
     }
-    case 'crew-leave': {
+    case 'crew-leave': openSheet(`<h2 class="sheet-title">Leave ${esc(doc.crew?.name || 'the crew')}?</h2><p class="card-sub" style="margin:0 0 14px">You’ll come off the board. To rejoin later you’ll need the code: <b class="num">${esc(doc.crew?.code ?? '')}</b></p>
+        <div class="sheet-actions"><button class="btn primary big" data-action="crew-leave-yes">Leave</button><button class="btn big" data-action="sheet-close">Stay</button></div>`); break;
+    case 'crew-leave-yes': {
+      closeSheet(); const code = doc.crew?.code;
       if (signedIn() && await ensureToken()) await sb(`/rest/v1/stride_crew?user_id=eq.${SESSION.user_id}`, { method:'DELETE' }).catch(() => {});
       doc.crew = null; Object.assign(CREW, { rows:null, state:'idle', pushed:null });
-      await save(); render(); toast('Left the crew'); break;
+      await save(); render(); toast(`Left the crew. Its code was ${code}`); break;
     }
     case 'cancel-pain': Object.assign(painUi, { area:null, side:null, level:null }); renderBody(); break;
     case 'save-pain': {
@@ -7966,6 +7991,10 @@ document.addEventListener('click', async e => {
     case 'lv-menu': openSheet(`<h2 class="sheet-title">${esc(LV.name)}</h2><p class="card-sub" style="margin:0 0 14px">Nothing here deletes anything: every ticked set is already saved.</p>
       <div class="sheet-actions"><button class="btn primary big" data-action="lv-finish">Finish workout<small>Done for today: shows your summary</small></button><button class="btn big" data-action="lv-leave">Leave for now<small>Pick it up later from the Lift tab</small></button><button class="btn big" data-action="sheet-close">Keep going</button></div>`); break;
     case 'lv-leave': closeSheet(); LV.away = true; liveSave(); keepAwake(false); location.hash = 'lift'; renderLift(); scrollTo(0, 0); break;
+    case 'lv-list': openSheet(`<h2 class="sheet-title">This workout</h2><div class="ex-list">${LV.items.map((x, j) => { const d = x.sets.filter(y => y.done).length;
+        return `<button class="ex-row" data-lv-go="${j}"${j === LV.i ? ' aria-current="step"' : ''}>${j + 1}. ${esc(liftDef(x.ex).name)}<small>${d === x.sets.length ? 'done ✓' : d ? `${d} of ${x.sets.length} sets` : `${x.sets.length} sets`}${j === LV.i ? ' · you’re here' : ''}</small></button>`; }).join('')}</div>
+      <p class="card-sub" style="margin:12px 0 0">Tap one to jump to it. To take one out, open it and tap Remove.</p>
+      <div class="sheet-actions" style="margin-top:14px"><button class="btn big" data-action="lv-add-open">+ Add an exercise</button><button class="btn big" data-action="sheet-close">Close</button></div>`); break;
     case 'lv-drop-set': { const it = LV.items[LV.i]; if (it.sets.length > 1 && !it.sets.at(-1).done){ it.sets.pop(); liveSave(); renderLive(); } break; }
     case 'lv-remove': {
       const it = LV.items[LV.i], nd = it.sets.filter(x => x.done).length, nm = esc(liftDef(it.ex).name);
@@ -7975,7 +8004,8 @@ document.addEventListener('click', async e => {
     }
     case 'lv-remove-yes': closeSheet(); liveRemove(); await save(); break;
     case 'toast-undo': { const u = toastUndo; toastUndo = null; $('#toast').classList.remove('show', 'has-undo'); if (u){ await u(); } break; }
-    case 'lv-resume': LV.away = false; liveSave(); keepAwake(true); scrollTo(0, 0); renderLift(); break;
+    case 'lv-resume': LV.away = false; liveSave(); keepAwake(true); scrollTo(0, 0); if (location.hash !== '#lift') location.hash = 'lift'; else renderLift(); break;
+    case 'lv-finish-away': { liveFinish(false); render(); toast(liftUi.summary ? 'Workout finished. Its sets are saved' : 'Closed. Nothing was logged'); break; }
     case 'lv-bar': prefs.set('barLb', prefs.get('barLb', 45) === 45 ? 35 : 45); $('#lv-plates').innerHTML = platesLine(LV.items[LV.i]); break;
     case 'lv-summary-close': liftUi.summary = null; readLiftForm(); renderLift(); break;
     case 'lift-prog-cancel': liftUi.setup = null; readLiftForm(); renderLift(); break;
@@ -7991,8 +8021,14 @@ document.addEventListener('click', async e => {
     case 'install-app': if (installPrompt){ installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; installPrompt = null; if (outcome !== 'accepted') renderSetup(); } break;
     case 'icu-connect': connectIntervals(); break;
     case 'icu-check': checkIntervals({ manual:true }); break;
-    case 'key-make': keyMake().catch(() => toast('Couldn’t make a key')); break;
-    case 'key-off': keyOff().catch(() => toast('Couldn’t turn it off')); break;
+    case 'key-make':
+      if (KEY.has){ openSheet(`<h2 class="sheet-title">Replace your key?</h2><p class="card-sub" style="margin:0 0 14px">The old key stops working straight away. Anything using it (Claude, a Shortcut, a script) needs the new one.</p>
+        <div class="sheet-actions"><button class="btn primary big" data-action="key-make-yes">Replace it</button><button class="btn big" data-action="sheet-close">Keep the old one</button></div>`); break; }
+      keyMake().catch(() => toast('Couldn’t make a key')); break;
+    case 'key-make-yes': closeSheet(); keyMake().catch(() => toast('Couldn’t make a key')); break;
+    case 'key-off': openSheet(`<h2 class="sheet-title">Turn off your key?</h2><p class="card-sub" style="margin:0 0 14px">Anything using it (Claude, a Shortcut, a script) stops being able to add weigh-ins and food.</p>
+        <div class="sheet-actions"><button class="btn primary big" data-action="key-off-yes">Turn it off</button><button class="btn big" data-action="sheet-close">Keep it on</button></div>`); break;
+    case 'key-off-yes': closeSheet(); keyOff().catch(() => toast('Couldn’t turn it off')); break;
     case 'key-copy': try { await navigator.clipboard.writeText(KEY.fresh); toast('Key copied'); } catch { $('#key-show')?.select(); toast('Select it and copy'); } break;
     case 'icu-off': delete doc.intervals; try { localStorage.removeItem(ICUKEY); } catch {} await save(); render(); toast('Disconnected from intervals.icu'); break;
     case 'reset-ask': $('#reset-confirm').classList.add('show'); break;
