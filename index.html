@@ -2756,7 +2756,7 @@ const EXPLAIN = {
   drift: () => 'How much your heart rate rose from the first half of the jog to the second at the same pace. Under about 5 bpm means your body is coping well and you’re ready to go a little longer.',
   gate: () => 'Each Sunday night the plan looks back at the week: did you get your runs in, were your legs fine at 48 hours, and did you stay under your heart-rate limits? All green moves you up a week; otherwise you repeat it. Repeating a week is normal and keeps you healthy.',
   zones: () => 'Your threshold is the heart rate where running stops feeling sustainable. Garmin estimates it after a few runs. Every zone, limit and chart in Stride is set from it, so it’s worth getting right.',
-  treadmill: () => 'Your heart rate while jogging on the treadmill, compared only with other treadmill runs. Treadmills usually feel easier than the street: no wind, a perfectly flat belt that helps pull your legs through, and often a cool room. So the same pace costs fewer beats indoors, and these runs stay out of the outdoor trend. Lower over time here still means fitter. Setting the incline to 1% makes the belt feel closer to running outside.',
+  treadmill: () => 'Your heart rate on the treadmill, compared only with other treadmill runs at the same belt speed. The belt sets the pace exactly, so if the same speed costs fewer beats over the weeks, you’re fitter: one of the cleanest checks there is. Belt speed comes from the run’s distance and time, so type the treadmill’s own distance into the run’s page (“Treadmill said”) to keep it exact. Runs with walk breaks or faster pieces mix speeds, so they’re left out. Indoor and outdoor runs aren’t mixed: a warm gym with no breeze, and a belt that helps pull your legs through, change the beats. Heat, sleep and caffeine move heart rate by a few beats, so look at the trend over weeks, not one run.',
   take: () => 'A read of this run the way a coach would give it, written by Stride from your own history (nothing leaves the app). It compares the run with your last few of a similar distance, indoors with indoors and outdoors with outdoors: faster for the same or lower heart rate means fitness is building. Then it looks inside the run (how much was easy, when it got hard, whether heart rate crept up) and ends with one thing to do next.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as a timeline, left to right. Each dot is a run, and bigger means longer. Diamonds are milestones you’ve passed. The dashed line ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. It shows when things happened, not how fit you are; the charts further down show that. Tap a run to open it.',
@@ -3442,6 +3442,40 @@ function coachCard(){
 }
 
 /* ═══ PROGRESS ═══════════════════════════════════════════════════════ */
+/* Treadmill runs are compared only with each other, at the same belt speed: the belt makes the
+   pace exact, so the same speed costing fewer beats is a clean fitness signal. Belt speed is the
+   run's distance (the treadmill's own number, when typed in) over its time. Runs with walk breaks or
+   intervals (more than 15% walking) are left out, since they mix speeds. */
+function treadStats(runs){
+  const all = runs.filter(r => isTreadmill(r) && hrMetric(r) != null && r.distMi > 0 && r.timerSec > 0);
+  const steady = all.filter(r => (r.walkSec ?? 0) <= r.timerSec * .15)
+    .map(r => ({ r, mph:Math.round(r.distMi / r.timerSec * 36000) / 10, hr:Math.round(hrMetric(r)) }));
+  const by = {};
+  for (const x of steady) (by[x.mph] ??= []).push(x);
+  // The speed run most often leads (ties: the one used most recently).
+  const speeds = Object.entries(by).map(([mph, list]) => ({ mph:+mph, list }))
+    .sort((a, b) => b.list.length - a.list.length || (a.list.at(-1).r.date < b.list.at(-1).r.date ? 1 : -1));
+  return { all, steady, speeds, skipped:all.filter(r => !steady.some(x => x.r === r)) };
+}
+function treadCard(ts){
+  if (!ts.all.length) return '';
+  const main = ts.speeds[0], chg = l => l.length > 1 ? l.at(-1).hr - l[0].hr : null;
+  const sign = d => d == null ? '—' : d === 0 ? 'same' : `<span style="color:var(--${d < 0 ? 'good' : 'warn'}-text);font-weight:700">${d > 0 ? '+' : '−'}${Math.abs(d)} bpm</span>`;
+  const head = main ? (() => { const l = main.list, last = l.at(-1);
+    return `<p style="margin:0 0 12px">At <b>${main.mph} mph</b>: <b class="num">${last.hr} bpm</b> on ${fmtDate(last.r.date)}${l.length > 1
+      ? ` · ${sign(chg(l))} vs your first run at this speed (${l[0].hr} on ${fmtDate(l[0].r.date)})`
+      : '. That’s your baseline: run this speed again and you’ll see whether it costs fewer beats.'}</p>`; })()
+    : '<p class="card-sub" style="margin:0 0 12px">No steady treadmill jog yet. Runs with walk breaks or faster pieces aren’t compared.</p>';
+  return `<div class="card" style="margin-top:16px">
+    <div class="card-head"><div><h2>Treadmill heart rate${infoBtn}</h2>
+      <div class="card-sub">compared at the same belt speed · lower is better</div></div></div>
+    ${explain('treadmill')}${head}
+    ${main?.list.length >= 2 ? '<div class="chart" id="c-tread"></div>' : ''}
+    ${ts.speeds.length ? `<table class="quiet" style="margin-top:8px"><tr><th>Speed</th><th>Runs</th><th>First</th><th>Latest</th><th>Change</th></tr>
+      ${ts.speeds.map(({ mph, list }) => `<tr><td class="num">${mph} mph</td><td class="num">${list.length}</td><td class="num">${list[0].hr}</td><td class="num">${list.length > 1 ? list.at(-1).hr : '—'}</td><td>${sign(chg(list))}</td></tr>`).join('')}</table>` : ''}
+    ${ts.skipped.length ? `<p class="card-sub" style="margin:10px 0 0">Not compared (walk breaks or intervals): ${ts.skipped.map(r => fmtDate(r.date)).join(', ')}.</p>` : ''}
+  </div>`;
+}
 function renderProgress(){
   const runs = sortedRuns(), p = doc.profile;
   const page = $('#page-progress');
@@ -3452,7 +3486,7 @@ function renderProgress(){
     return;
   }
   const clean = runs.filter(isClean);
-  const tread = runs.filter(r => isTreadmill(r) && hrMetric(r) != null).slice(-12);
+  const ts = treadStats(runs);
   const lastClean = clean.at(-1), firstClean = clean[0];
   const rec = runs.filter(r => r.recoveryHr != null);
   const lastRun = runs.at(-1);
@@ -3520,11 +3554,7 @@ function renderProgress(){
       </div>
       <div class="chart" id="c-hr"></div>
     </div>
-    ${tread.length >= 2 ? `<div class="card" style="margin-top:16px">
-      <div class="card-head"><div><h2>Treadmill heart rate${infoBtn}</h2>
-        <div class="card-sub">Treadmill runs compared only with each other · lower is better</div></div></div>
-      ${explain('treadmill')}<div class="chart" id="c-tread"></div>
-    </div>` : ''}
+    ${treadCard(ts)}
     <div class="section-label">Showing up</div>
     ${recapCard()}
     ${crewCard() ? `<div style="margin-top:16px">${crewCard()}</div>` : ''}
@@ -3569,11 +3599,13 @@ function renderProgress(){
   const openRun = c => { location.hash = 'runs/' + c.id; };
   drawJourney($('#j-progress'));
   chartHrTrend($('#c-hr'), runs);
-  if (tread.length >= 2){
-    const hrs = tread.map(r => Math.round(hrMetric(r)));
-    chartLine($('#c-tread'), tread.map((r, i) => ({ r, v:hrs[i] })), {
+  // Only the main speed is charted, so the line never joins two different belt speeds.
+  const tl = ts.speeds[0]?.list.slice(-12);
+  if (tl?.length >= 2){
+    const hrs = tl.map(x => x.hr);
+    chartLine($('#c-tread'), tl.map(x => ({ r:x.r, v:x.hr })), {
       lo: Math.floor(Math.min(...hrs) / 10) * 10 - 10, hi: Math.ceil(Math.max(...hrs) / 10) * 10 + 10, step: 10,
-      tipFmt: pt => `<b>${fmtDate(pt.r.date)}</b><br>${pt.v} bpm ${pt.r.jogHr != null ? 'jogging' : 'average'} · ${fmtDur(pt.r.jogPaceSec ?? pt.r.avgPaceSec)} /mi on the watch` });
+      tipFmt: pt => `<b>${fmtDate(pt.r.date)}</b><br>${pt.v} bpm ${pt.r.jogHr != null ? 'jogging' : 'average'} at ${ts.speeds[0].mph} mph` });
   }
   const wMax = Math.max(4, ...weeks.map(w => w.n));
   chartColumns($('#c-weeks'), {

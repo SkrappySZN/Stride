@@ -110,6 +110,9 @@ data runs through it, so treat changes to data handling with care.
   like `fr265Large`, `epixGen2Pro51`), rides from intervals.icu's `device_name`; older runs and rides are filled once by
   start time (`loc.deviceBack`). Shown on the run page, the runs table, and the phone list once more than one watch is used.
   (`run.watch` is something else: the watch's distance on a treadmill run.)
+- **Treadmill trend** (`treadStats`, `treadCard` on Progress): treadmill runs compared only with each other, grouped by
+  belt speed (distance over timer time, to 0.1 mph). Runs with more than 15% walking are left out. Only the most-run
+  speed is charted, so the line never joins two speeds; a table lists every speed's first vs latest.
 - **Sleep** (Body): hours per night plus `sleepLine()` (last night, Garmin's sleep score, the week's average).
 - **Undo toasts**: `toast(msg, undoFn)` shows an Undo button for 5 s (food, goals, logged lifts, workouts, program stop).
 - **Bike** (`bikeCard` on Today, `bikeSetupCard`, `bikeDays`): opt-in `doc.bike` `{ perWeek, min, lo, hi, ceil }`; `doc.rides` `{ id, date, min, avgHr, maxHr, name }`
