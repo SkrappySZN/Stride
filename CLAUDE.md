@@ -104,6 +104,11 @@ data runs through it, so treat changes to data handling with care.
   next one (build → 5K → 10K), started this week at week 1; the finished plan goes to `doc.planHistory`.
 - **Quiet legs** (`profile.quietLegs`, Setup, or "Stop asking" on the card): no soreness check-in prompts and no 48-h wait
   in the gate. The 48-h prompt is also skipped when the 24-h answer was "Nothing". Hard stops still come from the body map.
+- **Which watch** (`deviceLabel`, `fitDevice`, `DEVICE_NAMES`): `run.device` from the FIT file's creator (SDK product names
+  like `fr265Large`, `epixGen2Pro51`), rides from intervals.icu's `device_name`; older runs and rides are filled once by
+  start time (`loc.deviceBack`). Shown on the run page, the runs table, and the phone list once more than one watch is used.
+  (`run.watch` is something else: the watch's distance on a treadmill run.)
+- **Sleep** (Body): hours per night plus `sleepLine()` (last night, Garmin's sleep score, the week's average).
 - **Undo toasts**: `toast(msg, undoFn)` shows an Undo button for 5 s (food, goals, logged lifts, workouts, program stop).
 - **Bike** (`bikeCard` on Today, `bikeSetupCard`, `bikeDays`): opt-in `doc.bike` `{ perWeek, min, lo, hi, ceil }`; `doc.rides` `{ id, date, min, avgHr, maxHr, name }`
   from intervals.icu (summary numbers only, id `ir…`) or by hand (`mr…`). Suggests rest days; never touches the run plan or its gate.

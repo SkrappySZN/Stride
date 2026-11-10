@@ -1375,6 +1375,24 @@ function bestEfforts(s){
   return out;
 }
 
+// Which watch recorded it, for people who switch between watches. From the FIT file's product
+// (the SDK's names, e.g. 'fr265Large', 'epixGen2Pro51') or intervals.icu's device_name.
+const DEVICE_NAMES = { fr265large:'Forerunner 265', fr265small:'Forerunner 265S', epixgen2pro42:'Epix Pro 42mm', epixgen2pro47:'Epix Pro 47mm',
+  epixgen2pro51:'Epix Pro 51mm', epixgen2:'Epix (Gen 2)', fenix8:'Fenix 8', fenix8small:'Fenix 8 43mm', fenix8solar:'Fenix 8 Solar', fenix8solarlarge:'Fenix 8 Solar 51mm', fenix8pro:'Fenix 8 Pro' };
+function deviceLabel(raw){
+  if (raw == null || raw === '') return null;
+  const t = String(raw).replace(/^Garmin\s+/i, '').trim(), k = t.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (DEVICE_NAMES[k]) return DEVICE_NAMES[k];
+  // Already a name (intervals.icu's "Garmin epix Pro (Gen 2) 51mm"): tidy it to match the FIT names. A bare number isn't one.
+  if (/\s/.test(t) || !/[a-z]/.test(t)) return /^\d+$/.test(t) ? null : t.replace(/\s*\(Gen \d\)/i, '').replace(/^./, c => c.toUpperCase());
+  // camelCase SDK name: fr965 → Forerunner 965, venu3S → Venu 3 S
+  return t.replace(/^fr(?=\d)/, 'Forerunner ').replace(/([a-z])(\d)/g, '$1 $2').replace(/(\d)([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
+}
+const fitDevice = messages => {
+  const creator = (messages.deviceInfoMesgs ?? []).find(d => d.deviceIndex === 'creator' || d.deviceIndex === 0);
+  const f = messages.fileIdMesgs?.[0] ?? {};
+  return deviceLabel(creator?.productName) ?? deviceLabel(f.garminProduct ?? (typeof f.product === 'string' ? f.product : null));
+};
 function analyzeFit(messages, profile){
   const session = messages.sessionMesgs?.[0] ?? {};
   const recs = (messages.recordMesgs ?? []).filter(r => r.timestamp);
@@ -1521,7 +1539,7 @@ function analyzeFit(messages, profile){
   const zs = zoneStats(samples, profile);
 
   const run = {
-    id: 'g' + Math.round(t0 / 1000), source: 'fit', date: localDate, start: startDate.toISOString(), tzOffsetSec,
+    id: 'g' + Math.round(t0 / 1000), source: 'fit', date: localDate, start: startDate.toISOString(), tzOffsetSec, device: fitDevice(messages),
     sport, subSport: String(session.subSport ?? ''),
     distMi, elapsedSec: session.totalElapsedTime ?? T[n-1], timerSec,
     movingSec: runSec + walkSec, runSec, walkSec, idleSec,
@@ -2727,6 +2745,7 @@ const EXPLAIN = {
   food: () => 'What you ate each day, added up: calories (energy) and protein (what your muscles rebuild from). Set your own daily targets with “Targets”. Losing weight means eating a bit under what you burn; protein near your target helps you keep muscle while you do. Save the things you eat often and they’re one tap to add.',
   burn: () => 'How many calories your body actually uses in a day, worked out from your own numbers instead of a formula: what you logged eating over the last few weeks, and which way your weight moved. About 3,500 calories is a pound, so if you ate 2,000 a day and lost a pound a week, you burn about 2,500. It counts only days with food logged, so log everything you eat and drink on those days. A forgotten meal makes the burn look lower than it is. Evening weigh-ins count too, less your usual overnight drop.',
   readiness: () => 'How rested your body is this morning, compared with your own normal over the last four weeks. It looks at last night’s HRV (lower than usual can mean you’re run down or fighting something), your resting heart rate (higher than usual means the same), and how long you slept. It needs your watch on overnight. One off night isn’t a problem; it’s a nudge to keep the day easy, not a diagnosis.',
+  sleep: () => 'How long you slept each night, from your watch through intervals.icu. It needs the watch on overnight; nights without it stay blank. Garmin’s sleep score (0–100) weighs how long you slept, how much was deep and REM sleep, and how restless you were: 80 and up is good. Most adults recover best on 7–9 hours, and runners building mileage feel it most when they get less.',
   amPm: () => 'You weigh more at night than in the morning: the day’s food and water are still in you, often 2–4 lbs’ worth. That isn’t fat. So the trend and the 7-day average use your morning weigh-ins only (filled dots), and evening ones are the rings. The overnight drop shows how much of the day was just food and water.',
   consistency: () => 'How many runs you did each week. Fitness comes from stacking ordinary weeks, so a missed week costs you more than a slow run does.',
   effort: () => 'How hard the run felt, from 1 (very easy) to 10 (all-out). Your watch asks when you save a run, or you can tap it in on the run’s page. The same route feeling easier over time is real progress, even when the numbers haven’t moved yet.',
@@ -2937,7 +2956,7 @@ function bikeCard(){
   return `<div class="card"><div class="card-head"><h2>Bike${infoBtn}</h2><span class="card-sub">this week</span></div>${explain('bike')}
     <div class="next-run-big display num">${done}<span style="font-size:.45em"> of ${b.perWeek}</span></div>
     ${bikeTarget() ? `<div class="card-sub">Each one: ${esc(bikeTarget())}</div>` : ''}
-    ${last ? `<p class="card-sub" style="margin:12px 0 0">Last ride: ${fmtDate(last.date)} · ${last.min} min${last.avgHr != null ? ` · avg HR ${Math.round(last.avgHr)}${range(last)}` : ''}${String(last.id).startsWith('mr') ? ` <button class="link-btn" data-ride-del="${last.id}">remove</button>` : ''}</p>` : ''}
+    ${last ? `<p class="card-sub" style="margin:12px 0 0">Last ride: ${fmtDate(last.date)} · ${last.min} min${last.avgHr != null ? ` · avg HR ${Math.round(last.avgHr)}${range(last)}` : ''}${last.device ? ` · ${esc(last.device)}` : ''}${String(last.id).startsWith('mr') ? ` <button class="link-btn" data-ride-del="${last.id}">remove</button>` : ''}</p>` : ''}
     <div class="btn-row" style="margin-top:14px"><button class="btn small" data-action="ride-open">+ Log a ride</button></div></div>`;
 }
 function bikeSetupCard(){
@@ -4321,6 +4340,8 @@ function renderRunsList(){
     return;
   }
   const dotColor = { crit:'var(--crit)', warn:'var(--warn)', wait:'var(--axis)' };
+  // The phone cards name the watch only once there's more than one in use.
+  const multiDevice = new Set(runs.map(r => r.device).filter(Boolean)).size > 1;
   const last30 = runs.filter(r => diffDays(r.date, todayYmd()) < 30);
   page.innerHTML = band({
     eyebrow: `${runs.length} run${runs.length === 1 ? '' : 's'} · ${runs.filter(isClean).length} ${trWord('clean on the test route', 'outdoors')}`,
@@ -4332,14 +4353,14 @@ function renderRunsList(){
     <ul class="run-cards">${rows.map(r => `<li><a href="#runs/${r.id}">
           <div class="rc-main">${fmtDate(r.date)} · ${fmtMi(r.distMi)} mi</div>
           <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? `<span class="badge test">${trWord('Test', 'Outside')}</span>` : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
-          <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}${shoeOf(r) ? ` · ${esc(shortName(shoeOf(r).name))}` : ''}</div>
+          <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}${shoeOf(r) ? ` · ${esc(shortName(shoeOf(r).name))}` : ''}${multiDevice ? ` · ${esc(r.device ?? '')}` : ''}</div>
         </a></li>`).join('')}</ul>
     <div class="table-wrap"><table class="runs">
       <thead><tr><th>Date</th><th>Route</th><th style="text-align:left">Shoes</th><th>Dist</th><th>Jog / walk</th><th>Pace</th><th>Avg HR</th><th>Jog HR</th><th>Max HR</th><th>Effort</th><th>Temp</th><th>An TE</th><th>Load</th><th>Flags</th></tr></thead>
       <tbody>${rows.map(r => {
         const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
         return `<tr data-run="${r.id}" tabindex="0">
-          <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">${r.source === 'fit' ? fmtTime(r.start) + ' · FIT' : 'from notes'}</div></td>
+          <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">${r.source === 'fit' ? fmtTime(r.start) + ' · ' + (r.device ? esc(r.device) : 'FIT') : 'from notes'}</div></td>
           <td style="text-align:right">${isTest(r) ? `<span class="badge test">${trWord('Test', 'Outside')}</span>` : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : '<span class="badge">Other</span>'}</td>
           <td class="r-shoe" title="${esc(shoeOf(r)?.name ?? '')}">${shoeOf(r) ? esc(shoeOf(r).name) : '<span class="r-sub">—</span>'}</td>
           <td>${fmtMi(r.distMi)}</td>
@@ -4487,7 +4508,7 @@ async function renderRunDetail(id){
   if (!isTreadmill(r)) routeCtl += ` <button class="btn small" data-action="is-indoor">It was on a treadmill</button>`;
 
   page.innerHTML = band({
-    eyebrow: `<button class="link-btn" data-action="back" style="color:inherit;opacity:.8">← All runs</button> &nbsp;·&nbsp; ${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''}`,
+    eyebrow: `<button class="link-btn" data-action="back" style="color:inherit;opacity:.8">← All runs</button> &nbsp;·&nbsp; ${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''}${r.device ? ' · ' + esc(r.device) : ''}`,
     title: `${fmtMi(r.distMi)}<em> mi</em>`,
     stats: [['Time', fmtDur(r.timerSec)], [r.jogHr != null ? 'Jog HR' : 'Avg HR', r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr), 'bpm'], ['Pace', fmtDur(r.avgPaceSec), '/mi']],
     extra: `<div class="btn-row">${routeCtl}${(doc.shoes ?? []).length ? `<label class="shoe-pick">Shoes <select id="shoe-in"><option value="">None</option>${doc.shoes.filter(sh => !sh.retired || sh.id === r.shoeId).map(sh => `<option value="${sh.id}"${sh.id === r.shoeId ? ' selected' : ''}>${esc(sh.name)}</option>`).join('')}</select></label>` : ''}</div>`,
@@ -5776,6 +5797,14 @@ function burnCard(){
   return `<div class="card" id="burn-card"><div class="card-head"><h2>What you burn${infoBtn}</h2><span class="card-sub">from your own food log and weight</span></div>${explain('burn')}${body}</div>`;
 }
 
+// Last night from Garmin (hours and its 0–100 sleep score), and the week's average.
+function sleepLine(){
+  const pts = Object.entries(doc.body ?? {}).filter(([, v]) => v.sleepH != null).sort(([a], [b]) => a < b ? -1 : 1);
+  if (!pts.length) return '';
+  const [d, v] = pts.at(-1), wk = pts.filter(([x]) => diffDays(x, todayYmd()) < 7).map(([, x]) => x.sleepH);
+  const h = x => `${Math.floor(x)} h ${Math.round((x % 1) * 60)} min`;
+  return `<p class="card-sub" style="margin:12px 0 0">${d === todayYmd() ? 'Last night' : `Night before ${fmtDate(d)}`}: ${h(v.sleepH)}${v.sleepScore != null ? ` · sleep score ${v.sleepScore}` : ''}${wk.length > 1 ? ` · ${h(avgOf(wk))} average over ${wk.length} nights` : ''}.</p>`;
+}
 // Average steps over the last 7 full days, and roughly how many came from runs (cadence × running time).
 function stepsLine(){
   const today = todayYmd(), week = bodySeries('steps').filter(p => p.date < today && diffDays(p.date, today) <= 7);
@@ -5816,7 +5845,7 @@ function renderBody(){
         : chartCard('c-weight', 'Weight', 'dots are days · line is the 7-day average', ws)}
       ${chartCard('c-rhr', 'Resting heart rate', 'drifts down as fitness builds · lower is better', rhr)}
       ${chartCard('c-hrv', 'HRV', 'overnight · a sudden drop can mean run down', hrv)}
-      ${chartCard('c-sleep', 'Sleep', 'hours per night', sleep)}
+      ${chartCard('c-sleep', `Sleep${infoBtn}`, 'hours per night', sleep, explain('sleep') + sleepLine())}
       ${chartCard('c-steps', `Steps${infoBtn}`, 'per day', steps, explain('steps') + stepsLine())}
     </div>
     <div class="section-label">Food</div>
@@ -7184,12 +7213,26 @@ async function checkIntervals({ manual = false } = {}){
     }
     // Daily body data Garmin sends to intervals.icu: weight, resting HR, HRV, sleep, VO2 max.
     let bodyChanged = false;
+    // Watch names came later: fill them in once for runs and rides already here, matched by start time.
+    if (!loc.deviceBack && (doc.runs.some(r => r.source === 'fit' && r.device === undefined) || doc.rides.some(r => r.id.startsWith('ir') && r.device === undefined))){
+      const first = sortedRuns()[0]?.date ?? addDays(todayYmd(), -60);
+      const all = await (await icuGet(`/athlete/0/activities?oldest=${addDays(first, -1)}&newest=${addDays(todayYmd(), 1)}`, key)).json();
+      for (const a of all){
+        const dev = deviceLabel(a.device_name); if (!dev) continue;
+        const at = Date.parse(a.start_date ?? '');
+        const run = ICU_RUNS.includes(a.type) && at ? doc.runs.find(r => r.device === undefined && r.start && Math.abs(Date.parse(r.start) - at) < 120e3) : null;
+        if (run){ run.device = dev; bodyChanged = true; }
+        const ride = doc.rides.find(r => r.id === 'ir' + a.id && r.device === undefined);
+        if (ride){ ride.device = dev; bodyChanged = true; }
+      }
+      loc.deviceBack = true;
+    }
     // Rides need only the summary numbers, no file. Reach back once per device for earlier ones.
     if (doc.bike){
       const rl = loc.ridesBack ? list : await (await icuGet(`/athlete/0/activities?oldest=${addDays(todayYmd(), -60)}&newest=${addDays(todayYmd(), 1)}`, key)).json();
       for (const a of rl){
         if (!ICU_RIDES.includes(a.type) || !a.start_date_local || doc.rides.some(r => r.id === 'ir' + a.id)) continue;
-        doc.rides = [...doc.rides, { id:'ir' + a.id, date:a.start_date_local.slice(0, 10), min:Math.round((a.moving_time || a.elapsed_time || 0) / 60), avgHr:a.average_heartrate ?? null, maxHr:a.max_heartrate ?? null, name:a.name || 'Ride' }];
+        doc.rides = [...doc.rides, { id:'ir' + a.id, date:a.start_date_local.slice(0, 10), min:Math.round((a.moving_time || a.elapsed_time || 0) / 60), avgHr:a.average_heartrate ?? null, maxHr:a.max_heartrate ?? null, name:a.name || 'Ride', device:deviceLabel(a.device_name) }];
         bodyChanged = true;
       }
       loc.ridesBack = true;
