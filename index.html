@@ -2756,7 +2756,7 @@ const EXPLAIN = {
   drift: () => 'How much your heart rate rose from the first half of the jog to the second at the same pace. Under about 5 bpm means your body is coping well and you’re ready to go a little longer.',
   gate: () => 'Each Sunday night the plan looks back at the week: did you get your runs in, were your legs fine at 48 hours, and did you stay under your heart-rate limits? All green moves you up a week; otherwise you repeat it. Repeating a week is normal and keeps you healthy.',
   zones: () => 'Your threshold is the heart rate where running stops feeling sustainable. Garmin estimates it after a few runs. Every zone, limit and chart in Stride is set from it, so it’s worth getting right.',
-  treadmill: () => 'Your heart rate on the treadmill, compared only with other treadmill runs at the same belt speed. The belt sets the pace exactly, so if the same speed costs fewer beats over the weeks, you’re fitter: one of the cleanest checks there is. Belt speed comes from the run’s distance and time, so type the treadmill’s own distance into the run’s page (“Treadmill said”) to keep it exact. Runs with walk breaks or faster pieces mix speeds, so they’re left out. Indoor and outdoor runs aren’t mixed: a warm gym with no breeze, and a belt that helps pull your legs through, change the beats. Heat, sleep and caffeine move heart rate by a few beats, so look at the trend over weeks, not one run.',
+  treadmill: () => 'Your heart rate on the treadmill, compared only with other treadmill runs at the same belt speed. The belt sets the pace exactly, so if the same speed costs fewer beats over the weeks, you’re fitter: one of the cleanest checks there is. For the belt speed, type what you set it to on the run’s page (“Belt speed”); otherwise Stride estimates it from the distance and time, which a warm-up walk drags a little low. Runs with walk breaks or faster pieces mix speeds, so they’re left out. Indoor and outdoor runs aren’t mixed: a warm gym with no breeze, and a belt that helps pull your legs through, change the beats. Heat, sleep and caffeine move heart rate by a few beats, so look at the trend over weeks, not one run.',
   take: () => 'A read of this run the way a coach would give it, written by Stride from your own history (nothing leaves the app). It compares the run with your last few of a similar distance, indoors with indoors and outdoors with outdoors: faster for the same or lower heart rate means fitness is building. Then it looks inside the run (how much was easy, when it got hard, whether heart rate crept up) and ends with one thing to do next.',
   coach: () => 'Patterns Stride spots in your runs, the way a coach would: heart-rate trends, heat, consistency, effort versus heart rate, how fast you’re ramping up and your form. The most important few show here, and they change as you run.',
   journey: () => 'Your training as a timeline, left to right. Each dot is a run, and bigger means longer. Diamonds are milestones you’ve passed. The dashed line ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. It shows when things happened, not how fit you are; the charts further down show that. Tap a run to open it.',
@@ -3446,10 +3446,12 @@ function coachCard(){
    pace exact, so the same speed costing fewer beats is a clean fitness signal. Belt speed is the
    run's distance (the treadmill's own number, when typed in) over its time. Runs with walk breaks or
    intervals (more than 15% walking) are left out, since they mix speeds. */
+// Belt speed worked out from distance and time; a warm-up walk drags it a little low, so a typed speed wins.
+const beltEst = r => r.distMi > 0 && r.timerSec > 0 ? Math.round(r.distMi / r.timerSec * 36000) / 10 : null;
 function treadStats(runs){
   const all = runs.filter(r => isTreadmill(r) && hrMetric(r) != null && r.distMi > 0 && r.timerSec > 0);
   const steady = all.filter(r => (r.walkSec ?? 0) <= r.timerSec * .15)
-    .map(r => ({ r, mph:Math.round(r.distMi / r.timerSec * 36000) / 10, hr:Math.round(hrMetric(r)) }));
+    .map(r => ({ r, mph:r.beltMph ?? beltEst(r), hr:Math.round(hrMetric(r)) }));
   const by = {};
   for (const x of steady) (by[x.mph] ??= []).push(x);
   // The speed run most often leads (ties: the one used most recently).
@@ -4550,6 +4552,7 @@ async function renderRunDetail(id){
       ${runTake(r, s).map(t => `<p class="coach-line">${t}</p>`).join('')}</div>
     <div class="stat-grid">
       ${isTreadmill(r) || r.watch ? `<div class="stat"><div class="s-l">Treadmill said</div><input type="number" inputmode="decimal" min="0" max="100" step="0.01" id="tread-in" value="${r.watch ? r.distMi : ''}" placeholder="—" aria-label="Distance on the treadmill's screen, miles"><div class="s-n">${r.watch ? `mi · watch said ${fmtMi(r.watch.distMi)}` : 'Type in the miles from its screen'}</div></div>` : ''}
+      ${isTreadmill(r) ? `<div class="stat"><div class="s-l">Belt speed</div><input type="number" inputmode="decimal" min="1" max="15" step="0.1" id="belt-in" value="${r.beltMph ?? ''}" placeholder="${beltEst(r) ?? '—'}" aria-label="Treadmill belt speed, mph"><div class="s-n">${r.beltMph != null ? 'mph · what you set' : 'mph · type what you set it to'}</div></div>` : ''}
       ${stat('Timer', fmtDur(r.timerSec))}
       ${stat('Jog / walk', `${fmtDur(r.runSec)}`, `/ ${fmtDur(r.walkSec)}`)}
       ${stat('Avg pace', fmtDur(r.avgPaceSec), '/mi')}
@@ -4628,6 +4631,12 @@ async function renderRunDetail(id){
     if (v !== '' && !(mi >= 0.1 && mi <= 100)){ toast('That distance doesn’t look right'); renderRunDetail(r.id); return; }
     setTreadMi(r, v === '' ? null : mi);
     await save(); toast(v === '' ? 'Back to the watch’s distance' : 'Treadmill distance saved'); renderRunDetail(r.id);
+  });
+  $('#belt-in')?.addEventListener('change', async e => {
+    const v = e.target.value.trim(), mph = Math.round(+v * 10) / 10;
+    if (v !== '' && !(mph >= 1 && mph <= 15)){ toast('That speed doesn’t look right'); renderRunDetail(r.id); return; }
+    if (v === '') delete r.beltMph; else r.beltMph = mph;
+    await save(); toast(v === '' ? 'Belt speed cleared' : 'Belt speed saved'); renderRunDetail(r.id);
   });
   $('#shoe-in')?.addEventListener('change', async e => { r.shoeId = e.target.value || null; await save(); toast('Shoes updated'); });
   $('#temp-in').addEventListener('change', async e => {
