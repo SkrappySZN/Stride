@@ -94,6 +94,17 @@ data runs through it, so treat changes to data handling with care.
 - **Food** (`foodCard` on Body, `foodSheet`): `doc.food` is one entry per thing eaten (`{ id, date, name, cal, pro }`),
   `doc.foods` the person's saved foods (one tap to add), `profile.calTarget`/`proTarget` their own targets; Stride never
   suggests targets.
+- **What you burn** (`burnEstimate`, `burnCard`, next to Food on Body): average logged intake (days with food, last 4 weeks,
+  today left out) minus the weight-trend slope × 3,500. Morning weigh-ins, plus evenings less the person's own overnight
+  drop. Needs 14 food days and 4 weigh-ins over 10+ days; until then it shows progress. Never suggests a target.
+- **Readiness** (`readiness`, `readinessCard` on Today): last night's HRV and resting HR (from intervals.icu wellness)
+  against the median of the previous 4 weeks, plus sleep hours. Green/amber/red advice; shows only when last night came
+  in, never touches the plan.
+- **Plan cycle** (`NEXT_PLAN`, `planDoneCard`, `plan-next`): once a fixed plan's last week is behind you, Today offers the
+  next one (build → 5K → 10K), started this week at week 1; the finished plan goes to `doc.planHistory`.
+- **Quiet legs** (`profile.quietLegs`, Setup, or "Stop asking" on the card): no soreness check-in prompts and no 48-h wait
+  in the gate. The 48-h prompt is also skipped when the 24-h answer was "Nothing". Hard stops still come from the body map.
+- **Undo toasts**: `toast(msg, undoFn)` shows an Undo button for 5 s (food, goals, logged lifts, workouts, program stop).
 - **Bike** (`bikeCard` on Today, `bikeSetupCard`, `bikeDays`): opt-in `doc.bike` `{ perWeek, min, lo, hi, ceil }`; `doc.rides` `{ id, date, min, avgHr, maxHr, name }`
   from intervals.icu (summary numbers only, id `ir…`) or by hand (`mr…`). Suggests rest days; never touches the run plan or its gate.
 - **Also in the doc**: `shoes`/`defaultShoe` (`run.shoeId`), `pains` (body
@@ -125,6 +136,10 @@ data runs through it, so treat changes to data handling with care.
   lifting day, and `SPLIT_TEMPLATES` builds a workout when they have none for that group. PRs use estimated 1-rep max (Epley); `progWeight()`
   adds a step after every rep is hit and drops ~10% after two misses. Lifting never changes
   the run plan: `liftRunTips()` and one coach note only suggest.
+  The live workout's top-left button reads "End" (finish or leave; nothing is deleted). Once a set is ticked a "Finish
+  workout" button sits under the thumb bar (`lv-finish-ask` lists unstarted exercises first). "Remove" takes the current
+  exercise out (confirming if it has logged sets), "− Set" drops an unticked last set, and swapping after sets are logged
+  keeps those sets and adds the swap after. Starting a workout while another is open finishes the open one first.
   “Start” on a workout or program day opens the live workout (`LV`, `renderLive()`): one exercise at
   a time with its `HOWTO` (equipment, setup, cues, what to watch for), sets prefilled by `liveItem()`,
   a ✓ per set that writes to `doc.lifts` at once (`liveCommit`), and a timestamp-based rest timer. Where

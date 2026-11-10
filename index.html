@@ -568,6 +568,9 @@ textarea.felt{
   transition:opacity .2s, transform .2s; pointer-events:none
 }
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+.toast.has-undo{pointer-events:auto}
+.toast-undo{margin-left:10px; background:none; border:0; color:var(--accent); font:inherit; font-weight:800; text-transform:uppercase; letter-spacing:.04em; cursor:pointer; padding:6px 4px}
+:root:not([data-theme="dark"]) .toast-undo{color:inherit; text-decoration:underline}
 @media (max-width:720px){
   .toast{bottom:92px}
   .detail-head h1{font-size:44px}
@@ -702,8 +705,11 @@ table.lift-recent td:first-child{white-space:nowrap; padding-right:12px}
 /* Gym mode: no header or dock, a sticky top strip and a thumb bar */
 body.gym .topbar{display:none}
 body.gym main{padding-bottom:0}
-.gym-top{position:sticky; top:0; z-index:20; display:grid; grid-template-columns:44px 1fr 44px; align-items:center; gap:8px; padding:calc(8px + env(safe-area-inset-top)) 14px 8px; background:var(--bg); border-bottom:1px solid var(--line)}
+.gym-top{position:sticky; top:0; z-index:20; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; padding:calc(8px + env(safe-area-inset-top)) 14px 8px; background:var(--bg); border-bottom:1px solid var(--line)}
 .gym-x{width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:15px; cursor:pointer}
+.gym-x.gym-end{width:auto; border-radius:20px; padding:0 14px; font-size:14px; font-weight:700}
+.gym-finish{display:block; width:100%; margin-top:8px}
+.sheet-actions .btn small{display:block; font-weight:500; font-size:12px; opacity:.75; margin-top:2px; text-transform:none; letter-spacing:0}
 .gym-title{display:flex; flex-direction:column; align-items:center; min-width:0}
 .gym-title b{font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%}
 .gym-title span{font-family:var(--mono); font-size:12px; color:var(--muted)}
@@ -713,7 +719,7 @@ body.gym main{padding-bottom:0}
 .gym-dots .some{background:color-mix(in srgb, var(--accent) 45%, var(--line))}
 .gym-dots .done{background:var(--accent)}
 .gym-dots [aria-current]{outline:2px solid var(--ink); outline-offset:2px}
-.gym-body{max-width:640px; margin:0 auto; padding:16px 16px calc(190px + env(safe-area-inset-bottom))}
+.gym-body{max-width:640px; margin:0 auto; padding:16px 16px calc(250px + env(safe-area-inset-bottom))}
 .gym-ex{display:grid; grid-template-columns:96px 1fr; gap:14px; align-items:center}
 .gym-ex .lv-fig{margin:0; padding:2px}
 .gym-ex .lv-fig .fig{width:92px}
@@ -1226,6 +1232,21 @@ const PLANS = {
         third:['5K time trial', 'Warm up 10 min, then run 5K as evenly as you can'] },
     ],
   },
+  '10k': {
+    name:'Build to 10K', short:'10K', who:'You can run 5K (about 30–40 minutes) without stopping. Builds the weekly long run, then a 10K time trial.',
+    goal:'Run 10K (6.2 mi), walk breaks allowed, then race it',
+    weeks: [
+      { phase:'Base',    session:'30 min easy', detail:'Conversational pace the whole way',        add:'Long run: 40 min easy', third:['Long run', '40 min easy'] },
+      { phase:'Base',    session:'30 min easy', detail:'Conversational pace the whole way',        add:'Long run: 45 min easy', strides:1, third:['Long run', '45 min easy'] },
+      { phase:'Build',   session:'32 min easy', detail:'Keep the long run slower than the others', add:'Long run: 50 min easy', strides:2, third:['Long run', '50 min easy — walk breaks are fine'] },
+      { phase:'Build',   session:'30 min easy', detail:'An easier week so your legs catch up',     add:'Long run: 45 min easy', strides:1, third:['Long run', '45 min easy'] },
+      { phase:'Extend',  session:'35 min easy', detail:'Conversational pace the whole way',        add:'Long run: 55 min easy', strides:2, third:['Long run', '55 min easy'] },
+      { phase:'Extend',  session:'35 min easy', detail:'Conversational pace the whole way',        add:'Long run: 60 min easy', strides:2, third:['Long run', '60 min easy — bring water'] },
+      { phase:'Extend',  session:'35 min easy', detail:'The biggest week',                         add:'Long run: 70 min easy', strides:1, third:['Long run', '70 min easy — slower than you think'] },
+      { phase:'Race',    session:'25 min easy', detail:'Ease off so the legs are fresh',           add:'10K time trial on run 3, walk breaks allowed — then celebrate',
+        third:['10K time trial', 'Warm up 10 min, then 10K at an even, steady effort'] },
+    ],
+  },
   marathon: {
     name:'Marathon', short:'Marathon', who:'You already run a few times a week and have a race on the calendar. Built backward from race day and from what you can run now.',
     goal:'Get to the start line healthy, and finish',
@@ -1236,6 +1257,8 @@ const PLANS = {
     goal:null, weeks:[],
   },
 };
+// Finishing a fixed plan leads into the next one, so there's always something to stride toward.
+const NEXT_PLAN = { build:'5k', '5k':'10k' };
 // Per person (Setup): no test route. Every outdoor run without idle time counts toward the heart-rate trend.
 const allOutdoor = () => !!doc.profile.allOutdoor;
 const trWord = (route, outdoor) => allOutdoor() ? outdoor : route;
@@ -1562,9 +1585,13 @@ const WARN_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" st
 const statusIcon = s => `<span class="s-icon s-${s}" aria-label="${s}">${ICON[s]}</span>`;
 
 let toastTimer;
-function toast(msg){
+// An undo makes the toast tappable and keeps it up longer; it's dropped once the toast goes.
+let toastUndo = null;
+function toast(msg, undo = null){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  toastUndo = undo; t.classList.toggle('has-undo', !!undo);
+  if (undo) t.insertAdjacentHTML('beforeend', ' <button class="toast-undo" data-action="toast-undo">Undo</button>');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.classList.remove('show', 'has-undo'); toastUndo = null; }, undo ? 5000 : 2600);
 }
 
 /* ── Storage: IndexedDB, one doc + one samples row per run ───────── */
@@ -1608,8 +1635,8 @@ function freshDoc(){
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
-    profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, allOutdoor:false, ...(d.profile ?? freshDoc().profile) } });
+  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, planHistory:[], lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
+    profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, allOutdoor:false, quietLegs:false, ...(d.profile ?? freshDoc().profile) } });
 }
 // A custom exercise that has since become a built-in one (same name): its logs move to the built-in id.
 function adoptBuiltIns(n){
@@ -2096,13 +2123,16 @@ function redFlagActive(){
   const reds = doc.checkins.filter(c => c.value === 'red').map(c => c.at).sort();
   return reds.length > 0 && (!doc.redClearedAt || reds.at(-1) > doc.redClearedAt);
 }
+// quietLegs: the person asked not to be prompted; they log soreness themselves (body map) only when something's off.
 function pendingCheckin(){
+  if (doc.profile.quietLegs) return null;
   // Only the latest run matters — a newer run resets the soreness clock.
   const r = sortedRuns().reverse().find(x => hoursSince(x) >= 0);
   if (!r) return null;
   const h = hoursSince(r);
   const has = st => doc.checkins.some(c => c.runId === r.id && c.stage === st);
-  if (h >= 36 && h < 72 && !has('48')) return { run:r, stage:'48', hours:h };
+  const fine24 = doc.checkins.some(c => c.runId === r.id && c.stage === '24' && c.value === 'none');
+  if (h >= 36 && h < 72 && !has('48') && !fine24) return { run:r, stage:'48', hours:h };
   if (h >= 10 && h < 36 && !has('24')) return { run:r, stage:'24', hours:h };
   return null;
 }
@@ -2297,7 +2327,7 @@ function sorenessItem(runs){
   const red = cks.some(c => c.value === 'red');
   const sore48 = cks.filter(c => c.stage === '48' && c.value !== 'none');
   const last = runs.at(-1);
-  const pending48 = !!last && !doc.checkins.some(c => c.runId === last.id && c.stage === '48') && hoursSince(last) < 72;
+  const pending48 = !doc.profile.quietLegs && !!last && !doc.checkins.some(c => c.runId === last.id && (c.stage === '48' || (c.stage === '24' && c.value === 'none'))) && hoursSince(last) < 72;
   let item;
   if (red) item = ['crit', 'No red-flag symptoms', 'Hard stop logged — plan paused'];
   else if (sore48.length) item = ['crit', 'No soreness past 48 hrs', `${SORE[sore48[0].value]} still sore at 48 hrs`];
@@ -2693,6 +2723,8 @@ const EXPLAIN = {
   bike: () => 'Easy bike sessions add heart-and-lung work without the pounding of running. They’re your own target (set it in Setup), and they never change your run plan or its weekly check. Rides from your watch come in through intervals.icu; you can also log one by hand. The heart rate range is where to stay, and the ceiling is the number to ease off at.',
   steps: () => 'Steps your watch counted each day, from Garmin. Days you take the watch off read low, and days it’s off entirely stay blank. The line underneath estimates how many came from running (your cadence × your running time), so you can see how much you move outside your runs too.',
   food: () => 'What you ate each day, added up: calories (energy) and protein (what your muscles rebuild from). Set your own daily targets with “Targets”. Losing weight means eating a bit under what you burn; protein near your target helps you keep muscle while you do. Save the things you eat often and they’re one tap to add.',
+  burn: () => 'How many calories your body actually uses in a day, worked out from your own numbers instead of a formula: what you logged eating over the last few weeks, and which way your weight moved. About 3,500 calories is a pound, so if you ate 2,000 a day and lost a pound a week, you burn about 2,500. It counts only days with food logged, so log everything you eat and drink on those days. A forgotten meal makes the burn look lower than it is. Evening weigh-ins count too, less your usual overnight drop.',
+  readiness: () => 'How rested your body is this morning, compared with your own normal over the last four weeks. It looks at last night’s HRV (lower than usual can mean you’re run down or fighting something), your resting heart rate (higher than usual means the same), and how long you slept. It needs your watch on overnight. One off night isn’t a problem; it’s a nudge to keep the day easy, not a diagnosis.',
   amPm: () => 'You weigh more at night than in the morning: the day’s food and water are still in you, often 2–4 lbs’ worth. That isn’t fat. So the trend and the 7-day average use your morning weigh-ins only (filled dots), and evening ones are the rings. The overnight drop shows how much of the day was just food and water.',
   consistency: () => 'How many runs you did each week. Fitness comes from stacking ordinary weeks, so a missed week costs you more than a slow run does.',
   effort: () => 'How hard the run felt, from 1 (very easy) to 10 (all-out). Your watch asks when you save a run, or you can tap it in on the run’s page. The same route feeling easier over time is real progress, even when the numbers haven’t moved yet.',
@@ -2709,7 +2741,7 @@ const EXPLAIN = {
   journey: () => 'Your training as a timeline, left to right. Each dot is a run, and bigger means longer. Diamonds are milestones you’ve passed. The dashed line ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. It shows when things happened, not how fit you are; the charts further down show that. Tap a run to open it.',
   onerm: () => 'Your 1-rep max is the heaviest weight you’ve lifted for a single rep: a true max, not an estimate. Log one with “+ Log a 1-rep max”: pick the lift and enter the heaviest weight you got for one full rep. Warm up with a few lighter singles first, and use a spotter or safety arms. Max tests never change the weights Stride suggests for your normal sets. Everyday progress (best sets of several reps) is on the Best sets card. Body-weight and assisted moves aren’t listed: they go by reps or help instead.',
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
-  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
+  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. When you finish, the summary’s “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
   badges: () => 'Badges come from what you’ve already done, so older runs and lifts count too. Each one has tiers, from bronze to silver, gold and volt: the more you do, the higher it goes. The bar shows how close you are to the next tier; tap a badge to see every tier and the day you earned it. Runs live on Progress (counts, miles, longest run, steady weeks, fastest mile and 5K, early, late, cold and hot runs); lifting on Lift (lifting days, volume, steady weeks, PRs, pull-ups, run-and-lift days, and bench, squat and deadlift against your body weight, which use your latest weight from the Body tab). New ones show on Today and in the new-run scene.',
   e1rm: () => 'Each lift shows your best set: the set you actually did that’s worth the most. The small “≈ … for 1 rep” under it is your estimated one-rep max: the most you could likely lift once, worked out from that set (weight × (1 + reps ÷ 30)). It lets 5 reps at 225 and 3 at 240 be compared fairly, so every set can count toward a PR without ever testing a true max. It’s most accurate under about 10 reps. Tested a true max? Log it as one set of 1 rep: a single counts as exactly what you lifted. “Heaviest” is the most weight you’ve actually moved, with its reps. For body-weight moves like pull-ups, the best is the most reps in one set. Timed moves are logged in seconds: a plank or dead hang’s best is the longest hold, a farmer’s carry’s the heaviest dumbbells you took the full time. Assisted machines count your body weight minus the help (from your latest weight on the Body tab), so less help shows as a higher number; with no weight on file they count reps.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
@@ -2824,12 +2856,12 @@ function checkinCards(){
     html = `<div class="card">
       <div class="card-head"><h2>How are the legs after ${dn}’s run?</h2><span class="card-sub">${pc.stage === '48' ? '48-hour check' : '~' + Math.round(pc.hours) + ' hrs after'}</span></div>
       <div class="pill-row">${soreOptions().map(([k, l]) => `<button class="pill${k === 'red' ? ' flag' : ''}" data-checkin="${k}" data-run="${pc.run.id}" data-stage="${pc.stage}">${l}</button>`).join('')}</div>
-      <p class="card-sub" style="margin:12px 0 0">Somewhere else? <a href="#body/pain">Mark it on the body map</a>.</p>
+      <p class="card-sub" style="margin:12px 0 0">Somewhere else? <a href="#body/pain">Mark it on the body map</a>. <button class="link-btn" data-action="quiet-legs">Stop asking</button></p>
     </div>`;
   }
   if (lastResponse){
     const c = lastResponse.c, sided = ['calves', 'hip', 'knee'].includes(c.value);
-    html += `<div class="card"><div class="card-head"><h2>Logged</h2><button class="link-btn" data-action="undo-checkin">Undo</button></div>
+    html += `<div class="card"><div class="card-head"><h2>Logged</h2><span class="btn-row"><button class="link-btn" data-action="undo-checkin">Undo</button><button class="link-btn" data-action="checkin-ok">Done</button></span></div>
       <div class="response show${lastResponse.alarm || (c.value === 'calves' && c.side && c.side !== 'both') ? ' alarm' : ''}" style="margin-top:0">${lastResponse.html}${c.side ? ' ' + (SIDE_NOTE[c.value]?.[c.side === 'both' ? 'both' : 'one'] ?? '') : ''}</div>
       ${sided ? `<div class="eyebrow" style="margin:14px 0 8px">Which side?</div>
         <div class="pill-row">${[['left', 'Left'], ['right', 'Right'], ['both', 'Both']].map(([k, l]) => `<button class="pill" data-side="${k}" aria-pressed="${c.side === k}">${l}</button>`).join('')}</div>` : ''}</div>`;
@@ -2942,13 +2974,14 @@ function renderToday(){
     }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
       ${doc.runs.length ? journeyCard('j-today') : ''}${coachCard()}${goalsTodayCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
-      <div class="grid two" style="margin-top:16px">${routineCard()}${weatherCard()}</div>
+      <div class="grid two" style="margin-top:16px">${readinessCard(todayRuns.length ? 'done' : 'rest')}${routineCard()}${weatherCard()}</div>
       <div class="grid" style="margin-top:16px">${bikeCard()}${todayNotes(today)}</div></div>`;
     drawJourney($('#j-today'));
     return;
   }
 
   const weeks = planState(), cur = weeks.at(-1), pw = cur.planWeek, len = planLen();
+  const finished = !isMarathon() && pw > len;
   const days = schedule(today, 7), t = days[0];
   const pwo = planWeekObj(pw);
   let eyebrow = `${dateLine} · today’s assignment`, title, copy, tasks;
@@ -2960,7 +2993,7 @@ function renderToday(){
   } else if (t.kind === 'done'){
     const r = todayRuns.at(-1);
     title = 'Run <em>done</em>';
-    copy = `${fmtMi(r.distMi)} mi · ${fmtDur(r.runSec)} jogging · ${r.jogHr != null ? `jogging HR ${Math.round(r.jogHr)}` : `avg HR ${r.avgHr}`}${r.recoveryHr != null ? ` · recovery ${r.recoveryHr}` : ''}. Stretch tonight. Soreness check tomorrow.`;
+    copy = `${fmtMi(r.distMi)} mi · ${fmtDur(r.runSec)} jogging · ${r.jogHr != null ? `jogging HR ${Math.round(r.jogHr)}` : `avg HR ${r.avgHr}`}${r.recoveryHr != null ? ` · recovery ${r.recoveryHr}` : ''}. Stretch tonight.${doc.profile.quietLegs ? '' : ' Soreness check tomorrow.'}`;
     tasks = tasksFor(today, dayTasks('done'));
   } else if (t.kind === 'run'){
     const s = sessionFor(pw, t.slot, today);
@@ -3024,7 +3057,7 @@ function renderToday(){
         <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div><div class="d-tag tag-${k}">${l}</div></div>`;
     }).join('')}</div>
     <div class="plan-bar" style="grid-template-columns:repeat(${len},1fr);margin-top:18px">${activePlan().weeks.map((_, i) => `<div class="plan-seg${i + 1 < pw ? ' done' : i + 1 === pw ? ' now' : ''}"></div>`).join('')}</div>
-    <p class="card-sub" style="margin:10px 0 0">${pw < len ? `Week ${pw + 1}: ${[planWeekObj(pw + 1).detail, planWeekObj(pw + 1).add].filter(Boolean).map(x => esc(x.charAt(0).toLowerCase() + x.slice(1))).join('. ')}.` : isMarathon() ? 'Race week. The work is done — rest, eat, sleep.' : 'Final week. After this, re-test on the flat route and pick what’s next on the Plan tab.'}</p>
+    <p class="card-sub" style="margin:10px 0 0">${pw < len ? `Week ${pw + 1}: ${[planWeekObj(pw + 1).detail, planWeekObj(pw + 1).add].filter(Boolean).map(x => esc(x.charAt(0).toLowerCase() + x.slice(1))).join('. ')}.` : isMarathon() ? 'Race week. The work is done — rest, eat, sleep.' : finished ? 'Plan complete. Pick up the next one above.' : `Final week.${NEXT_PLAN[doc.planId] ? ` Next up: ${esc(PLANS[NEXT_PLAN[doc.planId]].name)}.` : ' After this, pick what’s next on the Plan tab.'}`}</p>
   </div>`;
 
   const runsDone = weekRuns.length;
@@ -3035,10 +3068,10 @@ function renderToday(){
     stats: [[`Week · ${esc(pwo.phase)}`, Math.min(pw, len), `/${len}`], ['Runs this week', Math.min(runsDone, 9), `/${pwo.runs?.length ?? 3}`],
       isMarathon() ? ['Race in', Math.max(0, diffDays(today, doc.race.date)), 'days'] : ['Miles this week', weekMi.toFixed(1)]],
     extra: `<ul class="task-list">${tasks}</ul>${cta}`,
-  }) + `<div class="wrap">${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
+  }) + `<div class="wrap">${finished ? planDoneCard() : ''}${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
     ${journeyCard('j-today')}${coachCard()}${goalsTodayCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
-    <div class="grid today-grid" style="margin-top:16px"><div class="col">${next}${weatherCard()}</div><div class="col">${bikeCard()}${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
+    <div class="grid today-grid" style="margin-top:16px"><div class="col">${red ? '' : readinessCard(t.kind)}${next}${weatherCard()}</div><div class="col">${bikeCard()}${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
   drawJourney($('#j-today'));
 }
@@ -4632,6 +4665,43 @@ function bodyTodayCard(){
   </a>`;
 }
 
+/* ── Readiness: last night against the person's own normal ──────────
+   Garmin's overnight HRV and resting HR from intervals.icu, each against the median of the
+   previous 4 weeks (needs 5 nights), plus hours slept. Only shows when last night came in, so a
+   night without the watch means no card, not a nag. Advice only: it never moves the plan. */
+function readiness(date = todayYmd()){
+  const b = doc.body?.[date];
+  if (!b) return null;
+  const base = k => {
+    const v = Object.entries(doc.body).filter(([d, x]) => d < date && diffDays(d, date) <= 28 && x[k] != null).map(([, x]) => x[k]).sort((a, c) => a - c);
+    return v.length >= 5 ? v[Math.floor(v.length / 2)] : null;
+  };
+  const parts = [];
+  const hm = b.hrv != null ? base('hrv') : null;
+  if (hm){ const d = (b.hrv - hm) / hm; parts.push({ k:'HRV', v:b.hrv, u:'ms', norm:`usually ${hm}`, lvl: d <= -.2 ? 2 : d <= -.1 ? 1 : 0 }); }
+  const rm = b.rhr != null ? base('rhr') : null;
+  if (rm){ const d = b.rhr - rm; parts.push({ k:'Resting HR', v:b.rhr, u:'bpm', norm:`usually ${rm}`, lvl: d >= 7 ? 2 : d >= 4 ? 1 : 0 }); }
+  if (b.sleepH != null) parts.push({ k:'Sleep', v:b.sleepH, u:'hrs', norm: b.sleepH < 6 ? 'short night' : '', lvl: b.sleepH < 5 ? 2 : b.sleepH < 6 ? 1 : 0 });
+  if (!parts.length) return null;
+  const reds = parts.filter(x => x.lvl === 2).length, flags = parts.filter(x => x.lvl).length;
+  return { parts, lvl: reds >= 2 || (reds && flags >= 2) ? 2 : flags ? 1 : 0 };
+}
+function readinessCard(kind){
+  const r = readiness();
+  if (!r) return '';
+  const run = kind === 'run';
+  const [word, line] = [
+    ['Ready', run ? 'Run as planned.' : 'Recovered well overnight.'],
+    ['Go easy', run ? 'Run, but keep it easy and cut it short if it feels hard.' : 'A good day to rest or keep the bike easy.'],
+    ['Rest up', run ? 'Think about swapping today’s run for an easy bike or a walk, or moving it to tomorrow.' : 'Take it easy today. If this lasts a few days, it’s worth backing off.'],
+  ][r.lvl];
+  return `<div class="card"><div class="card-head"><h2>Readiness${infoBtn}</h2><span class="card-sub">last night vs your usual</span></div>${explain('readiness')}
+    <div class="next-run-big display" style="color:${['var(--good-text)', 'var(--warn-text)', 'var(--crit-text)'][r.lvl]}">${word}</div>
+    <p class="card-sub" style="margin:0 0 12px">${line}</p>
+    <div class="mini-stats">${r.parts.map(x => `<div><div class="ms-l">${x.k}</div><div class="ms-v display num">${x.v}<small>${x.u}</small></div>${x.norm ? `<span class="delta${x.lvl ? ' bad' : ''}">${x.norm}</span>` : ''}</div>`).join('')}</div>
+  </div>`;
+}
+
 /* ── Aches & pains: a tap-where-it-hurts body map ─────────────────────
    Front and back outlines, legs split into zones. Front view shows the
    person's right leg on the viewer's left; the back view is the other way
@@ -5114,6 +5184,7 @@ function liveItem(ex, sets, reps, day){
 function liveStart({ wo = null, day = null, name, items, free = false }){
   try { audioCtx ??= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch {}
   const date = todayYmd(), claimed = new Set();
+  if (LV?.items.some(it => it.sets.some(s => s.done))){ const was = LV.name; liveFinish(false); liftUi.summary = null; toast(`${was} finished first. Its sets are saved`); }
   LV = { wo, day, name, date, free, started:Date.now(), i:0, rest:null, swap:false, away:false, prs:[], items:items.map(it => liveItem(it.ex, it.sets, it.reps, day)) };
   // Anything already logged today for this workout counts as done.
   for (const it of LV.items){
@@ -5136,18 +5207,32 @@ const liveStats = () => {
   const done = LV.items.map(it => [liftDef(it.ex), it.sets.filter(s => s.done)]);
   return { sets:done.reduce((n, [, ss]) => n + ss.length, 0), lbs:Math.round(done.reduce((n, [d, ss]) => n + setsVolume(d, ss), 0)), min:Math.round((Date.now() - LV.started) / 60000) };
 };
-function liveFinish(){
+function liveFinish(draw = true){
   const st = liveStats(), done = LV.items.filter(it => it.sets.some(s => s.done));
+  if (!st.sets && draw) toast('Nothing was ticked, so nothing was logged');
   liftUi.summary = st.sets ? { name:LV.name, ...st, exs:done.map(it => liftDef(it.ex).name), prs:LV.prs,
     // An empty workout can be kept as a preset: what was done, in order, with today counted as it.
     ...(LV.free ? { free:true, entries:done.map(it => it.entry).filter(Boolean), plan:done.map(it => { const d = it.sets.filter(s => s.done); return { ex:it.ex, sets:d.length, reps:+d[0].reps || null }; }) } : {}) } : null;
-  LV = null; liveSave(); keepAwake(false); scrollTo(0, 0); renderLift();
+  LV = null; liveSave(); keepAwake(false);
+  if (draw){ scrollTo(0, 0); renderLift(); }
+}
+// The set under the thumb button, in words.
+function liveSetTxt(def, s){
+  const lb = +s.lb || 0, r = +s.reps || 0, u = def.secs ? ' s' : '';
+  return def.assist ? `${lb} lb help × ${r}` : def.bw ? `${lb ? `+${lb} lb` : 'body weight'} × ${r}${u}` : lb ? `${lb} lb × ${r}${u}` : `${r}${u || ' reps'} · set the weight above`;
+}
+// Take the current exercise out of the live workout, along with anything it logged.
+function liveRemove(){
+  const it = LV.items[LV.i];
+  it.sets.forEach(x => { x.done = false; }); liveCommit(it);
+  LV.items.splice(LV.i, 1); LV.i = Math.max(0, Math.min(LV.i, LV.items.length - 1)); LV.swap = false;
+  liveSave(); save(); renderLive(); scrollTo(0, 0); toast(`Removed ${liftDef(it.ex).name}`);
 }
 // Gym mode: the whole screen, one exercise at a time, the next set's button under your thumb.
 function renderLive(){
   document.body.classList.add('gym');
   if (!LV.items.length){
-    $('#page-lift').innerHTML = `<div class="gym-top"><button class="gym-x" data-action="lv-menu" aria-label="Workout menu">✕</button>
+    $('#page-lift').innerHTML = `<div class="gym-top"><button class="gym-x gym-end" data-action="lv-menu" aria-label="End or leave the workout">End</button>
         <div class="gym-title"><b>${esc(LV.name)}</b><span class="num" id="lv-clock">${mmss((Date.now() - LV.started) / 1000)}</span></div><span></span></div>
       <div class="gym-body"><div class="gym-empty"><div class="eyebrow">Empty workout</div><h1 class="gym-name">Add exercises as you go</h1>
         <p class="lv-why">Pick each machine or lift as you get to it. Every set you tick saves straight away, and when you finish you can keep this as a workout.</p></div></div>
@@ -5162,14 +5247,16 @@ function renderLive(){
   const nextI = LV.items.findIndex((x, j) => j > LV.i && x.sets.some(s => !s.done)), anyI = nextI >= 0 ? nextI : LV.items.findIndex((x, j) => j !== LV.i && x.sets.some(s => !s.done));
   const alts = def.f ? LIFTS.filter(l => l.f === def.f && l.id !== it.ex && !doc.gym.skip.includes(l.id)) : [];
   const stepper = (i, k, v, ph) => `<span class="lv-step"><button type="button" data-lv-step="${i}|${k}|-1" aria-label="Less ${k === 'lb' ? 'weight' : 'reps'}">−</button><input type="number" inputmode="${k === 'lb' ? 'decimal' : 'numeric'}" data-lv-${k}="${i}" value="${v}" placeholder="${ph}" aria-label="Set ${i + 1} ${k === 'lb' ? 'weight' : 'reps'}"><button type="button" data-lv-step="${i}|${k}|1" aria-label="More ${k === 'lb' ? 'weight' : 'reps'}">+</button></span>`;
-  const setTxt = s => { const lb = +s.lb || 0, r = +s.reps || 0;
-    return def.assist ? `${lb} lb help × ${r}` : def.bw ? `${lb ? `+${lb} lb` : 'body weight'} × ${r}${u}` : lb ? `${lb} lb × ${r}${u}` : `${r}${u || ' reps'} · set the weight above`; };
+  const setTxt = s => liveSetTxt(def, s);
+  const anyDone = LV.items.some(x => x.sets.some(s => s.done)), allDone = anyI < 0 && cur < 0;
   const go = cur >= 0 ? `<button class="btn primary gym-go" data-lv-done="${cur}">✓ Done set ${cur + 1}<small>${setTxt(it.sets[cur])}</small></button>`
     : anyI >= 0 ? `<button class="btn primary gym-go" data-lv-go="${anyI}">Next: ${esc(short(LV.items[anyI].ex))} →</button>`
     : LV.free ? `<button class="btn primary gym-go" data-action="lv-add-open">+ Add next exercise</button>`
     : `<button class="btn primary gym-go" data-action="lv-finish">Finish workout</button>`;
+  // Finishing is always one tap away once something's logged, even with exercises skipped.
+  const finish = anyDone && !(allDone && !LV.free) ? `<button class="btn gym-finish" data-action="lv-finish-ask">Finish workout${LV.free && allDone ? '' : ' early'}</button>` : '';
   $('#page-lift').innerHTML = `<div class="gym-top">
-      <button class="gym-x" data-action="lv-menu" aria-label="Workout menu">✕</button>
+      <button class="gym-x gym-end" data-action="lv-menu" aria-label="End or leave the workout">End</button>
       <div class="gym-title"><b>${esc(LV.name)}</b><span class="num" id="lv-clock">${mmss((Date.now() - LV.started) / 1000)}</span></div>
       <span class="gym-count num">${LV.i + 1}/${n}</span>
     </div>
@@ -5185,7 +5272,7 @@ function renderLive(){
       ${prevL ? `<div class="lv-last"><span>Last time · ${fmtDate(prevL.date)}</span><b>${fmtSets(prevL.sets, setMode(def), def.secs)}</b></div>` : ''}
       <p class="lv-why">${it.why}</p>
       ${warm && !LV.items.some(x => x.sets.some(s => s.done)) ? `<a class="lv-warm" href="#routine/${warm}">▶ Warm up first: ${ROUTINES[warm].name} · ${Math.round(routineSec(routineSteps(warm)) / 60)} min</a>` : ''}
-      <div class="gym-tools">${how ? `<button class="pill" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how-to' : 'How to do it'}</button>` : ''}<button class="pill" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button><button class="pill" data-action="lv-add-set">+ Set</button><button class="pill" data-action="lv-add-open">+ Exercise</button>${infoBtn}</div>${explain('liftLive')}
+      <div class="gym-tools">${how ? `<button class="pill" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how-to' : 'How to do it'}</button>` : ''}<button class="pill" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button><button class="pill" data-action="lv-add-set">+ Set</button>${it.sets.length > 1 && !it.sets.at(-1).done ? '<button class="pill" data-action="lv-drop-set">− Set</button>' : ''}<button class="pill" data-action="lv-add-open">+ Exercise</button><button class="pill" data-action="lv-remove">Remove</button>${infoBtn}</div>${explain('liftLive')}
       ${how && it.how ? `<div class="lv-how"><p><b>Set up:</b> ${how.set}</p><ol>${how.cues.map(c => `<li>${c}</li>`).join('')}</ol><p class="lv-avoid"><b>Watch for:</b> ${how.avoid}</p></div>` : ''}
       ${LV.swap ? `<div class="wo-swap">${alts.length ? alts.map(l => `<button class="pill" data-lv-pick="${l.id}">${esc(l.name)}</button>`).join('') : '<small>No other variations listed for this one.</small>'}
         ${LIFTS.some(l => l.id === it.ex) ? `<button class="link-btn" data-gym-skip="${it.ex}">${esc(def.name)} isn’t at my gym</button>` : ''}</div>` : ''}
@@ -5196,12 +5283,12 @@ function renderLive(){
           ${prevL?.sets[i] ? `<small class="lv-prev">last time ${prevTxt(prevL.sets[i])}</small>` : ''}</div>`).join('')}
       </div>
       ${BARBELL.includes(it.ex) ? `<div class="lv-plates" id="lv-plates">${platesLine(it)}</div>` : ''}
-      <p class="card-sub gym-foot">Swipe or use the arrows to move between exercises. Every ticked set saves straight away.</p>
+      <p class="card-sub gym-foot">Swipe or use the arrows to move between exercises. Every ticked set saves straight away. Tap a ticked ✓ again to undo it.</p>
     </div>
     <div class="gym-bar"><div id="lv-rest">${liveRest()}</div>
       <div class="gym-actions">
         <button class="gym-nav" data-lv-go="${LV.i - 1}"${LV.i ? '' : ' disabled'} aria-label="Previous exercise">‹</button>${go}<button class="gym-nav" data-lv-go="${LV.i + 1}"${LV.i < n - 1 ? '' : ' disabled'} aria-label="Next exercise">›</button>
-      </div>
+      </div>${finish}
     </div>`;
   // Swipe sideways between exercises.
   const body = $('#gym-body'); let sx = null, sy = 0;
@@ -5298,7 +5385,7 @@ function liveRest(){
   if (!LV?.rest) return '';
   const sec = Math.max(0, (LV.rest.end - Date.now()) / 1000), pct = LV.rest.dur ? Math.min(100, sec / LV.rest.dur * 100) : 0;
   return `<div class="lv-rest${sec <= 0 ? ' go' : ''}"><i class="lv-rest-bar" style="width:${pct.toFixed(1)}%"></i><span><small>${sec > 0 ? 'Rest' : 'Rest’s up'}</small><b class="num">${sec > 0 ? mmss(Math.ceil(sec)) : 'Go'}</b></span>
-    <span class="btn-row"><button class="btn small" data-action="lv-rest-add">+30 s</button><button class="btn small" data-action="lv-rest-skip">${sec > 0 ? 'Skip' : 'Hide'}</button></span></div>`;
+    <span class="btn-row"><button class="btn small" data-action="lv-rest-add">+30 s</button><button class="btn small" data-action="lv-rest-skip">${sec > 0 ? 'Skip rest' : 'Dismiss'}</button></span></div>`;
 }
 // The clock and rest countdown come from timestamps, so a locked phone doesn't stretch them.
 setInterval(() => {
@@ -5409,7 +5496,7 @@ function liftRecentCard(){
   if (!recent.length) return '';
   return `<div class="card"><div class="card-head"><h2>Logged lately</h2><span class="card-sub">tap Edit to fix one</span></div>
     <ul class="lift-list">${recent.map(l => `<li><span><b>${esc(liftDef(l.ex).name)}</b><small>${fmtDate(l.date)}${l.max ? ' · 1-rep max' : ''}${l.wo && doc.workouts.some(w => w.id === l.wo) ? ` · ${esc(doc.workouts.find(w => w.id === l.wo).name)}` : l.day ? ` · workout ${l.day}` : ''} · ${fmtSets(l.sets, setMode(liftDef(l.ex)), liftDef(l.ex).secs)}</small></span>
-      <span class="btn-row"><button class="btn small" data-edit-lift="${l.id}">Edit</button><button class="btn small" data-del-lift="${l.id}" aria-label="Remove">✕</button></span></li>`).join('')}</ul></div>`;
+      <span class="btn-row"><button class="btn small" data-edit-lift="${l.id}">Edit</button><button class="btn small" data-del-lift="${l.id}">Remove</button></span></li>`).join('')}</ul></div>`;
 }
 // Keeps what's typed when the card redraws (adding a set, switching exercise).
 function readLiftForm(){
@@ -5521,13 +5608,14 @@ function drawLiftChart(){
 
 function liftSummary(){
   const m = liftUi.summary; if (!m) return '';
-  return `<div class="card lv-done"><div class="card-head"><h2>${esc(m.name)} done</h2><button class="link-btn" data-action="lv-summary-close">close</button></div>
+  return `<div class="card lv-done"><div class="card-head"><h2>${esc(m.name)} done</h2><button class="link-btn" data-action="lv-summary-close">Done</button></div>
     <div class="lv-done-stats"><span><b class="num">${m.min}</b><small>minute${m.min === 1 ? '' : 's'}</small></span><span><b class="num">${m.sets}</b><small>sets</small></span><span><b class="num">${m.lbs.toLocaleString()}</b><small>lbs moved</small></span></div>
     <p class="card-sub" style="margin:12px 0 0">${m.exs.map(esc).join(' · ')}</p>
     ${m.prs.length ? `<p style="margin:10px 0 0"><span class="badge test">new PR</span> ${m.prs.map(esc).join(', ')}</p>` : ''}
     ${m.free ? m.saved ? `<p class="card-sub" style="margin:12px 0 0">Saved as <b>${esc(m.saved)}</b>. Find it under Train → Workouts.</p>`
       : `<div class="field" style="margin-top:14px"><label for="sum-name">Keep this as a workout?</label><input id="sum-name" type="text" placeholder="e.g. Legs Day 2"></div>
-        <button class="btn primary" style="margin-top:10px" data-action="lv-save-preset">Save as a workout</button>` : ''}</div>`;
+        <button class="btn primary" style="margin-top:10px" data-action="lv-save-preset">Save as a workout</button>
+        <p class="card-sub" style="margin:8px 0 0">Optional. Your sets are logged either way.</p>` : ''}</div>`;
 }
 // Suggestions only: lifting never moves or changes a run.
 function liftRunTips(){
@@ -5548,7 +5636,8 @@ function liftRunTips(){
 
 function renderLift(){
   // A workout left open past midnight is over; its ticked sets are already saved.
-  if (LV && LV.date !== todayYmd()){ LV = null; liveSave(); }
+  // Left open past midnight: wrap it up (its sets are already logged) so the summary still shows.
+  if (LV && LV.date !== todayYmd()) liveFinish(false);
   if (LV && !LV.away) return renderLive();
   document.body.classList.remove('gym');
   const tab = prefs.get('liftTab', 'train');
@@ -5625,6 +5714,54 @@ function addFood(date, f){
   doc.food = [...doc.food, { id:foodId(), date, name:f.name, cal:Math.round(+f.cal || 0), pro:Math.round(+f.pro || 0) }];
 }
 
+/* ── What you really burn: logged food vs the weight trend ───────────
+   Over the last 4 weeks: average intake on days with food logged (today left out, it isn't
+   over), and the slope of the weight trend. A pound is ~3,500 cal, so burn = intake − slope × 3,500.
+   Morning weigh-ins only; an evening one counts on days without a morning, less the person's own
+   usual overnight drop. Nothing is suggested: it only says what their own target would do. */
+const BURN_DAYS = 14, BURN_SPAN = 10;
+function burnEstimate(){
+  const today = todayYmd(), from = addDays(today, -28);
+  const days = [...new Set(doc.food.filter(f => f.date >= from && f.date < today).map(f => f.date))].sort();
+  const pairs = overnightPairs().filter(p => diffDays(p.date, today) < 60);
+  const drop = pairs.length >= 2 ? avgOf(pairs.map(p => p.eve - p.morn)) : null;
+  const eve = eveningWeights();
+  // weightSeries() falls back to evenings when there are no mornings; those get the drop below instead.
+  const am = weightSeries().filter(p => !eve.some(e => e.date === p.date && e.v === p.v));
+  const pts = am.map(p => ({ date:p.date, v:p.v }));
+  if (drop != null) for (const e of eve) if (!am.some(p => p.date === e.date)) pts.push({ date:e.date, v:e.v - drop });
+  const first = days[0] ?? today;
+  const w = pts.filter(p => p.date >= addDays(first, -1) && p.date <= today).sort((a, b) => a.date < b.date ? -1 : 1);
+  const span = w.length > 1 ? diffDays(w[0].date, w.at(-1).date) : 0;
+  const base = { foodDays:days.length, weighIns:w.length, span };
+  if (days.length < BURN_DAYS || w.length < 4 || span < BURN_SPAN) return base;
+  // Least-squares slope, lbs per day.
+  const xs = w.map(p => diffDays(w[0].date, p.date)), mx = avgOf(xs), my = avgOf(w.map(p => p.v));
+  const slope = xs.reduce((a, x, i) => a + (x - mx) * (w[i].v - my), 0) / xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  const intake = avgOf(days.map(d => foodSum(foodDay(d)).cal));
+  return { ...base, ready:true, intake, slope, burn:intake - slope * 3500, rough: span < 21 };
+}
+function burnCard(){
+  const b = burnEstimate(), p = doc.profile, r50 = v => (Math.round(v / 50) * 50).toLocaleString();
+  const lbsWk = v => `${Math.abs(v).toFixed(1)} lb a week`;
+  let body;
+  if (!b.ready){
+    const pct = Math.round(Math.min(1, b.foodDays / BURN_DAYS) * 50 + Math.min(1, b.span / BURN_SPAN) * 25 + Math.min(1, b.weighIns / 4) * 25);
+    body = `<p class="card-sub" style="margin:0">Works out from your own food log and weigh-ins, so it needs about two weeks of both.
+      So far: ${b.foodDays} of ${BURN_DAYS} days of food, ${b.weighIns} weigh-in${b.weighIns === 1 ? '' : 's'} over ${b.span} day${b.span === 1 ? '' : 's'}.</p>
+      <div class="pbar" style="margin-top:12px"><i style="width:${pct}%"></i></div>`;
+  } else {
+    const wk = b.slope * 7, atTarget = p.calTarget ? (p.calTarget - b.burn) / 3500 * 7 : null;
+    body = `<div class="field-row">
+        <div class="field"><div class="s-l">You burn about</div><div class="display num" style="font-size:28px">${r50(b.burn)}<small style="text-transform:none"> cal/day</small></div></div>
+        <div class="field"><div class="s-l">You’ve eaten about</div><div class="display num" style="font-size:28px">${r50(b.intake)}<small style="text-transform:none"> cal/day</small></div></div>
+      </div>
+      <p class="card-sub" style="margin:12px 0 0">Your weight is ${Math.abs(wk) < .1 ? 'holding steady' : `${wk < 0 ? 'dropping' : 'rising'} about ${lbsWk(wk)}`}.${atTarget != null ? ` At your target of ${p.calTarget.toLocaleString()}, you’d ${Math.abs(atTarget) < .1 ? 'hold steady' : `${atTarget < 0 ? 'lose' : 'gain'} about ${lbsWk(atTarget)}`}.` : ''}
+      ${b.rough ? ' Rough for now: the first weeks include water weight, so this settles over the next couple of weeks.' : ''}</p>`;
+  }
+  return `<div class="card" id="burn-card"><div class="card-head"><h2>What you burn${infoBtn}</h2><span class="card-sub">from your own food log and weight</span></div>${explain('burn')}${body}</div>`;
+}
+
 // Average steps over the last 7 full days, and roughly how many came from runs (cadence × running time).
 function stepsLine(){
   const today = todayYmd(), week = bodySeries('steps').filter(p => p.date < today && diffDays(p.date, today) <= 7);
@@ -5669,7 +5806,7 @@ function renderBody(){
       ${chartCard('c-steps', `Steps${infoBtn}`, 'per day', steps, explain('steps') + stepsLine())}
     </div>
     <div class="section-label">Food</div>
-    ${foodCard()}
+    <div class="grid two">${foodCard()}${burnCard()}</div>
     <div class="section-label">Fitness & composition</div>
     <div class="grid two">
       <div class="card"><div class="card-head"><h2>VO2 max</h2><span class="card-sub">${vo2.length ? 'Garmin’s estimate · moves slowly' : 'Garmin’s estimate'}</span></div>
@@ -6632,6 +6769,19 @@ function maraPreview(){
     <div class="legend" style="margin:10px 0 0"><span><i style="background:var(--series-1)"></i>Build</span><span><i style="background:var(--series-1);opacity:.45"></i>Easier week</span><span><i style="background:var(--walk)"></i>Taper</span><span><i style="background:var(--accent)"></i>Race</span></div>
     ${warn ? `<div class="note" style="margin-top:14px">${WARN_SVG}<div>${warn}</div></div>` : ''}`;
 }
+// Shown on Today once the last week of a fixed plan is behind you.
+function planDoneCard(){
+  const pl = activePlan(), id = NEXT_PLAN[doc.planId], nx = id && PLANS[id];
+  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>${esc(pl.name)}: complete</h2><span class="card-sub">${pl.weeks.length} weeks</span></div>
+    <p style="margin:0 0 14px">You finished the whole plan${pl.goal ? `: ${esc(pl.goal.charAt(0).toLowerCase() + pl.goal.slice(1))}` : ''}. Until you start the next one, Stride keeps your runs at the final week.</p>
+    ${nx ? `<div class="eyebrow">Up next · ${nx.weeks.length} weeks</div>
+      <div class="pc-name display" style="margin:4px 0 6px">${esc(nx.name)}</div>
+      <p class="card-sub" style="margin:0 0 6px">${esc(nx.who)}</p>
+      <p class="card-sub" style="margin:0"><b>Goal</b> ${esc(nx.goal)}</p>
+      <div class="btn-row" style="margin-top:14px"><button class="btn primary" data-action="plan-next">Start it this week</button><a class="btn" href="#welcome" style="text-decoration:none">Pick a different plan</a></div>`
+    : `<div class="btn-row"><a class="btn primary" href="#welcome" style="text-decoration:none">Choose what’s next</a></div>`}
+  </div>`;
+}
 function planChoices(sel){
   return `<div class="grid plan-pick">${Object.entries(PLANS).map(([id, pl]) => `
     <button class="card plan-card" data-pick-plan="${id}" aria-pressed="${sel === id}">
@@ -6700,6 +6850,9 @@ function renderSetup(){
         ${intervalsCard()}
         ${keyCard()}
         ${bikeSetupCard()}
+        <div class="card"><div class="card-head"><h2>Soreness check-ins</h2><span class="card-sub">after runs</span></div>
+          <label class="card-sub" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" data-action="quiet-legs-toggle"${doc.profile.quietLegs ? '' : ' checked'}> Ask how my legs feel the day after a run</label>
+          <p class="card-sub" style="margin:10px 0 0">Off, Stride stops asking and assumes your legs are fine. If something hurts, mark it on the body map (Body tab) and the plan’s safety rules still apply.</p></div>
         <div class="card"><div class="card-head"><h2>Heart rate trend</h2><span class="card-sub">which runs count</span></div>
           <label class="card-sub" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" data-action="all-outdoor"${doc.profile.allOutdoor ? ' checked' : ''}> Count all my outdoor runs (no test route)</label>
           <p class="card-sub" style="margin:10px 0 0">Stride normally compares only runs on one flat route, which is the fairest test. This counts every outdoor run instead. It’s simpler, but hills will add some noise. Treadmill runs stay separate.</p></div>
@@ -7187,7 +7340,12 @@ document.addEventListener('click', async e => {
       await save(); openSheet(foodSheet()); if (date && $('#fd-date')) $('#fd-date').value = date; return;
     }
     if (d.foodUnsave){ doc.foods = doc.foods.filter(x => x.id !== d.foodUnsave); await save(); openSheet(foodSheet()); return; }
-    if (d.foodDel){ doc.food = doc.food.filter(x => x.id !== d.foodDel); await save(); redrawFood(); return; }
+    if (d.foodDel){
+      const gone = doc.food.find(x => x.id === d.foodDel);
+      doc.food = doc.food.filter(x => x !== gone); await save(); redrawFood();
+      if (gone) toast(`Removed ${gone.name}`, async () => { doc.food = [...doc.food, gone]; await save(); redrawFood(); });
+      return;
+    }
     foodUi.date = addDays(foodUi.date ?? todayYmd(), +d.foodDay); if (foodUi.date >= todayYmd()) foodUi.date = null; redrawFood(); return;
   }
   const dm = e.target.closest('[data-del-measure]');
@@ -7228,14 +7386,16 @@ document.addEventListener('click', async e => {
     }
     if (lv.dataset.lvPick){
       const ex = lv.dataset.lvPick, fresh = liveItem(ex, it.sets.length, +it.sets[0].reps || null, LV.day);
-      LV.items[LV.i] = { ...fresh, entry:it.entry, sets:it.sets.some(s => s.done) ? it.sets : fresh.sets };
-      if (it.entry) liveCommit(LV.items[LV.i]);
+      // Sets already ticked belong to the old exercise: keep them, and add the swap after it.
+      if (it.sets.some(s => s.done)){ it.sets = it.sets.filter(x => x.done); LV.items.splice(LV.i + 1, 0, fresh); LV.i++; liveCommit(it); toast(`Kept your ${liftDef(it.ex).name} sets; ${liftDef(ex).name} added after`); }
+      else LV.items[LV.i] = { ...fresh, entry:it.entry, sets:fresh.sets };
       LV.swap = false; liveSave(); await save(); renderLive(); return;
     }
     const s = it.sets[+lv.dataset.lvDone], def = liftDef(it.ex);
     if (s.done){ s.done = false; LV.rest = null; }
     else {
       if (!(+s.reps > 0) || (!def.bw && !def.assist && !(+s.lb > 0))){ toast(def.bw || def.assist ? 'Enter your reps' : 'Enter the weight and reps'); return; }
+      if (+s.lb > 1500 || +s.reps > (def.secs ? 3600 : 100)){ toast('That number looks off. Check the weight and reps'); return; }
       const prior = Math.max(0, ...doc.lifts.filter(l => l.ex === it.ex && l.id !== it.entry).flatMap(l => l.sets.map(x => liftScore(def, x))));
       const v = liftScore(def, { lb:+s.lb || 0, reps:+s.reps });
       s.done = true;
@@ -7312,7 +7472,12 @@ document.addEventListener('click', async e => {
   const lc = e.target.closest('[data-lift-chart]');
   if (lc){ liftUi.chart = liftUi.chart === lc.dataset.liftChart ? null : lc.dataset.liftChart; readLiftForm(); renderLift(); return; }
   const dl = e.target.closest('[data-del-lift]');
-  if (dl){ readLiftForm(); doc.lifts = doc.lifts.filter(l => l.id !== dl.dataset.delLift); await save(); renderLift(); toast('Removed'); return; }
+  if (dl){
+    readLiftForm(); const gone = doc.lifts.find(l => l.id === dl.dataset.delLift);
+    doc.lifts = doc.lifts.filter(l => l !== gone); await save(); renderLift();
+    if (gone) toast(`Removed ${liftDef(gone.ex).name}`, async () => { doc.lifts = [...doc.lifts, gone]; await save(); renderLift(); });
+    return;
+  }
   const task = e.target.closest('[data-task]');
   if (task){
     const k = task.dataset.task;
@@ -7339,7 +7504,13 @@ document.addEventListener('click', async e => {
   const pl = e.target.closest('[data-pain-level]');
   if (pl){ painUi.level = +pl.dataset.painLevel; renderBody(); return; }
   const dp = e.target.closest('[data-del-pain]');
-  if (dp){ doc.pains = doc.pains.filter(p => p.id !== dp.dataset.delPain); painUi.msg = null; await save(); renderBody(); return; }
+  if (dp){
+    const gone = doc.pains.find(p => p.id === dp.dataset.delPain);
+    doc.pains = doc.pains.filter(p => p !== gone);
+    // A mistaken entry shouldn't leave the plan paused: drop the red flag it raised.
+    if (gone) doc.checkins = doc.checkins.filter(c => !(c.stage === 'map' && c.at === gone.at));
+    painUi.msg = null; await save(); render(); return;
+  }
   const rw = e.target.closest('[data-recap-week]');
   if (rw && !rw.disabled){ recapWs = addDays(recapWs ?? addDays(weekStart(todayYmd()), -7), +rw.dataset.recapWeek); renderProgress(); return; }
   const rsn = e.target.closest('[data-recap-seen]');
@@ -7361,7 +7532,12 @@ document.addEventListener('click', async e => {
     await save(); toast('Goal added'); render(); return;
   }
   const dg = e.target.closest('[data-del-goal]');
-  if (dg){ doc.goals = doc.goals.filter(g => g.id !== dg.dataset.delGoal); await save(); render(); return; }
+  if (dg){
+    const gone = doc.goals.find(g => g.id === dg.dataset.delGoal);
+    doc.goals = doc.goals.filter(g => g !== gone); await save(); render();
+    if (gone) toast('Goal removed', async () => { doc.goals = [...doc.goals, gone]; await save(); render(); });
+    return;
+  }
   const sm = e.target.closest('[data-seen-milestones]');
   if (sm){ prefs.set('seenMilestones', [...prefs.get('seenMilestones', []), ...sm.dataset.seenMilestones.split(',')].slice(-400)); render(); return; }
   const ia = e.target.closest('[data-intake]');
@@ -7418,7 +7594,8 @@ document.addEventListener('click', async e => {
     case 'routine-prev': if (RP.i > 0){ RP.paused = false; enterStep(RP.i - 1); } break;
     case 'routine-exit': { const id = RP.rid; stopRoutine(); renderRoutine(id); break; }
     case 'clear-red': doc.redClearedAt = new Date().toISOString(); await save(); render(); break;
-    case 'undo-checkin': doc.checkins = doc.checkins.filter(c => c !== lastResponse?.c); lastResponse = null; await save(); render(); break;
+    case 'undo-checkin': { const c0 = lastResponse?.c; doc.checkins = doc.checkins.filter(c => !(c0 && c.at === c0.at && c.runId === c0.runId)); lastResponse = null; await save(); render(); break; }
+    case 'checkin-ok': lastResponse = null; render(); break;
     case 'make-test': if (r){ makeTestRoute(r); await save(); toast('Test route set'); render(); } break;
     case 'not-test': if (r){ r.testOverride = false; await save(); render(); } break;
     case 'count-test': if (r){ r.testOverride = true; await save(); render(); } break;
@@ -7536,6 +7713,14 @@ document.addEventListener('click', async e => {
       welcomeUi.plan = welcomeUi.start = welcomeUi.race = null;
       await save(); location.hash = 'today'; render(); break;
     }
+    case 'plan-next': {
+      const id = NEXT_PLAN[doc.planId];
+      if (!id) break;
+      const thisMon = weekStart(todayYmd());
+      doc.planHistory = [...(doc.planHistory ?? []), { planId:doc.planId, start:doc.planStart, end:addDays(thisMon, -1) }];
+      Object.assign(doc, { planId:id, planStart:thisMon, startWeek:1, decisions:{} });
+      await save(); render(); toast(`${PLANS[id].name} starts now: week 1`); break;
+    }
     case 'hide-intake-nudge': prefs.set('intakeNudgeHidden', true); render(); break;
     case 'intake-back': intakeRead(); intakeUi.step = Math.max(0, intakeUi.step - 1); renderIntake(); scrollTo(0, 0); break;
     case 'intake-next': {
@@ -7602,6 +7787,8 @@ document.addEventListener('click', async e => {
     }
     case 'bike-off': doc.bike = null; await save(); toast('Bike sessions off. Your rides are kept'); render(); break;
     case 'all-outdoor': doc.profile.allOutdoor = e.target.checked; await save(); render(); break;
+    case 'quiet-legs-toggle': doc.profile.quietLegs = !e.target.checked; await save(); render(); break;
+    case 'quiet-legs': doc.profile.quietLegs = true; await save(); render(); toast('Stride won’t ask again. Turn it back on in Setup'); break;
     case 'food-open': openSheet(foodSheet()); break;
     case 'add-food': {
       const date = $('#fd-date').value, name = $('#fd-name').value.trim(), cal = $('#fd-cal').value, pro = $('#fd-pro').value;
@@ -7753,7 +7940,12 @@ document.addEventListener('click', async e => {
       await save(); toast(`Saved as your ${s.name} workout`); liveStart({ wo:id, name:s.name, items:s.items }); break;
     }
     case 'wo-cancel': liftUi.edit = null; redrawWo(); break;
-    case 'wo-delete': doc.workouts = doc.workouts.filter(x => x.id !== liftUi.edit.id); liftUi.edit = null; readLiftForm(); await save(); renderLift(); toast('Workout deleted. Its lifts stay logged'); break;
+    case 'wo-delete': {
+      const gone = doc.workouts.find(x => x.id === liftUi.edit.id), at = doc.workouts.indexOf(gone);
+      doc.workouts = doc.workouts.filter(x => x !== gone); liftUi.edit = null; readLiftForm(); await save(); renderLift();
+      if (gone) toast(`${gone.name} deleted. Its lifts stay logged`, async () => { const w = [...doc.workouts]; w.splice(at, 0, gone); doc.workouts = w; await save(); renderLift(); });
+      break;
+    }
     case 'lv-prog': {
       readLiftForm();
       const { day } = progNext();
@@ -7765,9 +7957,24 @@ document.addEventListener('click', async e => {
     case 'lv-rest-add': { const end = Math.max(LV.rest?.end ?? 0, Date.now()) + 30000; LV.rest = { end, dur:Math.max(LV.rest?.dur ?? 0, (end - Date.now()) / 1000) }; liveSave(); $('#lv-rest').innerHTML = liveRest(); break; }
     case 'lv-rest-skip': LV.rest = null; liveSave(); $('#lv-rest').innerHTML = ''; break;
     case 'lv-finish': closeSheet(); liveFinish(); break;
-    case 'lv-menu': openSheet(`<h2 class="sheet-title">${esc(LV.name)}</h2><p class="card-sub" style="margin:0 0 14px">Every ticked set is already saved. Leaving keeps your place: pick it up from the Lift tab.</p>
-      <div class="sheet-actions"><button class="btn primary big" data-action="lv-finish">Finish workout</button><button class="btn big" data-action="lv-leave">Leave for now</button><button class="btn big" data-action="sheet-close">Keep going</button></div>`); break;
-    case 'lv-leave': closeSheet(); LV.away = true; liveSave(); keepAwake(false); location.hash = 'today'; break;
+    case 'lv-finish-ask': {
+      const open = LV.items.filter(x => !x.sets.some(y => y.done));
+      if (!open.length){ liveFinish(); break; }
+      openSheet(`<h2 class="sheet-title">Finish now?</h2><p class="card-sub" style="margin:0 0 14px">Your ticked sets are saved. ${open.length === 1 ? 'This one wasn’t' : 'These weren’t'} started and won’t be logged: ${open.map(x => esc(liftDef(x.ex).name)).join(', ')}.</p>
+        <div class="sheet-actions"><button class="btn primary big" data-action="lv-finish">Finish workout<small>Shows your summary</small></button><button class="btn big" data-action="sheet-close">Keep going</button></div>`); break;
+    }
+    case 'lv-menu': openSheet(`<h2 class="sheet-title">${esc(LV.name)}</h2><p class="card-sub" style="margin:0 0 14px">Nothing here deletes anything: every ticked set is already saved.</p>
+      <div class="sheet-actions"><button class="btn primary big" data-action="lv-finish">Finish workout<small>Done for today: shows your summary</small></button><button class="btn big" data-action="lv-leave">Leave for now<small>Pick it up later from the Lift tab</small></button><button class="btn big" data-action="sheet-close">Keep going</button></div>`); break;
+    case 'lv-leave': closeSheet(); LV.away = true; liveSave(); keepAwake(false); location.hash = 'lift'; renderLift(); scrollTo(0, 0); break;
+    case 'lv-drop-set': { const it = LV.items[LV.i]; if (it.sets.length > 1 && !it.sets.at(-1).done){ it.sets.pop(); liveSave(); renderLive(); } break; }
+    case 'lv-remove': {
+      const it = LV.items[LV.i], nd = it.sets.filter(x => x.done).length, nm = esc(liftDef(it.ex).name);
+      if (!nd){ liveRemove(); break; }
+      openSheet(`<h2 class="sheet-title">Remove ${nm}?</h2><p class="card-sub" style="margin:0 0 14px">Its ${nd} logged set${nd > 1 ? 's' : ''} will be deleted too.</p>
+        <div class="sheet-actions"><button class="btn primary big" data-action="lv-remove-yes">Remove it</button><button class="btn big" data-action="sheet-close">Keep it</button></div>`); break;
+    }
+    case 'lv-remove-yes': closeSheet(); liveRemove(); await save(); break;
+    case 'toast-undo': { const u = toastUndo; toastUndo = null; $('#toast').classList.remove('show', 'has-undo'); if (u){ await u(); } break; }
     case 'lv-resume': LV.away = false; liveSave(); keepAwake(true); scrollTo(0, 0); renderLift(); break;
     case 'lv-bar': prefs.set('barLb', prefs.get('barLb', 45) === 45 ? 35 : 45); $('#lv-plates').innerHTML = platesLine(LV.items[LV.i]); break;
     case 'lv-summary-close': liftUi.summary = null; readLiftForm(); renderLift(); break;
@@ -7778,7 +7985,8 @@ document.addEventListener('click', async e => {
       doc.liftProg = { id, since:todayYmd(), start:Object.fromEntries(exs.map(ex => [ex, +$(`#lp-${ex}`).value])) };
       liftUi.setup = null; readLiftForm(); await save(); renderLift(); break;
     }
-    case 'lift-prog-stop': doc.liftProg = null; readLiftForm(); await save(); renderLift(); toast('Program stopped. Your lifts stay logged'); break;
+    case 'lift-prog-stop': { const was = doc.liftProg; doc.liftProg = null; readLiftForm(); await save(); renderLift();
+      toast('Program stopped. Your lifts stay logged', async () => { doc.liftProg = was; await save(); renderLift(); }); break; }
     case 'export': exportBackup(); break;
     case 'install-app': if (installPrompt){ installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; installPrompt = null; if (outcome !== 'accepted') renderSetup(); } break;
     case 'icu-connect': connectIntervals(); break;
@@ -7837,8 +8045,13 @@ document.addEventListener('input', e => {
 document.addEventListener('input', e => {
   const i = e.target.dataset.lvLb ?? e.target.dataset.lvReps; if (i == null || !LV) return;
   const it = LV.items[LV.i], s = it.sets[+i];
-  s[e.target.dataset.lvLb != null ? 'lb' : 'reps'] = e.target.value;
+  const k = e.target.dataset.lvLb != null ? 'lb' : 'reps';
+  s[k] = e.target.value;
+  // Same as the − / + buttons: later sets not done yet follow.
+  it.sets.forEach((x, j) => { if (j > +i && !x.done){ x[k] = e.target.value; const el = $(`[data-lv-${k}="${j}"]`); if (el) el.value = e.target.value; } });
   liveSave();
+  const gb = $('.gym-go small'), ci = it.sets.findIndex(x => !x.done);
+  if (gb && ci >= 0) gb.textContent = liveSetTxt(liftDef(it.ex), it.sets[ci]);
   const pl = $('#lv-plates'); if (pl) pl.innerHTML = platesLine(it);
   if (s.done){ liveCommit(it); clearTimeout(liveTyping); liveTyping = setTimeout(save, 800); }
 });
