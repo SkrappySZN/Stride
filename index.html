@@ -138,6 +138,7 @@ details > summary{padding:6px 0; cursor:pointer}
 #syncbox{display:flex; align-items:center}
 .sync-pill{display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:999px; border:1px solid var(--line); background:var(--surface); font-size:12.5px; font-weight:650; color:var(--ink-2); cursor:pointer; text-decoration:none; white-space:nowrap}
 .sync-pill.signin{background:var(--accent); color:var(--accent-ink); border-color:transparent}
+.sync-pill.signin.lost{background:var(--crit); color:#fff}
 .sync-line{display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:650; color:var(--ink-2)}
 .sync-line .dot{width:8px; height:8px; border-radius:50%; flex:none; background:var(--good)}
 .sync-busy .dot,.sync-signedout .dot,.sync-off .dot{background:none; box-shadow:0 0 0 1.5px var(--muted) inset}
@@ -1678,14 +1679,30 @@ function sb(path, opts = {}, auth = true){
   if (auth && SESSION) h.Authorization = 'Bearer ' + SESSION.access_token;
   return fetch(base() + path, { ...opts, headers:h });
 }
+// A refresh token works once, and several callers wake together after a long gap, so they
+// share one renewal. Only a rejected token ends the session: a bad signal, a busy server or
+// a rate limit leaves you signed in to try again later.
+let renewing = null;
 async function ensureToken(){
   if (!SESSION) return false;
   if (Date.now() < SESSION.expires_at - 60000) return true;
-  const r = await sb('/auth/v1/token?grant_type=refresh_token',
-    { method:'POST', body:JSON.stringify({ refresh_token:SESSION.refresh_token }) }, false);
-  if (!r.ok){ SESSION = null; saveSession(); return false; }
-  setSession(await r.json()); return true;
+  renewing ??= (async () => {
+    try {
+      // Another tab may have renewed already; its token is the live one.
+      let stored = null; try { stored = JSON.parse(localStorage.getItem(SESSKEY)); } catch {}
+      if (stored?.refresh_token && stored.refresh_token !== SESSION.refresh_token && Date.now() < stored.expires_at - 60000){ SESSION = stored; return true; }
+      const r = await sb('/auth/v1/token?grant_type=refresh_token',
+        { method:'POST', body:JSON.stringify({ refresh_token:SESSION.refresh_token }) }, false);
+      if (r.ok){ setSession(await r.json()); return true; }
+      if (r.status === 400 || r.status === 401){ SESSION = null; saveSession(); prefs.set('lostSession', true); toast('You were signed out. Sign in again so this device keeps syncing'); paintSync(); }
+      return false;
+    } catch { return false; }
+    finally { renewing = null; }
+  })();
+  return renewing;
 }
+// Signed out by the server, or still signed in but couldn't reach it right now.
+const tokenTrouble = () => SESSION ? setSync('error', 'Couldn’t reach your account — will try again') : setSync('signedout', 'Signed out — sign in again');
 // The emailed link lands with the tokens in the URL fragment — which this app
 // also uses for routing — so it has to be read and cleared before first render.
 function consumeAuthHash(){
@@ -1730,7 +1747,7 @@ async function adoptRemote(row){
 async function pushRow(){
   clearTimeout(pushTimer); pushTimer = null;
   if (!signedIn()) return;
-  if (!await ensureToken()){ setSync('signedout', 'Session expired — sign in again'); return; }
+  if (!await ensureToken()){ tokenTrouble(); return; }
   const v = doc.sync?.version || 0;
   const payload = { user_id:SESSION.user_id, data:blobOf(), version:v + 1, updated_at:new Date().toISOString() };
   setSync('busy', 'Saving…');
@@ -1862,7 +1879,7 @@ function syncLine(){
 function paintSync(){
   const box = $('#syncbox'); if (!box) return;
   if (!syncOn()){ box.innerHTML = ''; return; }
-  if (!SESSION){ box.innerHTML = `<button class="sync-pill signin" data-action="goto-signin">Sign in</button>`; return; }
+  if (!SESSION){ box.innerHTML = prefs.get('lostSession', false) ? `<button class="sync-pill signin lost" data-action="goto-signin">Signed out · sign in</button>` : `<button class="sync-pill signin" data-action="goto-signin">Sign in</button>`; return; }
   const short = syncLine().replace(/ ago$/, '').replace(' min', 'm').replace(' hr', 'h').replace(' d', 'd');
   box.innerHTML = `<a class="sync-pill sync-line sync-${SYNC.status}" href="#setup" title="${esc(SESSION.email)} · ${esc(syncLine())}"><span class="dot"></span><span class="sync-txt">${esc(short)}</span></a>`;
   document.querySelectorAll('[data-sync-line]').forEach(e => { e.className = `sync-line sync-${SYNC.status}`; e.innerHTML = `<span class="dot"></span>${esc(syncLine())}`; });
@@ -1903,7 +1920,7 @@ async function verifyCode(){
   } catch { toast('Network error'); }
 }
 async function signedInWith(d){
-  setSession(d); await fetchUser();
+  setSession(d); prefs.set('lostSession', false); await fetchUser();
   Object.assign(authUi, { stage:'email', mode:'password', busy:false });
   if (momentOpen) closeMoment();
   paintSync(); render(); toast('Signed in');
@@ -1964,7 +1981,7 @@ async function syncInit(fromLink){
   if (!syncOn()) return;
   if (fromLink?.error){ toast(fromLink.error); }
   if (!SESSION){ setSync('off'); return; }
-  if (!await ensureToken()){ setSync('signedout', 'Sign in again'); return; }
+  if (!await ensureToken()){ tokenTrouble(); return; }
   if (!SESSION.user_id) await fetchUser();
   paintSync(); render();
   await firstSync();
@@ -1972,6 +1989,8 @@ async function syncInit(fromLink){
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden'){ if (pushTimer) pushRow().catch(() => {}); }
+  // After a failed renewal, coming back is the retry: finish the first sync, or send what's waiting.
+  else if (SESSION && SYNC.status === 'error') syncInit();
   else refreshFromRemote().then(() => { checkInbox(); checkIntervals(); });
 });
 
