@@ -2280,7 +2280,7 @@ function marathonWeeks(race = doc.race, start = doc.planStart){
   taperLongs.forEach(f => weeks.push(maraWeek('Taper', half(peak * f), per, true, .7)));
   const easy = clampMi(peak * .2, 3, 5);
   weeks.push({ phase:'Race week', race:true, longMi:26.2,
-    runs:[ { mi:easy, title:`${easy} mi easy`, detail:'Then 4 × 20 sec strides. Legs should feel springy, not tired' },
+    runs:[ { mi:easy, title:`${easy} mi easy`, detail:'After the run, 4 × 20 sec strides. Legs should feel springy, not tired' },
            { mi:4, title:'4 mi with 2 at marathon effort', detail:'A last reminder of goal pace — no faster' },
            { mi:2, title:'2 mi shakeout', detail:'Very easy. Lay out your kit and fuel tonight' },
            { mi:26.2, long:true, title:'Race day', detail:'Start slower than you want to. Fuel early and on schedule. Walk the aid stations if it helps' } ] });
@@ -2298,9 +2298,9 @@ function maraWeek(phase, longMi, per, quality, scale = 1){
   const E = (mi, extra = '') => ({ mi, title:`${mi} mi easy`, detail:`Conversational pace${extra}` });
   const M = quality ? { mi:med, mp:true, title:`${med} mi with the last ${mp} at marathon effort`, detail:'Easy for the rest. Marathon effort is comfortably hard — you could still talk in short sentences' }
                     : { mi:med, title:`${med} mi easy`, detail:'The midweek medium run. Easy all the way' };
-  if (per === 3) runs.push(E(easy, '. Then 4 × 20 sec strides'), M);
+  if (per === 3) runs.push(E(easy, '. After the run, 4 × 20 sec strides'), M);
   if (per === 4) runs.push(E(easy), M, E(3, '. Short and very easy — it’s the day before the long run'));
-  if (per === 5) runs.push(E(easy), M, E(easy, '. Then 4 × 20 sec strides'), E(3, '. Short and very easy — it’s the day before the long run'));
+  if (per === 5) runs.push(E(easy), M, E(easy, '. After the run, 4 × 20 sec strides'), E(3, '. Short and very easy — it’s the day before the long run'));
   runs.push({ mi:longMi, long:true, title:`${longMi} mi long run`,
     detail: longMi >= 16 ? 'Slower than marathon pace the whole way. Practise race fueling: something every 30–45 min after the first hour'
       : longMi >= 12 ? 'Easy pace. Take fuel after the first hour — find what your stomach likes now, not on race day'
@@ -2461,7 +2461,7 @@ function sessionFor(pw, slot, date){
   if (isMarathon()) return marathonSession(pw, slot, date);
   const p = planWeekObj(pw);
   if (p.third && slot === 3) return { title:p.third[0], detail:p.third[1], extra:'' };
-  return { title:p.session, detail:p.detail, extra: slot && p.strides && slot <= p.strides ? 'Then 4 × 20 sec strides at ~80% — a full minute of walking between' : '' };
+  return { title:p.session, detail:p.detail, extra: slot && p.strides && slot <= p.strides ? 'After the run: 4 × 20 sec strides, quick but relaxed (~80%, not a sprint), with a full minute of walking between. Stop and save the run on your watch first, and don’t record the strides' : '' };
 }
 
 /* ── Theme ───────────────────────────────────────────────────────── */
