@@ -144,7 +144,9 @@ data runs through it, so treat changes to data handling with care.
   so add exercises but never rename an id. Each exercise has a family (`f`); `woPlan()` resolves a
   workout's slots through swaps, `vary` rotation (least recently done) and `doc.gym.skip`
   (equipment the person's gym lacks). `nextGroup()` suggests push → pull → legs from the last
-  lifting day, and `SPLIT_TEMPLATES` builds a workout when they have none for that group. PRs use estimated 1-rep max (Epley); `progWeight()`
+  lifting day, and `SPLIT_TEMPLATES` builds a workout when they have none for that group. The Lift page shows real numbers only: a best set is the most weight (least help when assisted), then the most reps
+  at it (`setRank`, `liftTop`, `topSet`, labels by `setLabel`); a lift's chart is the top weight each workout with `liftHistory()`
+  under it (`setChange`: ↑/↓ against the workout before). The Epley estimate (`e1rm`, `liftScore`) is left for lift goals. `progWeight()`
   adds a step after every rep is hit and drops ~10% after two misses. Lifting never changes
   the run plan: `liftRunTips()` and one coach note only suggest.
   The live workout's top-left button reads "End" (finish or leave; nothing is deleted). Once a set is ticked a "Finish
