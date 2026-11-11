@@ -168,9 +168,13 @@ data runs through it, so treat changes to data handling with care.
   Volume (`liftVolume`, `setLoad`) is weight × reps summed; `whole:true` moves (pull-up, chin-up, dips)
   add body weight, assisted ones use body weight minus help, other body-weight moves count added weight only.
   It's the "Volume · week" stat, the Volume card (by group, last 12 weeks) and the live workout's "Lbs moved".
-  Page layout: `liftHero()` (Resume; a program's next day; or, once you have workouts, `liftPickHero()`: this week's push/pull/legs so far from `liftWeek()`, a rough suggestion from `liftSuggest()` (the next group in turn not done this week), and every workout as a button to pick, suggested group first. Nothing is pre-chosen) then tabs (`LIFT_TABS`, `prefs` 'liftTab'):
-  Train, Progress, Badges. Logging a one-off set is the "+ Log a set" button, which opens `liftLogCard()` in a
-  bottom sheet (`openSheet`/`closeSheet`) with a searchable picker (`pickList`). The live workout is gym mode:
+  Page layout: `liftHero()` (Resume; a program's next day; or, once you have workouts, `liftPickHero()`: this week's push/pull/legs
+  in one line from `liftWeek()`, one workout to Start (the suggested group from `liftSuggest()`, done longest ago) with its
+  exercises, and the others as small "Or start another" buttons). The odd jobs (empty workout, log a set, a past workout, a
+  1-rep max) sit behind one button that opens `logMenu()` in a sheet. Then tabs (`LIFT_TABS`, `prefs` 'liftTab', key 'train'):
+  Workouts (one row per workout, tap to see it with Start/Edit, `liftUi.woOpen`; programs behind a link; the run-tips card
+  only with a run plan), Progress (Best sets shows what improved in the last 2 weeks, "Show all" for the rest by group), Badges.
+  Logging a one-off set opens `liftLogCard()` in a bottom sheet (`openSheet`/`closeSheet`) with a searchable picker (`pickList`). The live workout is gym mode:
   `body.gym` hides the header and dock, a fixed thumb bar holds "✓ Done set" and the rest timer, swipes move
   between exercises, and ✕ offers finish or leave (`LV.away`, resumed from the hero).
   "+ Log a past workout" (`pastItems`, `pastCard`, `liftUi.past`) logs a whole earlier session in one sheet: a day
