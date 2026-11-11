@@ -193,6 +193,12 @@ data runs through it, so treat changes to data handling with care.
   left out of volume and 1-rep maxes; a hold's best is the longest time, a carry's the heaviest weight.
   Extra days (`w.extra`, e.g. "Shoulders, arms & abs" from `EXTRA_DAYS`) sit outside push → pull → legs: `nextGroup`
   and `woNext` ignore them. A workout's `routine` shows a "Warm up first" link in the live workout until a set is ticked.
+- **Sharing workouts** (`shareLink`, `takeShare`, `fillCard`): "Share with a friend" under Your workouts makes a link
+  (`#lift/s.<deflated base64url>`, fragment only, never sent to a server) with your workouts, custom exercises and past
+  lifting days as exercises + reps, never weights. Opening it parks it in `prefs` 'liftShare' (so signing in first doesn't
+  lose it) and Lift shows "Workouts shared with you". Adding merges workouts and exercises by name and queues days not
+  already logged in `doc.liftFill` (`{ date, wo, items:[{ ex, reps:[…] }] }`); each opens the past-workout sheet with
+  the reps filled in (`liftUi.past.fill`), and saving or ✕ removes it from the queue.
 - **The journey** (`drawJourney`): one road from the first run to the end of the plan,
   split into chapters (plan phases, or months). Runs are waypoints, milestones are
   checkpoints, and a marker shows today. It's on Today and Progress.

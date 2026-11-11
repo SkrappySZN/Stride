@@ -661,6 +661,7 @@ a.btn.primary{color:var(--accent-ink)}
 .lift-list{list-style:none; margin:0; padding:0}
 .lift-list li{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--line)}
 .lift-list li:first-child{border-top:0; padding-top:0}
+.card.share-in{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, var(--surface))}
 .lift-list li > span:first-child{display:flex; flex-direction:column; gap:2px; min-width:0}
 .lift-list small{color:var(--muted); font-size:12.5px; line-height:1.4}
 .lift-list .btn-row{flex-wrap:nowrap; flex:none}
@@ -1674,7 +1675,7 @@ function freshDoc(){
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, planHistory:[], lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], gym:{ skip:[] }, ...d,
+  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, planHistory:[], lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], liftFill:[], gym:{ skip:[] }, ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, allOutdoor:false, quietLegs:false, garminBurn:null, ...(d.profile ?? freshDoc().profile) } });
 }
 // A custom exercise that has since become a built-in one (same name): its logs move to the built-in id.
@@ -5248,7 +5249,7 @@ function woList(){
         ${open ? `<div class="wo-detail"><ol>${items.map(it => { const d = liftDef(it.ex); return `<li>${esc(d.name)}${it.sets ? ` <small>${it.sets} × ${it.reps || '?'}${d.secs ? ' s' : ''}</small>` : ''}</li>`; }).join('')}</ol>
           ${w.vary ? '<p class="card-sub" style="margin:0 0 10px">Mixes up variations each time.</p>' : ''}
           <div class="btn-row"><button class="btn small primary" data-wo-start="${w.id}">Start</button><button class="btn small" data-wo-edit="${w.id}">Edit</button></div></div>` : ''}</li>`; }).join('')}</ul>` : ''}
-    <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-new">+ New workout</button>${doc.workouts.some(w => w.tpl === 'sap') ? '' : '<button class="btn small" data-action="wo-extra" data-tpl="sap">+ Shoulders, arms &amp; abs day</button>'}${loose ? `<button class="btn small" data-action="wo-from-day">Save ${date === todayYmd() ? 'today' : fmtDate(date).slice(4)} as a workout</button>` : ''}</div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-new">+ New workout</button>${doc.workouts.length ? '<button class="btn small" data-action="wo-share">Share with a friend</button>' : ''}${doc.workouts.some(w => w.tpl === 'sap') ? '' : '<button class="btn small" data-action="wo-extra" data-tpl="sap">+ Shoulders, arms &amp; abs day</button>'}${loose ? `<button class="btn small" data-action="wo-from-day">Save ${date === todayYmd() ? 'today' : fmtDate(date).slice(4)} as a workout</button>` : ''}</div>
     ${doc.gym.skip.length ? `<p class="card-sub" style="margin:12px 0 0">Not at your gym (tap to bring back): ${doc.gym.skip.map(ex => `<button class="link-btn" data-gym-unskip="${ex}">${esc(liftDef(ex).name)}</button>`).join(', ')}</p>` : ''}`;
 }
 /* ── Live workout ────────────────────────────────────────────────────
@@ -5496,6 +5497,91 @@ const openLogSheet = () => openSheet(liftLogCard());
 /* Log a past workout: a day and a workout, every exercise in one sheet,
    prefilled from the last time before that day. A day already logged opens
    as it was, so saving again edits it instead of doubling it. */
+/* ── Sharing workouts with a gym friend ──────────────────────────────
+   A link carries your workouts and your past lifting days with the weights
+   left out (each person lifts their own), so a friend can add the same
+   workouts and fill in what they lifted. It travels in the URL fragment,
+   which never reaches a server. Days waiting for weights sit in doc.liftFill. */
+const b64u = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = t => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+const pipeBytes = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+function shareData(){
+  const days = new Map();
+  for (const l of doc.lifts){
+    if (l.max) continue;
+    const k = l.date + '|' + (l.wo ?? ''), d = days.get(k) ?? { d:l.date, w:l.wo ?? '', i:[] };
+    d.i.push([l.ex, l.sets.map(s => s.reps)]); days.set(k, d);
+  }
+  const used = new Set([...doc.lifts.map(l => l.ex), ...doc.workouts.flatMap(w => w.items.map(it => it.ex))]);
+  return { v:1, w:doc.workouts.map(({ id, name, items, vary, extra, routine, tpl }) => ({ id, name, items, vary, extra, routine, tpl })),
+    x:doc.liftEx.filter(x => used.has(x.id)), p:[...days.values()].sort((a, b) => a.d < b.d ? -1 : 1) };
+}
+async function shareLink(){
+  const raw = new TextEncoder().encode(JSON.stringify(shareData()));
+  // Compressed where the browser can (every current one); plain otherwise.
+  const z = typeof CompressionStream === 'function';
+  const code = z ? 'z' + b64u(await pipeBytes(raw, new CompressionStream('deflate-raw'))) : 'j' + b64u(raw);
+  return location.origin + location.pathname + '#lift/s.' + code;
+}
+async function readShare(code){
+  const bytes = unb64u(code.slice(1));
+  const raw = code[0] === 'z' ? await pipeBytes(bytes, new DecompressionStream('deflate-raw')) : bytes;
+  const s = JSON.parse(new TextDecoder().decode(raw));
+  if (s?.v !== 1 || !Array.isArray(s.w) || !Array.isArray(s.p)) throw new Error('bad share');
+  return s;
+}
+// Adds what isn't here yet: workouts matched by name, custom exercises by name, days not already logged.
+function takeShare(s){
+  const exMap = {}, woMap = {}, nm = t => String(t ?? '').trim().toLowerCase();
+  for (const x of s.x ?? []){
+    const have = [...LIFTS, ...doc.liftEx].find(l => nm(l.name) === nm(x.name));
+    if (have) exMap[x.id] = have.id;
+    else { const id = doc.liftEx.some(l => l.id === x.id) ? 'lx' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4) : x.id;
+      exMap[x.id] = id; doc.liftEx = [...doc.liftEx, { ...x, id }]; }
+  }
+  const ex = id => exMap[id] ?? id;
+  let added = 0;
+  for (const w of s.w){
+    const have = doc.workouts.find(x => nm(x.name) === nm(w.name));
+    if (have){ woMap[w.id] = have.id; continue; }
+    const id = doc.workouts.some(x => x.id === w.id) ? 'wo' + Date.now().toString(36) + added : w.id;
+    woMap[w.id] = id; added++;
+    const clean = Object.fromEntries(Object.entries(w).filter(([, v]) => v !== undefined && v !== false));
+    doc.workouts = [...doc.workouts, { ...clean, id, items:w.items.map(it => ({ ...it, ex:ex(it.ex) })) }];
+  }
+  const key = f => f.date + '|' + f.wo;
+  const logged = new Set(doc.lifts.map(l => l.date + '|' + (l.wo ?? ''))), queued = new Set(doc.liftFill.map(key));
+  const fill = s.p.map(p => ({ date:p.d, wo:p.w ? woMap[p.w] ?? '' : '', items:p.i.map(([e, reps]) => ({ ex:ex(e), reps })) }))
+    .filter(f => /^\d{4}-\d\d-\d\d$/.test(f.date) && f.date <= todayYmd() && !logged.has(key(f)) && !queued.has(key(f)));
+  doc.liftFill = [...doc.liftFill, ...fill].sort((a, b) => a.date < b.date ? 1 : -1);
+  return { workouts:added, days:fill.length };
+}
+function shareSheet(){
+  const days = shareData().p.length;
+  return `<h2 class="sheet-title">Share with a gym friend</h2>
+    <p class="card-sub">Sends a link with your ${doc.workouts.length} workout${doc.workouts.length === 1 ? '' : 's'} and your ${days} past lifting day${days === 1 ? '' : 's'}: the exercises and reps, never the weights. They open it in their Stride, add the workouts, and fill in what they lifted.</p>
+    <button class="btn primary big sheet-save" data-action="wo-share-send">Share the link</button>`;
+}
+// The incoming link waits here until they choose, so signing in first doesn't lose it.
+function shareInCard(){
+  const s = prefs.get('liftShare', null); if (!s) return '';
+  const nw = s.w.filter(w => !doc.workouts.some(x => x.name.trim().toLowerCase() === String(w.name).trim().toLowerCase())).length;
+  return `<div class="card share-in"><div class="card-head"><h2>Workouts shared with you</h2></div>
+    <p class="card-sub" style="margin:0 0 10px">${nw ? `${nw} workout${nw === 1 ? '' : 's'}` : 'No new workouts'} and ${s.p.length} past lifting day${s.p.length === 1 ? '' : 's'}, with the exercises and reps but no weights. Add them, then fill in the weights you remember.</p>
+    ${SESSION ? '' : '<p class="card-sub" style="margin:0 0 10px">You’re not signed in, so they’d stay on this device only. To keep them in your account, sign in first (Setup), then come back here.</p>'}
+    <div class="btn-row"><button class="btn small primary" data-action="share-take">Add them</button><button class="btn small" data-action="share-drop">No thanks</button></div></div>`;
+}
+function fillCard(){
+  const F = doc.liftFill; if (!F.length) return '';
+  const show = liftUi.fillAll ? F : F.slice(0, 4);
+  return `<div class="card" id="fill-card"><div class="card-head"><h2>Fill in your weights</h2><span class="card-sub">${F.length} day${F.length === 1 ? '' : 's'} left</span></div>
+    <p class="card-sub" style="margin:0 0 10px">Days you trained together. Open one, add what you lifted, and change anything that was different. ✕ a day you weren’t there.</p>
+    <ul class="lift-list">${show.map(f => { const w = doc.workouts.find(x => x.id === f.wo), k = f.date + '|' + f.wo;
+      return `<li><span><b>${esc(w?.name ?? 'Workout')}</b><small>${fmtDate(f.date)} · ${f.items.length} exercise${f.items.length === 1 ? '' : 's'}</small></span>
+        <span class="btn-row"><button class="btn small primary" data-fill-open="${esc(k)}">Fill in</button><button class="link-btn" data-fill-skip="${esc(k)}" aria-label="Not there on ${fmtDate(f.date)}">✕</button></span></li>`; }).join('')}</ul>
+    ${F.length > show.length ? `<button class="link-btn" data-action="fill-all">Show all ${F.length}</button>` : ''}</div>`;
+}
+
 function pastItems(woId, date){
   const w = doc.workouts.find(x => x.id === woId), copy = ss => ss.map(x => ({ lb:x.lb || '', reps:x.reps }));
   const done = doc.lifts.filter(l => l.date === date && (w ? l.wo === w.id : !l.wo && !l.day));
@@ -5523,9 +5609,9 @@ function pastCard(){
       <div class="field"><label for="past-date">Day</label><input id="past-date" type="date" max="${today}" value="${P.date}"></div>
       <div class="field"><label for="past-wo">Workout</label><select id="past-wo">${doc.workouts.map(w => `<option value="${w.id}"${w.id === P.wo ? ' selected' : ''}>${esc(w.name)}</option>`).join('')}<option value=""${P.wo ? '' : ' selected'}>Just exercises</option></select></div>
     </div>
-    <p class="card-sub" style="margin:10px 0 4px">${P.items.some(it => it.entry) ? 'This day is already logged: change anything and save.' : 'Filled in from the last time you did each one. Change what was different, and ✕ anything you skipped.'}</p>
+    <p class="card-sub" style="margin:10px 0 4px">${P.fill ? 'Reps are from the shared log. Add the weights you lifted, change anything that was different, and ✕ what you skipped.' : P.items.some(it => it.entry) ? 'This day is already logged: change anything and save.' : 'Filled in from the last time you did each one. Change what was different, and ✕ anything you skipped.'}</p>
     ${P.items.map((it, i) => { const def = liftDef(it.ex);
-      return `<div class="past-ex"><div class="past-head"><span><b>${esc(def.name)}</b><small>${it.entry ? 'logged that day' : it.from ? `from ${fmtDate(it.from).slice(4)}` : 'first time: enter what you did'}</small></span><button class="link-btn" data-past-del="${i}">✕ skip</button></div>
+      return `<div class="past-ex"><div class="past-head"><span><b>${esc(def.name)}</b><small>${it.entry ? 'logged that day' : it.shared ? 'reps from the shared log' : it.from ? `from ${fmtDate(it.from).slice(4)}` : 'first time: enter what you did'}</small></span><button class="link-btn" data-past-del="${i}">✕ skip</button></div>
         <div class="lift-sets">${it.sets.map((x, j) => `<div class="lift-set"><span class="num">${j + 1}</span>
           <input type="number" inputmode="decimal" data-past-lb="${i}|${j}" value="${x.lb}" placeholder="${ph(def)}" aria-label="${esc(def.name)} set ${j + 1} weight">
           <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-past-reps="${i}|${j}" value="${x.reps}" placeholder="${def.secs ? 'sec' : 'reps'}" aria-label="${esc(def.name)} set ${j + 1} reps">
@@ -5840,7 +5926,7 @@ function renderLift(){
     eyebrow: 'Lift · strength alongside your running',
     title: 'Lift',
     stats: [['Lifts · week', new Set(wk.map(l => l.date)).size, ''], ['Volume · week', fmtK(liftVolume(wk)), 'lb'], ['PRs · 30 days', prs, '']],
-  }) + `<div class="wrap">${liftSummary()}${freshBadgesCard('lift')}${liftHero()}
+  }) + `<div class="wrap">${liftSummary()}${shareInCard()}${freshBadgesCard('lift')}${liftHero()}${fillCard()}
     <div class="seg" role="tablist" aria-label="Lift sections">${LIFT_TABS.map(([k, l]) => `<button role="tab" data-lift-tab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
     ${tab === 'progress' ? `<div class="grid two">${liftMaxCard()}${liftPRCard()}</div><div class="grid two" style="margin-top:16px">${liftVolumeCard()}${liftRecentCard()}</div>`
       : tab === 'badges' ? badgesCard('lift')
@@ -7681,6 +7767,18 @@ document.addEventListener('click', async e => {
     if (def.bw || def.assist || def.secs){ toast('Body-weight, assisted and timed moves don’t have a 1-rep max'); return; }
     Object.assign(liftUi.max, { ex:mx.dataset.maxEx, pick:false, q:'' }); redrawMax(); return;
   }
+  const fo = e.target.closest('[data-fill-open], [data-fill-skip]');
+  if (fo){
+    const k = fo.dataset.fillOpen ?? fo.dataset.fillSkip, at = doc.liftFill.findIndex(f => f.date + '|' + f.wo === k), f = doc.liftFill[at];
+    if (!f) return;
+    if (fo.dataset.fillSkip != null){
+      doc.liftFill = doc.liftFill.filter(x => x !== f); await save(); renderLift();
+      toast(`Removed ${fmtDate(f.date)}`, async () => { const F = [...doc.liftFill]; F.splice(at, 0, f); doc.liftFill = F; await save(); renderLift(); });
+      return;
+    }
+    liftUi.past = { date:f.date, wo:f.wo, fill:k, removed:[], items:f.items.map(it => ({ ex:it.ex, entry:null, from:null, shared:true, sets:it.reps.map(r => ({ lb:'', reps:r })) })) };
+    openSheet(pastCard()); return;
+  }
   const pd = e.target.closest('[data-past-del], [data-past-addset], [data-past-setdel]');
   if (pd && liftUi.past){
     readPast(); const P = liftUi.past;
@@ -8143,6 +8241,7 @@ document.addEventListener('click', async e => {
         if (it.entry && doc.lifts.some(l => l.id === it.entry)) doc.lifts = doc.lifts.map(l => l.id === it.entry ? { ...l, date:P.date, ex:it.ex, sets, ...(P.wo ? { wo:P.wo } : {}) } : l);
         else doc.lifts = [...doc.lifts, { id:liftId(), date:P.date, ex:it.ex, sets, ...(P.wo ? { wo:P.wo } : {}) }];
       }
+      if (P.fill) doc.liftFill = doc.liftFill.filter(f => f.date + '|' + f.wo !== P.fill);
       const name = doc.workouts.find(w => w.id === P.wo)?.name;
       liftUi.past = null; closeSheet(); await save(); renderLift();
       toast(n ? `Logged ${name ? name + ', ' : ''}${n} exercise${n === 1 ? '' : 's'} on ${fmtDate(P.date)}` : 'Removed'); break;
@@ -8157,6 +8256,21 @@ document.addEventListener('click', async e => {
       doc.workouts = [...doc.workouts, { id:'wo' + Date.now().toString(36), tpl, name:t.name, extra:true, routine:t.routine, items:t.items.map(([ex, sets, reps]) => ({ ex, sets, reps })) }];
       await save(); renderLift(); toast(`${t.name} saved: start it from your workouts`); break;
     }
+    case 'wo-share': openSheet(shareSheet()); break;
+    case 'wo-share-send': {
+      let url; try { url = await shareLink(); } catch { toast('Couldn’t make the link'); break; }
+      const text = 'My Stride workouts: open this in Stride to add them, then fill in your own weights.';
+      try { if (navigator.share) await navigator.share({ text, url }); else { await navigator.clipboard.writeText(url); toast('Link copied'); } closeSheet(); }
+      catch (err) { if (err?.name !== 'AbortError'){ try { await navigator.clipboard.writeText(url); toast('Link copied'); closeSheet(); } catch { toast('Couldn’t share the link'); } } }
+      break;
+    }
+    case 'share-take': {
+      const s = prefs.get('liftShare', null); if (!s) break;
+      const r = takeShare(s); prefs.set('liftShare', null); await save(); renderLift();
+      toast(`Added ${r.workouts} workout${r.workouts === 1 ? '' : 's'} and ${r.days} day${r.days === 1 ? '' : 's'} to fill in`); break;
+    }
+    case 'share-drop': prefs.set('liftShare', null); renderLift(); break;
+    case 'fill-all': liftUi.fillAll = true; renderLift(); break;
     case 'wo-new': readLiftForm(); liftUi.edit = { id:null, name:'', items:[{ ex:'bench', sets:3, reps:8 }] }; redrawWo(); break;
     case 'wo-from-day': {
       readLiftForm();
@@ -8286,7 +8400,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('change', e => {
   if ((e.target.id === 'past-date' || e.target.id === 'past-wo') && liftUi.past){
-    readPast(); Object.assign(liftUi.past, { items:pastItems(liftUi.past.wo, liftUi.past.date), removed:[] }); redrawPast(); return;
+    readPast(); if (liftUi.past.fill) return; Object.assign(liftUi.past, { items:pastItems(liftUi.past.wo, liftUi.past.date), removed:[] }); redrawPast(); return;
   }
   // The workouts card offers to save the chosen day's lifts as a workout.
   if (e.target.id === 'lf-date'){ readLiftForm(); if ($('#lift-wo') && !liftUi.edit) redrawWo(); return; }
@@ -8331,9 +8445,17 @@ document.addEventListener('submit', e => {
 
 /* ── Routing ─────────────────────────────────────────────────────── */
 document.querySelectorAll('.tab[data-page]').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.page; }));
+// A shared-workouts link: keep it until they choose, and tidy the address.
+async function takeShareLink(code){
+  history.replaceState(null, '', location.pathname + location.search + '#lift');
+  try { prefs.set('liftShare', await readShare(code)); prefs.set('liftTab', 'train'); }
+  catch { toast('That share link didn’t come through whole: ask for it again'); }
+  render();
+}
 function render(){
   badgesInit();
   let [page, arg] = (location.hash.slice(1) || 'today').split('/');
+  if (page === 'lift' && arg?.startsWith('s.')){ takeShareLink(arg.slice(2)); return; }
   if (page === 'upload') page = 'setup';   // older links
   if (page === 'body' && arg === 'lifting') page = 'lift';   // older links
   let pg = ['today', 'progress', 'runs', 'body', 'lift', 'plan', 'setup', 'welcome', 'routine', 'intake', 'moves'].includes(page) ? page : 'today';
