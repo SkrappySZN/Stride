@@ -774,6 +774,15 @@ body.gym main{padding-bottom:0}
 .lift-hero-more{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px}
 .lift-hero-more .btn{min-height:46px}
 .lift-hero-more .lift-hero-empty{grid-column:1 / -1}
+.lift-week{display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 12px}
+.lift-week span{font:12px/1 var(--mono); padding:7px 10px; border:1px solid var(--line); border-radius:999px; color:var(--muted)}
+.lift-week span.done{color:var(--ink); border-color:color-mix(in srgb, var(--accent) 55%, var(--line)); background:color-mix(in srgb, var(--accent) 12%, transparent)}
+.lift-pick-h{margin:16px 0 8px; font-size:13px; font-weight:650; color:var(--ink-2)}
+.lift-picks{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px}
+.btn.lift-pick{flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; min-height:58px; text-align:left}
+.btn.lift-pick small{font-weight:500; font-size:12px; color:var(--muted)}
+.btn.lift-pick.sugg{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, var(--surface-2))}
+.btn.lift-pick.sugg small{color:var(--ink-2)}
 .gym-empty{padding:30px 4px}
 .past-ex{border-top:1px solid var(--line); padding:12px 0}
 .past-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:6px}
@@ -5108,7 +5117,29 @@ function woNext(){
   const { g } = nextGroup(), last = w => doc.lifts.filter(l => l.wo === w.id).map(l => l.date).sort().at(-1) ?? '';
   return doc.workouts.filter(w => !w.extra && groupOf(w.items.map(it => it.ex)) === g).sort((a, b) => last(a) < last(b) ? -1 : 1)[0]?.id ?? null;
 }
-// What to do next, with one big Start: the program's day, your next workout, or a suggested one.
+// This week's lifting (Monday on), one entry per day: the workout's name, or its group.
+function liftWeek(){
+  const ws = weekStart(todayYmd()), ex = extraWos(), byDay = {};
+  for (const l of doc.lifts){ if (l.date >= ws && !l.max) (byDay[l.date] ??= []).push(l); }
+  return Object.keys(byDay).sort().map(date => {
+    const ls = byDay[date], wo = doc.workouts.find(w => ls.some(l => l.wo === w.id)), g = groupOf(ls.map(l => l.ex));
+    return { date, name:wo?.name ?? g ?? 'Lifting', g: ls.every(l => ex.has(l.wo)) ? null : g };
+  });
+}
+// A rough pick, not a rule: the next group in turn that this week hasn't had yet. The person chooses.
+function liftSuggest(){
+  const today = todayYmd(), { g, after } = nextGroup(), week = liftWeek(), done = new Set(week.map(s => s.g).filter(Boolean));
+  const order = [0, 1, 2].map(i => LIFT_SPLIT[(LIFT_SPLIT.indexOf(g) + i) % 3]);
+  const pick = order.find(x => !done.has(x)) ?? g, missing = LIFT_SPLIT.filter(x => !done.has(x)).map(x => x.toLowerCase());
+  const when = after && (after.date === today ? 'today' : diffDays(after.date, today) === 1 ? 'yesterday' : 'on ' + fmtDate(after.date).slice(4));
+  let why = !week.length ? `Nothing yet this week.${after ? ` Last time was ${after.g.toLowerCase()}, ${when}, so ${pick.toLowerCase()} is a good start.` : ''}`
+    : !missing.length ? `Push, pull and legs are all done this week. Anything more is a bonus; ${pick.toLowerCase()} is next in turn.`
+    : `No ${missing.join(' or ')} yet this week${after && after.g !== pick ? `, and you did ${after.g.toLowerCase()} ${when}` : ''}, so ${pick.toLowerCase()} fits best.`;
+  const days = doc.planId && coached() ? schedule(today, 2) : [];
+  if (pick === 'Legs' && days[1]?.kind === 'run') why += ' You run tomorrow, so keep legs light or pick another day.';
+  return { pick, why, week, done };
+}
+// What to do next: the program's day, or this week so far with a suggestion, and you pick the workout.
 function liftHero(){
   if (LV?.away){
     const done = LV.items.filter(x => x.sets.every(s => s.done)).length;
@@ -5124,7 +5155,9 @@ function liftHero(){
     title = `Workout ${day}`; why = prog.name; start = 'data-action="lv-prog"';
     items = prog.days[day].map(([ex, n, r]) => `${liftDef(ex).name} · ${n} × ${r}`);
   } else {
-    const { g, after } = nextGroup(), w = doc.workouts.find(x => x.id === woNext());
+    const own = doc.workouts.filter(w => !w.extra);
+    if (own.length) return liftPickHero(sets);
+    const { g, after } = nextGroup(), w = null;
     const days = doc.planId && coached() ? schedule(today, 2) : [];
     why = (after ? `You did ${after.g.toLowerCase()} ${after.date === today ? 'today' : diffDays(after.date, today) === 1 ? 'yesterday' : 'on ' + fmtDate(after.date).slice(4)}, so ${g.toLowerCase()} is next.` : 'Push, pull and legs, in turn.')
       + (g === 'Legs' && days[1]?.kind === 'run' ? ' You run tomorrow, so keep legs light today or do another day first.' : '');
@@ -5136,16 +5169,31 @@ function liftHero(){
     <ol class="lift-hero-list">${items.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
     <div class="lift-hero-more"><button class="btn lift-hero-empty" data-action="lv-empty">Start an empty workout</button><button class="btn" data-action="lift-log-open">+ Log a set</button><button class="btn" data-action="past-open">+ Log a past workout</button></div></div>`;
 }
+function liftPickHero(sets){
+  const { pick, why, week, done } = liftSuggest(), last = w => doc.lifts.filter(l => l.wo === w.id).map(l => l.date).sort().at(-1) ?? '';
+  const gOf = w => w.extra ? null : groupOf(w.items.map(it => it.ex)), rank = w => w.extra ? 4 : gOf(w) === pick ? 0 : 1 + LIFT_SPLIT.indexOf(gOf(w)) / 10;
+  // Suggested group first (done longest ago first), then the rest in push → pull → legs order, extra days last.
+  const wos = [...doc.workouts].sort((a, b) => rank(a) - rank(b) || (last(a) < last(b) ? -1 : last(a) > last(b) ? 1 : 0));
+  const dayOf = g => week.filter(s => s.g === g).map(s => DOW[parseYmd(s.date).getDay()]).join(', ');
+  const extras = week.filter(s => !s.g);
+  return `<div class="card lift-hero"><div class="eyebrow">This week${sets ? ` · ${sets} set${sets === 1 ? '' : 's'} logged today` : ''}</div>
+    <div class="lift-week">${LIFT_SPLIT.map(g => `<span class="${done.has(g) ? 'done' : ''}">${g} · ${done.has(g) ? dayOf(g) : 'not yet'}</span>`).join('')}${extras.map(s => `<span class="done">${esc(shortName(s.name))} · ${DOW[parseYmd(s.date).getDay()]}</span>`).join('')}</div>
+    <p class="card-sub">${why}</p>
+    <div class="lift-pick-h">Pick today’s workout</div>
+    <div class="lift-picks">${wos.map(w => { const d = last(w), sg = !w.extra && gOf(w) === pick;
+      return `<button class="btn lift-pick${sg ? ' sugg' : ''}" data-wo-start="${w.id}"><b>${esc(shortName(w.name))}</b><small>${sg ? 'suggested · ' : ''}${d ? 'last ' + fmtDate(d).slice(4) : 'not done yet'}</small></button>`; }).join('')}</div>
+    <div class="lift-hero-more"><button class="btn lift-hero-empty" data-action="lv-empty">Start an empty workout</button><button class="btn" data-action="lift-log-open">+ Log a set</button><button class="btn" data-action="past-open">+ Log a past workout</button></div></div>`;
+}
 const LIFT_TABS = [['train', 'Train'], ['progress', 'Progress'], ['badges', 'Badges']];
 function woList(){
-  const next = woNext(), date = liftUi.date || todayYmd();
+  const date = liftUi.date || todayYmd();
   const loose = doc.lifts.some(l => l.date === date && !l.wo && !l.day && !l.max);
   return `${doc.workouts.length ? '' : '<p class="card-sub" style="margin:0 0 10px">Save the workouts you repeat (Push, Pull, Legs…) and Stride rotates them for you.</p>'}
     ${doc.workouts.length ? `<ul class="lift-list">${doc.workouts.map(w => {
       const last = doc.lifts.filter(l => l.wo === w.id).sort(byDate).at(-1);
-      return `<li><span><b>${esc(w.name)}${w.id === next ? ' <span class="badge test">next</span>' : ''}</b>
+      return `<li><span><b>${esc(w.name)}</b>
         <small>${w.extra ? 'extra day · ' : ''}${w.vary ? 'mixes up variations · ' : ''}${woPlan(w, todayYmd()).map(it => esc(liftDef(it.ex).name)).join(', ')}${last ? ` · last ${fmtDate(last.date).slice(4)}` : ''}</small></span>
-        <span class="btn-row"><button class="btn small${w.id === next ? ' primary' : ''}" data-wo-start="${w.id}">Start</button><button class="btn small" data-wo-edit="${w.id}">Edit</button></span></li>`; }).join('')}</ul>` : ''}
+        <span class="btn-row"><button class="btn small" data-wo-start="${w.id}">Start</button><button class="btn small" data-wo-edit="${w.id}">Edit</button></span></li>`; }).join('')}</ul>` : ''}
     <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-new">+ New workout</button>${doc.workouts.some(w => w.tpl === 'sap') ? '' : '<button class="btn small" data-action="wo-extra" data-tpl="sap">+ Shoulders, arms &amp; abs day</button>'}${loose ? `<button class="btn small" data-action="wo-from-day">Save ${date === todayYmd() ? 'today' : fmtDate(date).slice(4)} as a workout</button>` : ''}</div>
     ${doc.gym.skip.length ? `<p class="card-sub" style="margin:12px 0 0">Not at your gym (tap to bring back): ${doc.gym.skip.map(ex => `<button class="link-btn" data-gym-unskip="${ex}">${esc(liftDef(ex).name)}</button>`).join(', ')}</p>` : ''}`;
 }

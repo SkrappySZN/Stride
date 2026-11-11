@@ -167,7 +167,7 @@ data runs through it, so treat changes to data handling with care.
   Volume (`liftVolume`, `setLoad`) is weight × reps summed; `whole:true` moves (pull-up, chin-up, dips)
   add body weight, assisted ones use body weight minus help, other body-weight moves count added weight only.
   It's the "Volume · week" stat, the Volume card (by group, last 12 weeks) and the live workout's "Lbs moved".
-  Page layout: `liftHero()` (one Start for what's next, or Resume) then tabs (`LIFT_TABS`, `prefs` 'liftTab'):
+  Page layout: `liftHero()` (Resume; a program's next day; or, once you have workouts, `liftPickHero()`: this week's push/pull/legs so far from `liftWeek()`, a rough suggestion from `liftSuggest()` (the next group in turn not done this week), and every workout as a button to pick, suggested group first. Nothing is pre-chosen) then tabs (`LIFT_TABS`, `prefs` 'liftTab'):
   Train, Progress, Badges. Logging a one-off set is the "+ Log a set" button, which opens `liftLogCard()` in a
   bottom sheet (`openSheet`/`closeSheet`) with a searchable picker (`pickList`). The live workout is gym mode:
   `body.gym` hides the header and dock, a fixed thumb bar holds "✓ Done set" and the rest timer, swipes move
