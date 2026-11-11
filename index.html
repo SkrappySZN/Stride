@@ -2063,8 +2063,11 @@ function choose(title, body, [aLabel, aFn], [bLabel, bFn]){
 }
 
 /* ── Derived facts ───────────────────────────────────────────────── */
-const sortedRuns = () => [...doc.runs].sort((a, b) => a.start < b.start ? -1 : 1);
-const runsOn = d => doc.runs.filter(r => r.date === d);
+// A recording marked as strides or drills (`run.drill`) stays in the runs list but isn't a run:
+// it doesn't count toward the week, the plan, trends or badges.
+const allRunsSorted = () => [...doc.runs].sort((a, b) => a.start < b.start ? -1 : 1);
+const sortedRuns = () => allRunsSorted().filter(r => !r.drill);
+const runsOn = d => doc.runs.filter(r => r.date === d && !r.drill);
 const runById = id => doc.runs.find(r => r.id === id);
 const testRoute = () => doc.routes.find(r => r.isTest);
 // Indoors: the watch's sub-sport says so, or a FIT run came in with no GPS at all.
@@ -2318,7 +2321,7 @@ function maraWeek(phase, longMi, per, quality, scale = 1){
 }
 // The adaptive part: never prescribe more than 2 mi beyond what you've actually run lately.
 function longCap(beforeDate){
-  const recent = doc.runs.filter(r => r.date < beforeDate && diffDays(r.date, beforeDate) <= 21).map(r => r.distMi ?? 0);
+  const recent = doc.runs.filter(r => !r.drill && r.date < beforeDate && diffDays(r.date, beforeDate) <= 21).map(r => r.distMi ?? 0);
   const setupLongest = doc.race?.setAt && diffDays(doc.race.setAt, beforeDate) <= 21 ? doc.race.longest || 0 : 0;
   return half(Math.max(4, setupLongest, ...recent) + LONG_STEP_MAX);
 }
@@ -2450,7 +2453,7 @@ const planWeekObj = pw => activePlan().weeks[Math.min(pw, planLen()) - 1];
 function schedule(from, n){
   if (isMarathon()) return marathonSchedule(from, n);
   const out = [], red = redFlagActive(), counts = {};
-  const count = ws => counts[ws] ??= doc.runs.filter(r => weekStart(r.date) === ws).length;
+  const count = ws => counts[ws] ??= doc.runs.filter(r => !r.drill && weekStart(r.date) === ws).length;
   for (let i = 0; i < n; i++){
     const d = addDays(from, i), ws = weekStart(d);
     count(ws);
@@ -2989,7 +2992,7 @@ function renderToday(){
   const ranYesterday = runsOn(addDays(today, -1)).length > 0;
   const todayRuns = runsOn(today);
   const ws = weekStart(today);
-  const weekRuns = doc.runs.filter(r => r.date >= ws);
+  const weekRuns = doc.runs.filter(r => r.date >= ws && !r.drill);
   const weekMi = weekRuns.reduce((a, r) => a + (r.distMi ?? 0), 0);
 
   if (!coached()){
@@ -4206,7 +4209,7 @@ async function shareRecap(ws){
    card says so instead of erroring. */
 const CREW = { rows:null, state:'idle', at:0, pushed:null };
 function crewStats(){
-  const ws = weekStart(todayYmd()), wk = doc.runs.filter(r => r.date >= ws);
+  const ws = weekStart(todayYmd()), wk = doc.runs.filter(r => r.date >= ws && !r.drill);
   return { week_start:ws, runs:wk.length, minutes:Math.round(wk.reduce((a, r) => a + (r.timerSec ?? 0), 0) / 60),
     miles:Math.round(wk.reduce((a, r) => a + (r.distMi ?? 0), 0) * 10) / 10, streak:milestones().streak ?? 0 };
 }
@@ -4376,7 +4379,7 @@ function shoesCard(){
 function renderRunsList(){
   const runs = sortedRuns().reverse();
   const page = $('#page-runs');
-  const rows = runs;
+  const rows = allRunsSorted().reverse();
   if (!runs.length){
     page.innerHTML = band({ eyebrow:'No runs yet', title:'Runs' }) + `<div class="wrap">
       <div class="empty"><b>No runs yet.</b><br>They appear once your watch syncs — <a href="#setup">set that up</a>, or upload a FIT file.</div></div>`;
@@ -4395,7 +4398,7 @@ function renderRunsList(){
     <div class="card runs-table-card">
     <ul class="run-cards">${rows.map(r => `<li><a href="#runs/${r.id}">
           <div class="rc-main">${fmtDate(r.date)} · ${fmtMi(r.distMi)} mi</div>
-          <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${isTest(r) ? `<span class="badge test">${trWord('Test', 'Outside')}</span>` : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
+          <div class="rc-right">${(() => { const fl = flagsFor(r).filter(f => f[0] === 'warn' || f[0] === 'crit'); return fl.length ? `<i class="flag-dot" style="background:var(--${fl.some(f => f[0] === 'crit') ? 'crit' : 'warn'})" aria-label="${esc(fl.map(f => f[1]).join(', '))}"></i>` : ''; })()}${r.drill ? '<span class="badge">Strides</span>' : isTest(r) ? `<span class="badge test">${trWord('Test', 'Outside')}</span>` : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : ''}<span aria-hidden="true" style="color:var(--muted)">›</span></div>
           <div class="rc-nums">${fmtDur(r.timerSec)} · ${fmtDur(r.avgPaceSec)}/mi · HR ${r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr)}${r.effort != null ? ` · effort ${r.effort}` : ''}${r.tempF != null ? ` · ${r.tempF}°` : ''}${shoeOf(r) ? ` · ${esc(shortName(shoeOf(r).name))}` : ''}${multiDevice ? ` · ${esc(r.device ?? '')}` : ''}</div>
         </a></li>`).join('')}</ul>
     <div class="table-wrap"><table class="runs">
@@ -4404,7 +4407,7 @@ function renderRunsList(){
         const fl = flagsFor(r).filter(f => f[0] !== 'wait' || f[1] === 'Not the test route');
         return `<tr data-run="${r.id}" tabindex="0">
           <td><div class="r-date">${fmtDate(r.date)}</div><div class="r-sub">${r.source === 'fit' ? fmtTime(r.start) + ' · ' + (r.device ? esc(r.device) : 'FIT') : 'from notes'}</div></td>
-          <td style="text-align:right">${isTest(r) ? `<span class="badge test">${trWord('Test', 'Outside')}</span>` : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : '<span class="badge">Other</span>'}</td>
+          <td style="text-align:right">${r.drill ? '<span class="badge">Strides</span>' : isTest(r) ? `<span class="badge test">${trWord('Test', 'Outside')}</span>` : isTreadmill(r) ? '<span class="badge tread">Treadmill</span>' : '<span class="badge">Other</span>'}</td>
           <td class="r-shoe" title="${esc(shoeOf(r)?.name ?? '')}">${shoeOf(r) ? esc(shoeOf(r).name) : '<span class="r-sub">—</span>'}</td>
           <td>${fmtMi(r.distMi)}</td>
           <td>${fmtDur(r.runSec)} / ${fmtDur(r.walkSec)}</td>
@@ -4440,6 +4443,7 @@ function setTreadMi(r, mi){
 const nth = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
 const secs = s => { s = Math.round(Math.abs(s)); return s >= 60 ? `${Math.floor(s / 60)}:${pad(s % 60)}` : `${s} s`; };
 function runTake(r, s){
+  if (r.drill) return ['Marked as strides or drills, so it doesn’t count as a run: it stays out of your week, your plan, trends and badges. Untick the box above if it was a real run.'];
   const p = doc.profile, runs = sortedRuns(), i = runs.indexOf(r), prior = runs.slice(0, i);
   const pace = x => x.jogPaceSec ?? x.avgPaceSec, tread = isTreadmill(r);
   const head = [], inside = [], next = [];
@@ -4554,7 +4558,7 @@ async function renderRunDetail(id){
     eyebrow: `<button class="link-btn" data-action="back" style="color:inherit;opacity:.8">← All runs</button> &nbsp;·&nbsp; ${fmtDateLong(r.date)}${r.source === 'fit' ? ' · ' + fmtTime(r.start) : ''}${r.device ? ' · ' + esc(r.device) : ''}`,
     title: `${fmtMi(r.distMi)}<em> mi</em>`,
     stats: [['Time', fmtDur(r.timerSec)], [r.jogHr != null ? 'Jog HR' : 'Avg HR', r.jogHr != null ? Math.round(r.jogHr) : num(r.avgHr), 'bpm'], ['Pace', fmtDur(r.avgPaceSec), '/mi']],
-    extra: `<div class="btn-row">${routeCtl}${(doc.shoes ?? []).length ? `<label class="shoe-pick">Shoes <select id="shoe-in"><option value="">None</option>${doc.shoes.filter(sh => !sh.retired || sh.id === r.shoeId).map(sh => `<option value="${sh.id}"${sh.id === r.shoeId ? ' selected' : ''}>${esc(sh.name)}</option>`).join('')}</select></label>` : ''}</div>`,
+    extra: `<div class="btn-row">${routeCtl}<label class="shoe-pick"><input type="checkbox" id="drill-in"${r.drill ? ' checked' : ''}> Strides or drills, not a run</label>${(doc.shoes ?? []).length ? `<label class="shoe-pick">Shoes <select id="shoe-in"><option value="">None</option>${doc.shoes.filter(sh => !sh.retired || sh.id === r.shoeId).map(sh => `<option value="${sh.id}"${sh.id === r.shoeId ? ' selected' : ''}>${esc(sh.name)}</option>`).join('')}</select></label>` : ''}</div>`,
   }) + `<div class="wrap">
     <div class="card coach take" style="margin-bottom:16px"><div class="card-head"><h2>Stride’s take${infoBtn}</h2><span class="card-sub">compared with your runs before it</span></div>
       ${explain('take')}
@@ -4646,6 +4650,10 @@ async function renderRunDetail(id){
     if (v !== '' && !(mph >= 1 && mph <= 15)){ toast('That speed doesn’t look right'); renderRunDetail(r.id); return; }
     if (v === '') delete r.beltMph; else r.beltMph = mph;
     await save(); toast(v === '' ? 'Belt speed cleared' : 'Belt speed saved'); renderRunDetail(r.id);
+  });
+  $('#drill-in')?.addEventListener('change', async e => {
+    if (e.target.checked) r.drill = true; else delete r.drill;
+    await save(); toast(r.drill ? 'Marked as strides: not counted as a run' : 'Counted as a run again'); renderRunDetail(r.id);
   });
   $('#shoe-in')?.addEventListener('change', async e => { r.shoeId = e.target.value || null; await save(); toast('Shoes updated'); });
   $('#temp-in').addEventListener('change', async e => {
