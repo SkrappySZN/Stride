@@ -790,7 +790,9 @@ body.gym main{padding-bottom:0}
 .lift-more-row .btn.lift-more{flex-direction:column; gap:1px; line-height:1.15}
 .lift-more-row .btn.lift-more small{font-weight:400; font-size:12px; color:var(--muted)}
 .lv-best{border-color:color-mix(in srgb, var(--accent) 45%, var(--line))}
-.lv-best small{flex-basis:100%; font-size:13px; color:var(--ink-2)}
+.lv-best small, .lv-try small{flex-basis:100%; font-size:13px; color:var(--ink-2); line-height:1.4}
+.lv-try{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 9%, var(--surface-2))}
+.lv-try b{color:var(--ink)}
 .lift-wk{margin:0 0 14px; font:12px/1.6 var(--mono); color:var(--muted)}
 .lift-wk span{text-transform:uppercase; letter-spacing:.08em; margin-right:4px}
 .lift-wk b{color:var(--ink); font-weight:600}
@@ -2793,7 +2795,7 @@ const EXPLAIN = {
   journey: () => 'Your training as a timeline, left to right. Each dot is a run, and bigger means longer. Diamonds are milestones you’ve passed. The dashed line ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. It shows when things happened, not how fit you are; the charts further down show that. Tap a run to open it.',
   onerm: () => 'Your 1-rep max is the heaviest weight you’ve lifted for a single rep: a true max, not an estimate. Log one with “+ Log a 1-rep max”: pick the lift and enter the heaviest weight you got for one full rep. Warm up with a few lighter singles first, and use a spotter or safety arms. Max tests never change the weights Stride suggests for your normal sets. Everyday progress (best sets of several reps) is on the Best sets card. Body-weight and assisted moves aren’t listed: they go by reps or help instead.',
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
-  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. When you finish, the summary’s “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar. “Your best” is your heaviest set before today (the most reps at that weight), and “Most reps” the set with the most reps at any weight. To beat your best, lift the same weight for one more rep, or more weight. The ✓ button says so when the set you’ve set up would beat it.',
+  liftLive: () => '“Try today” comes from last time, counting only the sets at your heaviest weight: keep that weight and add one rep to each set, until every set reaches 12. Then go one step heavier and start back at 8 reps (one step less help on an assisted machine). Body-weight moves add a rep each set; holds add 5 seconds. It’s already filled in below. Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. When you finish, the summary’s “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar. “Your best” is your heaviest set before today (the most reps at that weight), and “Most reps” the set with the most reps at any weight. To beat your best, lift the same weight for one more rep, or more weight. The ✓ button says so when the set you’ve set up would beat it.',
   badges: () => 'Badges come from what you’ve already done, so older runs and lifts count too. Each one has tiers, from bronze to silver, gold and volt: the more you do, the higher it goes. The bar shows how close you are to the next tier; tap a badge to see every tier and the day you earned it. Runs live on Progress (counts, miles, longest run, steady weeks, fastest mile and 5K, early, late, cold and hot runs); lifting on Lift (lifting days, volume, steady weeks, PRs, pull-ups, run-and-lift days, and bench, squat and deadlift against your body weight, which use your latest weight from the Body tab). New ones show on Today and in the new-run scene.',
   e1rm: () => 'Each lift shows your best set: the heaviest weight you’ve done for a working set, with the reps you got. A new PR is more weight than ever, or the same weight for more reps. Tap a lift to see the heaviest weight from each workout on a chart, and your last few workouts underneath with what changed from the time before (↑ more weight or more reps, ↓ less). Body-weight moves like pull-ups go by the most reps in a set. Assisted machines go by the help: less help is stronger. Timed moves go by seconds (planks, hangs) or weight (carries). Singles you test as a max live on the 1-rep max card instead.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
@@ -5373,24 +5375,31 @@ const liveSave = () => prefs.set('liftLive', LV);
 const restFor = ex => ['squat', 'hinge', 'hpress', 'ipress', 'vpress', 'vpull', 'hpull', 'single'].includes(liftDef(ex).f) ? 120 : 75;
 const mmss = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 // Last time's weight, one step up when every set hit its reps.
+// Double progression: keep the weight and add a rep to each set until every set reaches the top of the
+// range (12; a workout's own reps only matter the first time), then go up a step and start again at 8. Only sets at last time's
+// top weight count, so a light warm-up set doesn't set the target.
+const REP_LO = 8, REP_HI = 12;
 function liveItem(ex, sets, reps, day){
-  const def = liftDef(ex), last = lastWorking(ex, todayYmd());
-  // Reps come from a set at last time's top weight: a light first set's reps would pair 15 reps with the heaviest weight.
-  const topR = last && (w => last.sets.find(s => s.lb === w)?.reps)(def.assist ? Math.min(...last.sets.map(s => s.lb)) : topLb(last));
-  let n = sets || last?.sets.length || 3, r = reps || topR || last?.sets[0].reps || (def.secs ? 30 : def.bw ? 8 : 10), lb = def.bw ? 0 : '', why = 'First time: start light and find a weight you could lift a couple more reps with.';
+  const def = liftDef(ex), last = lastWorking(ex, todayYmd()), hi = REP_HI;
+  let n = sets || last?.sets.length || 3, why = 'First time: start light and find a weight you could lift a couple more reps with.';
+  let plan = Array.from({ length:n }, () => ({ lb:def.bw ? 0 : '', reps:reps || (def.secs ? 30 : def.bw ? 8 : 10) }));
   if (def.secs && !last) why = def.bw ? 'First time: hold with good form and stop when it slips. Change the seconds to what you managed.' : 'First time: pick dumbbells you can grip for the whole walk. Change the seconds to how long you went.';
-  const all = def.secs ? 'went the full time' : 'got every rep';
-  if (day){ lb = progWeight(ex, sets, reps); why = 'Your program’s weight for today.'; }
+  if (day){ const lb = progWeight(ex, sets, reps); plan = plan.map(x => ({ ...x, lb })); why = 'Your program’s weight for today.'; }
   else if (last){
-    const w = def.assist ? Math.min(...last.sets.map(s => s.lb)) : topLb(last), top = last.sets.filter(s => def.assist ? s.lb <= w : s.lb >= w);
-    lb = w;
-    if (top.length >= n && top.every(s => s.reps >= r)){
-      if (def.assist){ lb = Math.max(0, w - def.inc); why = `You got every rep last time, so try ${def.inc} lb less help.`; }
-      else if (def.bw) { r += def.secs ? 5 : 1; why = `You ${all} last time, so try ${def.secs ? '5 seconds longer' : 'one more rep'} each set.`; }
-      else { lb = w + def.inc; why = `You ${all} last time, so try ${def.inc} lb more.`; }
-    } else why = `Same ${def.assist ? 'help' : 'weight'} as last time: aim to ${def.secs ? 'go the full time' : 'get every rep'}.`;
+    const w = def.assist ? Math.min(...last.sets.map(s => s.lb)) : topLb(last), top = last.sets.filter(s => s.lb === w).map(s => +s.reps || 0);
+    const at = i => top[Math.min(i, top.length - 1)], u = def.secs ? ' s' : '';
+    const said = `Last time ${def.assist ? `${w} lb help` : def.bw && !w ? 'body weight' : `${w} lb`}: ${top.join(', ')}${u}.`;
+    if (def.secs){ plan = plan.map((x, i) => ({ lb:w, reps:at(i) + 5 })); why = `${said} Go 5 seconds longer each set.`; }
+    else if (def.bw && !def.assist){ plan = plan.map((x, i) => ({ lb:w, reps:at(i) + 1 })); why = `${said} One more rep each set.`; }
+    else if (top.length >= n && top.every(r => r >= hi)){
+      const lb = def.assist ? Math.max(0, w - def.inc) : w + def.inc;
+      plan = plan.map(() => ({ lb, reps:REP_LO })); why = `${said} Every set hit ${hi}, so go ${def.inc} lb ${def.assist ? 'less help' : 'heavier'} and start back at ${REP_LO} reps.`;
+    } else {
+      plan = plan.map((x, i) => ({ lb:w, reps:Math.min(hi, (at(i) || REP_LO - 1) + 1) }));
+      why = `${said} Same ${def.assist ? 'help' : 'weight'}, one more rep each set. Once every set gets ${hi}, ${def.assist ? `drop the help by ${def.inc} lb` : `go up ${def.inc} lb`}.`;
+    }
   }
-  return { ex, why, entry:null, how:!last, sets:Array.from({ length:n }, () => ({ lb, reps:r, done:false })) };
+  return { ex, why, entry:null, how:!last, try:last && !day ? plan.map(x => ({ ...x })) : null, sets:plan.map(x => ({ ...x, done:false })) };
 }
 function liveStart({ wo = null, day = null, name, items, free = false }){
   try { audioCtx ??= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch {}
@@ -5484,7 +5493,7 @@ function renderLive(){
       ${bb ? `<div class="lv-last lv-best"><span>Your best · ${fmtDate(bb.best.date).slice(4)}</span><b>${setLabel(def, bb.best)}</b>
         ${bb.reps ? `<span>Most reps · ${fmtDate(bb.reps.date).slice(4)}</span><b>${setLabel(def, bb.reps)}</b>` : ''}
         <small>To beat it: ${beatTxt(def, bb.best)}</small></div>` : ''}
-      <p class="lv-why">${it.why}</p>
+      ${it.try ? `<div class="lv-last lv-try"><span>Try today</span><b>${fmtSets(it.try, setMode(def), def.secs)}</b><small>${it.why}</small></div>` : `<p class="lv-why">${it.why}</p>`}
       ${warm && !LV.items.some(x => x.sets.some(s => s.done)) ? `<a class="lv-warm" href="#routine/${warm}">▶ Warm up first: ${ROUTINES[warm].name} · ${Math.round(routineSec(routineSteps(warm)) / 60)} min</a>` : ''}
       <div class="gym-tools">${how ? `<button class="pill" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how-to' : 'How to do it'}</button>` : ''}<button class="pill" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button><button class="pill" data-action="lv-add-set">+ Set</button>${it.sets.length > 1 && !it.sets.at(-1).done ? '<button class="pill" data-action="lv-drop-set">− Set</button>' : ''}<button class="pill" data-action="lv-add-open">+ Exercise</button><button class="pill" data-action="lv-remove">Remove</button>${infoBtn}</div>${explain('liftLive')}
       ${how && it.how ? `<div class="lv-how"><p><b>Set up:</b> ${how.set}</p><ol>${how.cues.map(c => `<li>${c}</li>`).join('')}</ol><p class="lv-avoid"><b>Watch for:</b> ${how.avoid}</p></div>` : ''}
@@ -7737,7 +7746,7 @@ document.addEventListener('click', async e => {
       liveSave(); renderLive(); return;
     }
     if (lv.dataset.lvPick){
-      const ex = lv.dataset.lvPick, fresh = liveItem(ex, it.sets.length, +it.sets[0].reps || null, LV.day);
+      const ex = lv.dataset.lvPick, fresh = liveItem(ex, it.sets.length, null, LV.day);
       // Sets already ticked belong to the old exercise: keep them, and add the swap after it.
       if (it.sets.some(s => s.done)){ it.sets = it.sets.filter(x => x.done); LV.items.splice(LV.i + 1, 0, fresh); LV.i++; liveCommit(it); toast(`Kept your ${liftDef(it.ex).name} sets; ${liftDef(ex).name} added after`); }
       else LV.items[LV.i] = { ...fresh, entry:it.entry, sets:fresh.sets };
@@ -8371,8 +8380,17 @@ document.addEventListener('click', async e => {
       openSheet(`<h2 class="sheet-title">Finish now?</h2><p class="card-sub" style="margin:0 0 14px">Your ticked sets are saved. ${open.length === 1 ? 'This one wasn’t' : 'These weren’t'} started and won’t be logged: ${open.map(x => esc(liftDef(x.ex).name)).join(', ')}.</p>
         <div class="sheet-actions"><button class="btn primary big" data-action="lv-finish">Finish workout<small>Shows your summary</small></button><button class="btn big" data-action="sheet-close">Keep going</button></div>`); break;
     }
-    case 'lv-menu': openSheet(`<h2 class="sheet-title">${esc(LV.name)}</h2><p class="card-sub" style="margin:0 0 14px">Nothing here deletes anything: every ticked set is already saved.</p>
-      <div class="sheet-actions"><button class="btn primary big" data-action="lv-finish">Finish workout<small>Done for today: shows your summary</small></button><button class="btn big" data-action="lv-leave">Leave for now<small>Pick it up later from the Lift tab</small></button><button class="btn big" data-action="sheet-close">Keep going</button></div>`); break;
+    case 'lv-menu': openSheet(`<h2 class="sheet-title">${esc(LV.name)}</h2><p class="card-sub" style="margin:0 0 14px">Every ticked set is already saved. Finishing or leaving keeps them.</p>
+      <div class="sheet-actions"><button class="btn primary big" data-action="lv-finish">Finish workout<small>Done for today: shows your summary</small></button><button class="btn big" data-action="lv-leave">Leave for now<small>Pick it up later from the Lift tab</small></button><button class="btn big" data-action="sheet-close">Keep going</button><button class="link-btn" data-action="lv-discard-ask" style="margin-top:6px">Delete this workout</button></div>`); break;
+    // A test or a mistake: take the workout away along with every set it logged (Undo puts it back).
+    case 'lv-discard-ask': { const n = LV.items.reduce((k, it) => k + it.sets.filter(x => x.done).length, 0);
+      openSheet(`<h2 class="sheet-title">Delete ${esc(LV.name)}?</h2><p class="card-sub" style="margin:0 0 14px">${n ? `This removes the ${n} set${n === 1 ? '' : 's'} you ticked in it. Your other workouts aren’t touched.` : 'Nothing has been ticked yet, so nothing is logged.'}</p>
+        <div class="sheet-actions"><button class="btn big danger" data-action="lv-discard">Delete workout</button><button class="btn big" data-action="lv-menu">Back</button></div>`); break; }
+    case 'lv-discard': {
+      const was = LV, ids = new Set(LV.items.map(it => it.entry).filter(Boolean)), gone = doc.lifts.filter(l => ids.has(l.id));
+      doc.lifts = doc.lifts.filter(l => !ids.has(l.id)); LV = null; liveSave(); keepAwake(false); closeSheet(); await save();
+      scrollTo(0, 0); renderLift();
+      toast('Workout deleted', async () => { doc.lifts = [...doc.lifts, ...gone]; LV = was; liveSave(); await save(); renderLift(); }); break; }
     case 'lv-leave': closeSheet(); LV.away = true; liveSave(); keepAwake(false); location.hash = 'lift'; renderLift(); scrollTo(0, 0); break;
     case 'lv-list': openSheet(`<h2 class="sheet-title">This workout</h2><div class="ex-list">${LV.items.map((x, j) => { const d = x.sets.filter(y => y.done).length;
         return `<button class="ex-row" data-lv-go="${j}"${j === LV.i ? ' aria-current="step"' : ''}>${j + 1}. ${esc(liftDef(x.ex).name)}<small>${d === x.sets.length ? 'done ✓' : d ? `${d} of ${x.sets.length} sets` : `${x.sets.length} sets`}${j === LV.i ? ' · you’re here' : ''}</small></button>`; }).join('')}</div>

@@ -156,6 +156,9 @@ data runs through it, so treat changes to data handling with care.
   Each exercise in the live workout shows “Your best” (`bestBefore`: the top set before today, plus most reps on a weighted
   lift) with a “To beat it” line, and the ✓ button adds “★ new best” when the set as entered would beat it (`liveGoTxt`).
   The exercise picker lists everything you've done, newest first, with your best set. “Free workout” sits on the hero.
+  “Try today” (`liveItem`, `it.try`) is double progression: last time's sets at its top weight, one more rep each, until
+  every set hits 12 (`REP_HI`), then one step heavier at 8 (`REP_LO`). End → “Delete this workout” (`lv-discard`) removes the
+  live workout and every set it logged, with Undo.
   “Start” on a workout or program day opens the live workout (`LV`, `renderLive()`): one exercise at
   a time with its `HOWTO` (equipment, setup, cues, what to watch for), sets prefilled by `liveItem()`,
   a ✓ per set that writes to `doc.lifts` at once (`liveCommit`), and a timestamp-based rest timer. Where
