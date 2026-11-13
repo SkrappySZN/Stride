@@ -153,6 +153,9 @@ data runs through it, so treat changes to data handling with care.
   workout" button sits under the thumb bar (`lv-finish-ask` lists unstarted exercises first). "Remove" takes the current
   exercise out (confirming if it has logged sets), "− Set" drops an unticked last set, and swapping after sets are logged
   keeps those sets and adds the swap after. Starting a workout while another is open finishes the open one first.
+  Each exercise in the live workout shows “Your best” (`bestBefore`: the top set before today, plus most reps on a weighted
+  lift) with a “To beat it” line, and the ✓ button adds “★ new best” when the set as entered would beat it (`liveGoTxt`).
+  The exercise picker lists everything you've done, newest first, with your best set. “Free workout” sits on the hero.
   “Start” on a workout or program day opens the live workout (`LV`, `renderLive()`): one exercise at
   a time with its `HOWTO` (equipment, setup, cues, what to watch for), sets prefilled by `liveItem()`,
   a ✓ per set that writes to `doc.lifts` at once (`liveCommit`), and a timestamp-based rest timer. Where

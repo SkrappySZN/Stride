@@ -786,6 +786,11 @@ body.gym main{padding-bottom:0}
 .seg button{flex:1; min-height:42px; border:0; border-radius:10px; background:none; color:var(--muted); font:inherit; font-weight:700; font-size:14px; cursor:pointer}
 .seg button[aria-selected="true"]{background:color-mix(in srgb, var(--accent) 16%, var(--surface)); color:var(--ink); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent)}
 .btn.lift-more{width:100%; min-height:46px; margin-top:16px; font-weight:600; color:var(--ink-2)}
+.lift-more-row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.lift-more-row .btn.lift-more{flex-direction:column; gap:1px; line-height:1.15}
+.lift-more-row .btn.lift-more small{font-weight:400; font-size:12px; color:var(--muted)}
+.lv-best{border-color:color-mix(in srgb, var(--accent) 45%, var(--line))}
+.lv-best small{flex-basis:100%; font-size:13px; color:var(--ink-2)}
 .lift-wk{margin:0 0 14px; font:12px/1.6 var(--mono); color:var(--muted)}
 .lift-wk span{text-transform:uppercase; letter-spacing:.08em; margin-right:4px}
 .lift-wk b{color:var(--ink); font-weight:600}
@@ -2788,7 +2793,7 @@ const EXPLAIN = {
   journey: () => 'Your training as a timeline, left to right. Each dot is a run, and bigger means longer. Diamonds are milestones you’ve passed. The dashed line ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. It shows when things happened, not how fit you are; the charts further down show that. Tap a run to open it.',
   onerm: () => 'Your 1-rep max is the heaviest weight you’ve lifted for a single rep: a true max, not an estimate. Log one with “+ Log a 1-rep max”: pick the lift and enter the heaviest weight you got for one full rep. Warm up with a few lighter singles first, and use a spotter or safety arms. Max tests never change the weights Stride suggests for your normal sets. Everyday progress (best sets of several reps) is on the Best sets card. Body-weight and assisted moves aren’t listed: they go by reps or help instead.',
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
-  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. When you finish, the summary’s “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar.',
+  liftLive: () => 'The weight to start with comes from last time: the same weight if you missed any reps, one step heavier if you got them all (one more rep each set for body-weight moves). Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. When you finish, the summary’s “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar. “Your best” is your heaviest set before today (the most reps at that weight), and “Most reps” the set with the most reps at any weight. To beat your best, lift the same weight for one more rep, or more weight. The ✓ button says so when the set you’ve set up would beat it.',
   badges: () => 'Badges come from what you’ve already done, so older runs and lifts count too. Each one has tiers, from bronze to silver, gold and volt: the more you do, the higher it goes. The bar shows how close you are to the next tier; tap a badge to see every tier and the day you earned it. Runs live on Progress (counts, miles, longest run, steady weeks, fastest mile and 5K, early, late, cold and hot runs); lifting on Lift (lifting days, volume, steady weeks, PRs, pull-ups, run-and-lift days, and bench, squat and deadlift against your body weight, which use your latest weight from the Body tab). New ones show on Today and in the new-run scene.',
   e1rm: () => 'Each lift shows your best set: the heaviest weight you’ve done for a working set, with the reps you got. A new PR is more weight than ever, or the same weight for more reps. Tap a lift to see the heaviest weight from each workout on a chart, and your last few workouts underneath with what changed from the time before (↑ more weight or more reps, ↓ less). Body-weight moves like pull-ups go by the most reps in a set. Assisted machines go by the help: less help is stronger. Timed moves go by seconds (planks, hangs) or weight (carries). Singles you test as a max live on the 1-rep max card instead.',
   liftProg: () => 'A program picks your next workout and weights so you don’t have to. You alternate workouts A and B. Hit every rep and next time the weight goes up a step (10 lb for legs, 5 lb for upper body). Miss reps and you stay at that weight; miss the same weight twice and it drops about 10% so you can build back up. Lifting never changes your running plan.',
@@ -5081,6 +5086,21 @@ function liftTop(ex){
   for (const l of liftHist(ex)){ const x = l.max ? null : topSet(def, l.sets); if (x && (!best || setRank(def, x) > best.v)) best = { v:setRank(def, x), s:x, date:l.date }; }
   return best;
 }
+// Your best before a day (so today's sets don't move the target), plus the most reps on a weighted lift
+// when that's a different set: the two numbers to match or beat.
+function bestBefore(ex, date){
+  const def = liftDef(ex), sets = liftHist(ex).filter(l => l.date < date && !l.max).flatMap(l => workingSets(def, l.sets).map(s => ({ ...s, date:l.date })));
+  if (!sets.length) return null;
+  const best = sets.reduce((a, x) => setRank(def, x) > setRank(def, a) ? x : a);
+  const reps = def.bw || def.assist || def.secs ? null : sets.reduce((a, x) => +x.reps > +a.reps || (+x.reps === +a.reps && x.lb > a.lb) ? x : a);
+  return { best, reps:reps && +reps.reps > +best.reps ? reps : null };
+}
+const beatTxt = (def, s) => def.secs ? (def.bw ? `${+s.reps + 5} s` : `${s.lb} lb for ${+s.reps + 5} s, or heavier`)
+  : def.assist ? `${s.lb} lb help × ${+s.reps + 1}, or less help` : def.bw ? `${+s.reps + 1} reps` : `${s.lb} lb × ${+s.reps + 1}, or more weight`;
+// Would this set beat the best before today? Shown on the ✓ button while you set it up.
+const beatsBest = (it, s) => { const b = LV && bestBefore(it.ex, LV.date)?.best, def = liftDef(it.ex);
+  return !!b && +s.reps > 0 && (def.bw || def.assist || +s.lb > 0) && setRank(def, { lb:+s.lb || 0, reps:+s.reps }) > setRank(def, b); };
+const liveGoTxt = (it, s) => liveSetTxt(liftDef(it.ex), s) + (beatsBest(it, s) ? ' ★ new best' : '');
 // What changed from one workout's top set to the next, in plain numbers.
 function setChange(def, a, b){
   const n = (v, u) => `${v > 0 ? '+' : '−'}${Math.abs(v)} ${u}`, rp = d => n(d, `rep${Math.abs(d) === 1 ? '' : 's'}`);
@@ -5202,7 +5222,7 @@ function liftHero(){
     return `<div class="card lift-hero live"><div class="eyebrow">Workout in progress</div>
       <div class="lift-hero-row"><div><h2 class="display">${esc(LV.name)}</h2><p class="card-sub">${done} of ${LV.items.length} exercises done · ${liveStats().sets} set${liveStats().sets === 1 ? '' : 's'}</p></div>
       <button class="btn primary big" data-action="lv-resume">Resume</button></div>
-      <button class="btn lift-more" data-action="log-menu">+ Empty workout or log something</button></div>`;
+      <div class="lift-more-row"><button class="btn lift-more" data-action="lv-empty">Free workout<small>pick as you go</small></button><button class="btn lift-more" data-action="log-menu">Log something else</button></div></div>`;
   }
   const today = todayYmd(), sets = doc.lifts.filter(l => l.date === today).reduce((n, l) => n + l.sets.length, 0);
   let title, items, start, why;
@@ -5223,7 +5243,7 @@ function liftHero(){
   return `<div class="card lift-hero"><div class="eyebrow">Up next${sets ? ` · ${sets} set${sets === 1 ? '' : 's'} logged today` : ''}</div>
     <div class="lift-hero-row"><div><h2 class="display">${esc(title)}</h2><p class="card-sub">${why}</p></div><button class="btn primary big" ${start}>Start</button></div>
     <ol class="lift-hero-list">${items.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
-    <button class="btn lift-more" data-action="log-menu">+ Empty workout or log something</button></div>`;
+    <div class="lift-more-row"><button class="btn lift-more" data-action="lv-empty">Free workout<small>pick as you go</small></button><button class="btn lift-more" data-action="log-menu">Log something else</button></div></div>`;
 }
 // One workout to start, the others a tap away; the week so far in one line above it.
 const exShort = id => liftDef(id).name.replace(/ \(.*\)$/, '');
@@ -5242,7 +5262,7 @@ function liftPickHero(sets){
     <p class="lift-exs">${woPlan(top, todayYmd()).map(it => esc(exShort(it.ex))).join(' · ')}</p>
     <p class="card-sub lift-why">${why}</p>
     ${rest.length ? `<div class="lift-pick-h">Or start another</div><div class="lift-chips">${rest.map(w => `<button class="pill" data-wo-start="${w.id}">${esc(shortName(w.name))}</button>`).join('')}</div>` : ''}
-    <button class="btn lift-more" data-action="log-menu">+ Empty workout or log something</button></div>`;
+    <div class="lift-more-row"><button class="btn lift-more" data-action="lv-empty">Free workout<small>pick as you go</small></button><button class="btn lift-more" data-action="log-menu">Log something else</button></div></div>`;
 }
 // The odd jobs, out of the way until you need one.
 const logMenu = () => `<h2 class="sheet-title">Start or log</h2><div class="ex-list">${[
@@ -5355,7 +5375,9 @@ const mmss = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padS
 // Last time's weight, one step up when every set hit its reps.
 function liveItem(ex, sets, reps, day){
   const def = liftDef(ex), last = lastWorking(ex, todayYmd());
-  let n = sets || last?.sets.length || 3, r = reps || last?.sets[0].reps || (def.secs ? 30 : def.bw ? 8 : 10), lb = def.bw ? 0 : '', why = 'First time: start light and find a weight you could lift a couple more reps with.';
+  // Reps come from a set at last time's top weight: a light first set's reps would pair 15 reps with the heaviest weight.
+  const topR = last && (w => last.sets.find(s => s.lb === w)?.reps)(def.assist ? Math.min(...last.sets.map(s => s.lb)) : topLb(last));
+  let n = sets || last?.sets.length || 3, r = reps || topR || last?.sets[0].reps || (def.secs ? 30 : def.bw ? 8 : 10), lb = def.bw ? 0 : '', why = 'First time: start light and find a weight you could lift a couple more reps with.';
   if (def.secs && !last) why = def.bw ? 'First time: hold with good form and stop when it slips. Change the seconds to what you managed.' : 'First time: pick dumbbells you can grip for the whole walk. Change the seconds to how long you went.';
   const all = def.secs ? 'went the full time' : 'got every rep';
   if (day){ lb = progWeight(ex, sets, reps); why = 'Your program’s weight for today.'; }
@@ -5431,14 +5453,14 @@ function renderLive(){
   const it = LV.items[LV.i], def = liftDef(it.ex), how = HOWTO[it.ex], n = LV.items.length, short = id => liftDef(id).name.replace(/ \(.*\)$/, '');
   const cur = it.sets.findIndex(s => !s.done), left = it.sets.filter(s => !s.done).length;
   // The last session before today, so you can match or beat it set by set.
-  const prevL = lastWorking(it.ex, LV.date), warm = doc.workouts.find(w => w.id === LV.wo)?.routine;
+  const prevL = lastWorking(it.ex, LV.date), bb = bestBefore(it.ex, LV.date), warm = doc.workouts.find(w => w.id === LV.wo)?.routine;
   const u = def.secs ? ' s' : '', prevTxt = x => def.assist ? `${x.lb} help × ${x.reps}` : def.bw ? (x.lb ? `+${x.lb} × ${x.reps}${u}` : `${x.reps}${u || ' reps'}`) : `${x.lb} × ${x.reps}${u}`;
   const nextI = LV.items.findIndex((x, j) => j > LV.i && x.sets.some(s => !s.done)), anyI = nextI >= 0 ? nextI : LV.items.findIndex((x, j) => j !== LV.i && x.sets.some(s => !s.done));
   const alts = def.f ? LIFTS.filter(l => l.f === def.f && l.id !== it.ex && !doc.gym.skip.includes(l.id)) : [];
   const stepper = (i, k, v, ph) => `<span class="lv-step"><button type="button" data-lv-step="${i}|${k}|-1" aria-label="Less ${k === 'lb' ? 'weight' : 'reps'}">−</button><input type="number" inputmode="${k === 'lb' ? 'decimal' : 'numeric'}" data-lv-${k}="${i}" value="${v}" placeholder="${ph}" aria-label="Set ${i + 1} ${k === 'lb' ? 'weight' : 'reps'}"><button type="button" data-lv-step="${i}|${k}|1" aria-label="More ${k === 'lb' ? 'weight' : 'reps'}">+</button></span>`;
   const setTxt = s => liveSetTxt(def, s);
   const anyDone = LV.items.some(x => x.sets.some(s => s.done)), allDone = anyI < 0 && cur < 0;
-  const go = cur >= 0 ? `<button class="btn primary gym-go" data-lv-done="${cur}">✓ Done set ${cur + 1}<small>${setTxt(it.sets[cur])}</small></button>`
+  const go = cur >= 0 ? `<button class="btn primary gym-go" data-lv-done="${cur}">✓ Done set ${cur + 1}<small>${esc(liveGoTxt(it, it.sets[cur]))}</small></button>`
     : anyI >= 0 ? `<button class="btn primary gym-go" data-lv-go="${anyI}">Next: ${esc(short(LV.items[anyI].ex))} →</button>`
     : LV.free ? `<button class="btn primary gym-go" data-action="lv-add-open">+ Add next exercise</button>`
     : `<button class="btn primary gym-go" data-action="lv-finish">Finish workout</button>`;
@@ -5459,6 +5481,9 @@ function renderLive(){
           ${how ? `<p class="lv-eq">${how.eq}</p>` : ''}</div>
       </div>
       ${prevL ? `<div class="lv-last"><span>Last time · ${fmtDate(prevL.date)}</span><b>${fmtSets(prevL.sets, setMode(def), def.secs)}</b></div>` : ''}
+      ${bb ? `<div class="lv-last lv-best"><span>Your best · ${fmtDate(bb.best.date).slice(4)}</span><b>${setLabel(def, bb.best)}</b>
+        ${bb.reps ? `<span>Most reps · ${fmtDate(bb.reps.date).slice(4)}</span><b>${setLabel(def, bb.reps)}</b>` : ''}
+        <small>To beat it: ${beatTxt(def, bb.best)}</small></div>` : ''}
       <p class="lv-why">${it.why}</p>
       ${warm && !LV.items.some(x => x.sets.some(s => s.done)) ? `<a class="lv-warm" href="#routine/${warm}">▶ Warm up first: ${ROUTINES[warm].name} · ${Math.round(routineSec(routineSteps(warm)) / 60)} min</a>` : ''}
       <div class="gym-tools">${how ? `<button class="pill" data-action="lv-how" aria-expanded="${it.how}">${it.how ? 'Hide how-to' : 'How to do it'}</button>` : ''}<button class="pill" data-action="lv-swap" aria-expanded="${LV.swap}">Swap</button><button class="pill" data-action="lv-add-set">+ Set</button>${it.sets.length > 1 && !it.sets.at(-1).done ? '<button class="pill" data-action="lv-drop-set">− Set</button>' : ''}<button class="pill" data-action="lv-add-open">+ Exercise</button><button class="pill" data-action="lv-remove">Remove</button>${infoBtn}</div>${explain('liftLive')}
@@ -5738,13 +5763,14 @@ function liftWorkoutsCard(){
 // Exercises matching what's typed; with nothing typed, the ones you did lately come first.
 function pickList(q, attr = 'data-pick-ex'){
   const all = [...LIFTS, ...doc.liftEx], t = q.trim().toLowerCase();
-  const row = l => `<button class="ex-row" ${attr}="${l.id}">${esc(l.name)}<small>${l.g ?? 'Yours'}</small></button>`;
+  // Lifts you've done show your best set, so you know the number to match before you start.
+  const row = l => { const b = liftTop(l.id); return `<button class="ex-row" ${attr}="${l.id}">${esc(l.name)}<small>${b ? `best ${setLabel(liftDef(l.id), b.s)}` : l.g ?? 'Yours'}</small></button>`; };
   if (t){
     const hit = all.filter(l => l.name.toLowerCase().includes(t));
     return (hit.length ? hit.map(row).join('') : '<p class="card-sub">Nothing by that name.</p>') + `<button class="ex-row" ${attr}="_new">Add “${esc(q.trim())}” as a new exercise</button>`;
   }
-  const recent = [...new Set([...doc.lifts].sort(byDate).reverse().map(l => l.ex))].slice(0, 6).map(liftDef);
-  return (recent.length ? `<div class="ex-group">Recent</div>${recent.map(row).join('')}` : '')
+  const recent = [...new Set([...doc.lifts].sort(byDate).reverse().map(l => l.ex))].map(liftDef);
+  return (recent.length ? `<div class="ex-group">You’ve done · newest first</div>${recent.map(row).join('')}` : '')
     + ['Legs', 'Push', 'Pull', 'Core'].map(g => `<div class="ex-group">${g}</div>${LIFTS.filter(l => l.g === g).map(row).join('')}`).join('')
     + (doc.liftEx.length ? `<div class="ex-group">Yours</div>${doc.liftEx.map(row).join('')}` : '')
     + `<button class="ex-row" ${attr}="_new">Something else…</button>`;
@@ -8444,7 +8470,7 @@ document.addEventListener('input', e => {
   it.sets.forEach((x, j) => { if (j > +i && !x.done){ x[k] = e.target.value; const el = $(`[data-lv-${k}="${j}"]`); if (el) el.value = e.target.value; } });
   liveSave();
   const gb = $('.gym-go small'), ci = it.sets.findIndex(x => !x.done);
-  if (gb && ci >= 0) gb.textContent = liveSetTxt(liftDef(it.ex), it.sets[ci]);
+  if (gb && ci >= 0) gb.textContent = liveGoTxt(it, it.sets[ci]);
   const pl = $('#lv-plates'); if (pl) pl.innerHTML = platesLine(it);
   if (s.done){ liveCommit(it); clearTimeout(liveTyping); liveTyping = setTimeout(save, 800); }
 });
