@@ -991,7 +991,7 @@ table.crew td:nth-child(2){white-space:nowrap}
 .run-cards{display:none; list-style:none; margin:0; padding:0}
 .run-cards li{border-top:1px solid var(--line)}
 .run-cards li:first-child{border-top:0}
-.run-cards a{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; color:inherit; text-decoration:none}
+.run-cards a, .run-cards .rc-row{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; color:inherit; text-decoration:none}
 .rc-main{font-weight:750; font-size:15px; font-variant-numeric:tabular-nums}
 .rc-nums{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
 .rc-right{grid-row:1 / span 2; grid-column:2; display:flex; align-items:center; gap:8px}
@@ -2774,6 +2774,7 @@ const EXPLAIN = {
   recovery: () => 'How far your heart rate falls in the 2 minutes after you stop. A bigger drop means a fitter heart, and it often improves before your pace does. The watch only records it if you stop the timer and stand still for 2 minutes before saving.',
   anTE: () => 'Garmin’s 0–5 score for how much hard, out-of-breath work a run had. Easy runs should sit near 0. Above 1 means the run got harder than an easy run should be, so slow down or take walk breaks.',
   hrTrend: p => `Each dot is a run. ${allOutdoor() ? 'Filled dots are your outdoor runs with the timer handled properly. Routes and hills vary, so judge the overall drift, not one run. Hollow dots had the timer left running; tap one to see why.' : 'Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why.'} You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
+  otherTable: () => 'Bike rides and games your watch recorded, newest first. They have no distance or pace, so only time, heart rate and calories are shown. Calories are your watch’s count. Load is intervals.icu’s training-load score, a measure of how hard the session was overall. It’s worked out differently from Garmin’s, so it reads lower than the number Garmin Connect shows; compare these rows with each other, not with Garmin.',
   sports: () => 'Other training your watch recorded, like a hockey game: how long it ran, your average and highest heart rate, and the calories your watch counted. It comes in through intervals.icu on its own. It’s real work for your heart and lungs, so a week of games isn’t a week off. It never counts as a run, though, and never changes your run plan or its weekly check: running is what builds your running legs.',
   bike: () => 'Easy bike sessions add heart-and-lung work without the pounding of running. They’re your own target (set it in Setup), and they never change your run plan or its weekly check. Rides from your watch come in through intervals.icu; you can also log one by hand. The heart rate range is where to stay, and the ceiling is the number to ease off at.',
   steps: () => 'Steps your watch counted each day, from Garmin. Days you take the watch off read low, and days it’s off entirely stay blank. The line underneath estimates how many came from running (your cadence × your running time), so you can see how much you move outside your runs too.',
@@ -4508,7 +4509,31 @@ function renderRunsList(){
         </tr>`;
       }).join('')}</tbody>
     </table></div></div>
-    <p class="card-sub" style="margin-top:12px">An amber or red dot means something on that run is worth a look. Missing a run? <a href="#setup">Upload its FIT file</a>.</p></div>`;
+    <p class="card-sub" style="margin-top:12px">An amber or red dot means something on that run is worth a look. Missing a run? <a href="#setup">Upload its FIT file</a>.</p>
+    ${otherTable()}</div>`;
+}
+// Rides and games under the runs: only the columns that mean something without a distance.
+function otherTable(){
+  const rows = [...doc.rides.map(r => ({ ...r, kind:'Bike' })), ...doc.sports.map(s => ({ ...s, kind:sportWord(s) }))]
+    .sort((a, b) => (b.start ?? b.date) < (a.start ?? a.date) ? -1 : 1);
+  if (!rows.length) return '';
+  const when = x => [x.start ? fmtTime(x.start) : '', x.device ? esc(x.device) : String(x.id).startsWith('mr') ? 'logged by hand' : ''].filter(Boolean).join(' · ');
+  const n = v => v == null ? '—' : Math.round(v).toLocaleString();
+  return `<div class="section-label">Rides & games</div>
+  <div class="card runs-table-card"><div class="card-head"><h2>Rides & games${infoBtn}</h2><span class="card-sub">${rows.length} · from your watch</span></div>${explain('otherTable')}
+    <ul class="run-cards">${rows.map(x => `<li><div class="rc-row">
+      <div class="rc-main">${fmtDate(x.date)} · ${fmtHm(x.min)}</div>
+      <div class="rc-right"><span class="badge">${esc(x.kind)}</span></div>
+      <div class="rc-nums">${[x.avgHr != null ? `HR ${Math.round(x.avgHr)}${x.maxHr != null ? `, max ${Math.round(x.maxHr)}` : ''}` : '', x.cal ? `${n(x.cal)} cal` : '', x.load != null ? `load ${n(x.load)}` : '', when(x)].filter(Boolean).join(' · ')}</div>
+    </div></li>`).join('')}</ul>
+    <div class="table-wrap"><table class="runs">
+      <thead><tr><th>Date</th><th>Type</th><th>Time</th><th>Avg HR</th><th>Max HR</th><th>Calories</th><th>Load</th></tr></thead>
+      <tbody>${rows.map(x => `<tr>
+        <td><div class="r-date">${fmtDate(x.date)}</div><div class="r-sub">${when(x) || '—'}</div></td>
+        <td style="text-align:right"><span class="badge">${esc(x.kind)}</span></td>
+        <td>${fmtHm(x.min)}</td><td>${n(x.avgHr)}</td><td>${n(x.maxHr)}</td><td>${n(x.cal)}</td><td>${n(x.load)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div></div>`;
 }
 
 // The treadmill's screen beats the wrist's guess. The watch's own numbers stay in
@@ -7610,17 +7635,30 @@ async function checkIntervals({ manual = false } = {}){
       const rl = loc.ridesBack ? list : await (await icuGet(`/athlete/0/activities?oldest=${addDays(todayYmd(), -60)}&newest=${addDays(todayYmd(), 1)}`, key)).json();
       for (const a of rl){
         if (!ICU_RIDES.includes(a.type) || !a.start_date_local || doc.rides.some(r => r.id === 'ir' + a.id)) continue;
-        doc.rides = [...doc.rides, { id:'ir' + a.id, date:a.start_date_local.slice(0, 10), min:Math.round((a.moving_time || a.elapsed_time || 0) / 60), avgHr:a.average_heartrate ?? null, maxHr:a.max_heartrate ?? null, name:a.name || 'Ride', device:deviceLabel(a.device_name) }];
+        doc.rides = [...doc.rides, { id:'ir' + a.id, date:a.start_date_local.slice(0, 10), start:a.start_date ?? null, min:Math.round((a.moving_time || a.elapsed_time || 0) / 60), avgHr:a.average_heartrate ?? null, maxHr:a.max_heartrate ?? null,
+          cal:a.calories ?? null, load:a.icu_training_load ?? null, name:a.name || 'Ride', device:deviceLabel(a.device_name) }];
         bodyChanged = true;
       }
       loc.ridesBack = true;
+    }
+    // Start time, calories and load came later: fill them in once for rides and games already here.
+    if (!loc.otherBack && [...doc.rides, ...doc.sports].some(x => /^i[rs]/.test(x.id) && x.start === undefined)){
+      const ol = await (await icuGet(`/athlete/0/activities?oldest=${addDays(todayYmd(), -365)}&newest=${addDays(todayYmd(), 1)}`, key)).json();
+      const byId = new Map(ol.map(a => [String(a.id), a]));
+      for (const x of [...doc.rides, ...doc.sports]){
+        const a = /^i[rs]/.test(x.id) && x.start === undefined ? byId.get(x.id.slice(2)) : null;
+        if (!a) continue;
+        x.start = a.start_date ?? null; x.cal ??= a.calories ?? null; x.load ??= a.icu_training_load ?? null;
+        bodyChanged = true;
+      }
+      loc.otherBack = true;
     }
     // Games and sports: summary numbers only, like rides, but always on. Reach back once for earlier ones.
     {
       const sl = loc.sportsBack ? list : await (await icuGet(`/athlete/0/activities?oldest=${addDays(todayYmd(), -60)}&newest=${addDays(todayYmd(), 1)}`, key)).json();
       for (const a of sl){
         if (!ICU_SPORTS[a.type] || !a.start_date_local || doc.sports.some(s => s.id === 'is' + a.id)) continue;
-        doc.sports = [...doc.sports, { id:'is' + a.id, date:a.start_date_local.slice(0, 10), type:a.type, name:a.name || ICU_SPORTS[a.type],
+        doc.sports = [...doc.sports, { id:'is' + a.id, date:a.start_date_local.slice(0, 10), start:a.start_date ?? null, type:a.type, name:a.name || ICU_SPORTS[a.type],
           min:Math.round((a.moving_time || a.elapsed_time || 0) / 60), avgHr:a.average_heartrate ?? null, maxHr:a.max_heartrate ?? null,
           cal:a.calories ?? null, load:a.icu_training_load ?? null, device:deviceLabel(a.device_name) }];
         bodyChanged = true;
@@ -7649,7 +7687,7 @@ async function checkIntervals({ manual = false } = {}){
     icuUi.status = 'idle';
     icuUi.msg = added ? `${added} new run${added > 1 ? 's' : ''} just now` : problems ? `${problems} couldn’t be imported — see the log` : '';
     if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); enrichRuns(); crewPush().catch(() => {}); maybeMoment(); }
-    else if (bodyChanged){ await save(); if (['', '#today', '#body', '#progress'].includes(location.hash)) render(); }
+    else if (bodyChanged){ await save(); if (['', '#today', '#body', '#progress', '#runs'].includes(location.hash)) render(); }
     else if (manual) toast(problems ? 'Some runs couldn’t be imported' : 'No new runs');
   } catch (err){
     icuUi.status = 'error'; icuUi.msg = err.message;
