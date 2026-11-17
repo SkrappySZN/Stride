@@ -309,6 +309,7 @@ main{min-width:0; padding-bottom:80px}
 .day.today{outline:2px solid var(--ink); outline-offset:-1px}
 .tag-run{background:var(--accent); color:var(--accent-ink)}
 .tag-rest{color:var(--muted)}
+.sport-list{list-style:none; margin:12px 0 0; padding:0; display:grid; gap:6px; font-size:14px}
 .tag-done{color:var(--accent-text)}
 
 .plan-bar{display:grid; grid-template-columns:repeat(8,1fr); gap:4px; margin-top:6px}
@@ -1680,12 +1681,12 @@ function freshDoc(){
     runs: structuredClone(SEED.runs ?? []),
     checkins: structuredClone(SEED.checkins ?? []),
     // refDays/refInfo held sport days, a retired feature; kept so older docs stay valid.
-    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], food: [], foods: [], rides: [], bike: null, liftProg: null, workouts: [], gym: { skip: [] },
+    routes: [], done: {}, refDays: [], refInfo: {}, decisions: {}, redClearedAt: null, routines: [], goals: [], shoes: [], defaultShoe: null, pains: [], crew: null, intake: null, startWeek: 1, lifts: [], liftEx: [], food: [], foods: [], rides: [], sports: [], bike: null, liftProg: null, workouts: [], gym: { skip: [] },
   };
 }
 // Older docs and docs pulled from another device may be missing newer keys.
 function normalize(d){
-  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, planHistory:[], lifts:[], liftEx:[], food:[], foods:[], rides:[], bike:null, liftProg:null, workouts:[], liftFill:[], gym:{ skip:[] }, ...d,
+  return adoptBuiltIns({ v:1, runs:[], checkins:[], routes:[], done:{}, refDays:[], refInfo:{}, decisions:{}, redClearedAt:null, body:{}, routines:[], goals:[], shoes:[], defaultShoe:null, pains:[], crew:null, intake:null, startWeek:1, planHistory:[], lifts:[], liftEx:[], food:[], foods:[], rides:[], sports:[], bike:null, liftProg:null, workouts:[], liftFill:[], gym:{ skip:[] }, ...d,
     profile: { weights:[], comps:[], sex:null, birthYear:null, birthMonth:null, birthDay:null, heightIn:null, zonesAuto:null, calTarget:null, proTarget:null, allOutdoor:false, quietLegs:false, garminBurn:null, ...(d.profile ?? freshDoc().profile) } });
 }
 // A custom exercise that has since become a built-in one (same name): its logs move to the built-in id.
@@ -2773,6 +2774,7 @@ const EXPLAIN = {
   recovery: () => 'How far your heart rate falls in the 2 minutes after you stop. A bigger drop means a fitter heart, and it often improves before your pace does. The watch only records it if you stop the timer and stand still for 2 minutes before saving.',
   anTE: () => 'Garmin’s 0–5 score for how much hard, out-of-breath work a run had. Easy runs should sit near 0. Above 1 means the run got harder than an easy run should be, so slow down or take walk breaks.',
   hrTrend: p => `Each dot is a run. ${allOutdoor() ? 'Filled dots are your outdoor runs with the timer handled properly. Routes and hills vary, so judge the overall drift, not one run. Hollow dots had the timer left running; tap one to see why.' : 'Filled dots are “clean” runs on your test route: the same flat route, timer handled properly, so they’re fair to compare. Hollow dots were somewhere else or had the timer left running; tap one to see why.'} You want the line drifting down. Below the shaded band (${p.zones.easy}) is truly easy; the red line is your threshold (${p.lthr}).`,
+  sports: () => 'Other training your watch recorded, like a hockey game: how long it ran, your average and highest heart rate, and the calories your watch counted. It comes in through intervals.icu on its own. It’s real work for your heart and lungs, so a week of games isn’t a week off. It never counts as a run, though, and never changes your run plan or its weekly check: running is what builds your running legs.',
   bike: () => 'Easy bike sessions add heart-and-lung work without the pounding of running. They’re your own target (set it in Setup), and they never change your run plan or its weekly check. Rides from your watch come in through intervals.icu; you can also log one by hand. The heart rate range is where to stay, and the ceiling is the number to ease off at.',
   steps: () => 'Steps your watch counted each day, from Garmin. Days you take the watch off read low, and days it’s off entirely stay blank. The line underneath estimates how many came from running (your cadence × your running time), so you can see how much you move outside your runs too.',
   food: () => 'What you ate each day, added up: calories (energy) and protein (what your muscles rebuild from). Set your own daily targets with “Targets”. Losing weight means eating a bit under what you burn; protein near your target helps you keep muscle while you do. Save the things you eat often and they’re one tap to add.',
@@ -3006,6 +3008,34 @@ function bikeSetupCard(){
     <div class="btn-row" style="margin-top:14px"><button class="btn small primary" data-action="bike-save">Save</button>${doc.bike ? '<button class="btn small" data-action="bike-off">Turn off</button>' : ''}</div></div>`;
 }
 
+/* ── Games and sports: other training from the watch ────────────────
+   doc.sports holds { id:'is…', date, type, name, min, avgHr, maxHr, cal, load, device }, the
+   summary numbers intervals.icu has for a hockey game, a tennis match and so on. Like rides they
+   never touch the run plan or its gate: they show the other work you did, and they soften the
+   "days since your last run" note when that work filled the gap. */
+const ICU_SPORTS = { Hockey:'Hockey', IceSkate:'Skating', InlineSkate:'Skating', Soccer:'Soccer', Basketball:'Basketball', Tennis:'Tennis', Pickleball:'Pickleball', Squash:'Squash', Racquetball:'Racquetball', Badminton:'Badminton', TableTennis:'Table tennis', Volleyball:'Volleyball', Rugby:'Rugby', Handball:'Handball', Football:'Football' };
+const sportWord = s => ICU_SPORTS[s.type] ?? 'Game';
+const sportsOn = d => doc.sports.filter(s => s.date === d);
+const sportsBetween = (from, to = '9999') => doc.sports.filter(s => s.date >= from && s.date < to).sort((a, b) => a.date < b.date ? -1 : 1);
+const sportMin = l => l.reduce((a, s) => a + (s.min || 0), 0);
+const fmtHm = m => m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`;
+// "3 hockey games", "2 sessions" when the types are mixed.
+function sportsPhrase(l){
+  const kinds = [...new Set(l.map(sportWord))];
+  return kinds.length === 1 ? `${l.length} ${kinds[0].toLowerCase()} ${kinds[0] === 'Hockey' ? (l.length === 1 ? 'game' : 'games') : (l.length === 1 ? 'session' : 'sessions')}` : `${l.length} sessions`;
+}
+const sportRow = s => `<li><b>${esc(sportWord(s))}</b> · ${fmtDate(s.date)}<span class="card-sub"> · ${fmtHm(s.min)}${s.avgHr != null ? ` · avg HR ${Math.round(s.avgHr)}` : ''}${s.maxHr != null ? `, max ${Math.round(s.maxHr)}` : ''}${s.cal ? ` · ${Math.round(s.cal).toLocaleString()} cal` : ''}</span></li>`;
+function sportsCard(){
+  // The last 7 days, not the calendar week: a weekend of games still counts on Monday.
+  const today = todayYmd(), wk = sportsBetween(addDays(today, -6)), recent = sportsBetween(addDays(today, -13));
+  if (!recent.length) return '';
+  const cal = Math.round(wk.reduce((a, s) => a + (s.cal || 0), 0));
+  return `<div class="card"><div class="card-head"><h2>Games & sports${infoBtn}</h2><span class="card-sub">last 7 days</span></div>${explain('sports')}
+    <div class="next-run-big display num">${wk.length}<span style="font-size:.45em"> ${wk.length === 1 ? 'session' : 'sessions'}</span></div>
+    <div class="card-sub">${wk.length ? `${fmtHm(sportMin(wk))}${cal ? ` · ${cal.toLocaleString()} cal` : ''}` : 'None in the last 7 days'}</div>
+    <ul class="sport-list">${recent.slice(-5).reverse().map(sportRow).join('')}</ul></div>`;
+}
+
 function renderToday(){
   const today = todayYmd(), now = new Date();
   const dateLine = `${DOW_LONG[now.getDay()]} · ${MON_LONG[now.getMonth()]} ${now.getDate()}`;
@@ -3027,7 +3057,7 @@ function renderToday(){
         const rr = runsOn(d), dd = parseYmd(d);
         return `<${rr.length ? `a href="#runs/${rr[0].id}"` : 'div'} class="day${i === 6 ? ' today' : ''}" style="text-decoration:none;color:inherit">
           <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div>
-          <div class="d-tag ${rr.length ? 'tag-run' : 'tag-rest'}">${rr.length ? fmtMi(rr.reduce((a, r) => a + r.distMi, 0)) : '—'}</div></${rr.length ? 'a' : 'div'}>`;
+          <div class="d-tag ${rr.length ? 'tag-run' : sportsOn(d).length ? 'tag-done' : 'tag-rest'}">${rr.length ? fmtMi(rr.reduce((a, r) => a + r.distMi, 0)) : sportsOn(d).length ? esc(sportWord(sportsOn(d)[0])) : '—'}</div></${rr.length ? 'a' : 'div'}>`;
       }).join('')}</div></div>`;
     $('#page-today').innerHTML = band({
       eyebrow: `${dateLine} · just tracking`, title, sub,
@@ -3037,7 +3067,7 @@ function renderToday(){
       ${doc.runs.length ? journeyCard('j-today') : ''}${coachCard()}${goalsTodayCard()}
       <div class="grid three">${strip}${bodyTodayCard()}${lastRunCard(last)}</div>
       <div class="grid two" style="margin-top:16px">${readinessCard(todayRuns.length ? 'done' : 'rest')}${routineCard()}${weatherCard()}</div>
-      <div class="grid" style="margin-top:16px">${bikeCard()}${todayNotes(today)}</div></div>`;
+      <div class="grid" style="margin-top:16px">${sportsCard()}${bikeCard()}${todayNotes(today)}</div></div>`;
     drawJourney($('#j-today'));
     return;
   }
@@ -3064,12 +3094,18 @@ function renderToday(){
     copy = `${s.detail}.${s.extra ? ' ' + s.extra + '.' : ''}${t.note ? ' ' + t.note + '.' : ''}`;
     tasks = tasksFor(today, dayTasks('run'));
   } else {
-    const biked = doc.bike && ridesOn(today).length > 0;
+    const biked = doc.bike && ridesOn(today).length > 0, played = sportsOn(today);
+    if (played.length && !biked){
+      title = `${esc(sportWord(played[0]))} <em>done</em>`;
+      copy = `${fmtHm(sportMin(played))} today${played[0].avgHr != null ? `, avg HR ${Math.round(played[0].avgHr)}` : ''}. That’s real training: no run needed today. Stretch and recover.`;
+      tasks = tasksFor(today, dayTasks('rest', ranYesterday));
+    } else {
     title = biked ? 'Bike <em>done</em>' : bikeDays(days).has(today) ? 'Easy <em>bike</em>' : 'Rest <em>day</em>';
     copy = biked ? 'That’s today’s training. Stretch and recover.' : bikeDays(days).has(today) ? `No run today. ${bikeTarget() || 'Keep it easy'}, or rest if your legs need it.` : (ranYesterday ? 'Legs rebuild in the 24–48 hours after a run. Mobility only.'
       : t.note === 'Week’s runs are in' ? 'This week’s runs are in. Walk, stretch, recover.'
       : 'Mobility only today.');
     tasks = bikeRow(today, bikeDays(days).has(today)) + tasksFor(today, dayTasks('rest', ranYesterday));
+    }
   }
 
   // Next run
@@ -3114,7 +3150,7 @@ function renderToday(){
   const strip = `<div class="card">
     <div class="card-head"><h2>Next 7 days</h2></div>
     <div class="days">${days.map((d, i) => {
-      const dd = parseYmd(d.date), [k, l] = d.kind === 'rest' && ridesOn(d.date).length ? ['done', 'Bike'] : bd.has(d.date) ? ['rest', 'Bike'] : TAG[d.kind];
+      const dd = parseYmd(d.date), [k, l] = d.kind === 'rest' && sportsOn(d.date).length ? ['done', sportWord(sportsOn(d.date)[0])] : d.kind === 'rest' && ridesOn(d.date).length ? ['done', 'Bike'] : bd.has(d.date) ? ['rest', 'Bike'] : TAG[d.kind];
       return `<div class="day${i === 0 ? ' today' : ''}" ${d.note ? `data-tip="${esc(d.note)}"` : ''}>
         <div class="d-name">${DOW[dd.getDay()]}</div><div class="d-num num">${dd.getDate()}</div><div class="d-tag tag-${k}">${l}</div></div>`;
     }).join('')}</div>
@@ -3133,7 +3169,7 @@ function renderToday(){
   }) + `<div class="wrap">${liveChip()}${finished ? planDoneCard() : ''}${checkinCards()}${milestoneCard()}${recapTodayCard()}${intakeNudge()}${guideCard()}
     ${journeyCard('j-today')}${coachCard()}${goalsTodayCard()}
     <div class="grid three">${gate}${strip}${bodyTodayCard()}</div>
-    <div class="grid today-grid" style="margin-top:16px"><div class="col">${red ? '' : readinessCard(t.kind)}${next}${weatherCard()}</div><div class="col">${bikeCard()}${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
+    <div class="grid today-grid" style="margin-top:16px"><div class="col">${red ? '' : readinessCard(t.kind)}${next}${weatherCard()}</div><div class="col">${sportsCard()}${bikeCard()}${routineCard()}${todayNotes(today) || lastRunCard(sortedRuns().at(-1))}</div></div>
   </div>`;
   drawJourney($('#j-today'));
 }
@@ -3432,7 +3468,10 @@ function coachNotes(){
   if (doc.lifts.some(l => l.date === addDays(today, -1) && liftDef(l.ex).legs) && (runsOn(today).length || (coached() && schedule(today, 1)[0].kind === 'run')))
     add(5, 'wait', '<b>Legs yesterday, run today.</b> Keep it easy and skip strides. A few extra beats of heart rate is the lifting, not lost fitness.');
   // Consistency beats everything early on.
-  if (since >= 5) add(9, 'warn', `<b>${since} days since your last run.</b> A short, easy one beats waiting for the perfect day.`);
+  // Games in the gap are real training: say so instead of nagging.
+  const gapSports = since >= 5 ? sportsBetween(addDays(last.date, 1)) : [];
+  if (since >= 5 && gapSports.length) add(9, 'wait', `<b>${since} days since your last run, but you put in ${sportsPhrase(gapSports)} (${fmtHm(sportMin(gapSports))}).</b> Your heart and lungs have been working. Your running legs haven’t, so ease back in with a short, easy run.`);
+  else if (since >= 5) add(9, 'warn', `<b>${since} days since your last run.</b> A short, easy one beats waiting for the perfect day.`);
   const recent = runs.filter(r => diffDays(r.date, today) <= 30);
   const gaps = recent.slice(1).filter((r, i) => diffDays(recent[i].date, r.date) >= 5).length;
   if (gaps >= 2) add(7, 'warn', `<b>${gaps} breaks of 5+ days this month.</b> Consistency is the lever right now, more than distance or pace.`);
@@ -3562,14 +3601,17 @@ function renderProgress(){
   const latest = k => [...runs].reverse().find(r => r[k] != null)?.[k];
 
   const since = diffDays(lastRun.date, todayYmd());
-  const sinceTxt = since <= 0 ? 'ran today' : since === 1 ? 'last run yesterday' : `${since} days since the last run`;
+  const lastSport = doc.sports.length ? sportsBetween('0000').at(-1) : null;
+  const sinceTxt = (since <= 0 ? 'ran today' : since === 1 ? 'last run yesterday' : `${since} days since the last run`)
+    + (since >= 2 && lastSport && lastSport.date > lastRun.date ? ` · ${sportWord(lastSport).toLowerCase()} ${fmtRel(lastSport.date).toLowerCase()}` : '');
   const effRuns = runs.filter(r => r.effort != null).slice(-12);
   const thisWk = weekStart(todayYmd());
   const wk0 = [weekStart(runs[0].date), addDays(thisWk, -77)].sort().at(-1);
   const weeks = [];
   for (let d = wk0; d <= thisWk; d = addDays(d, 7)){
     const rr = runs.filter(r => r.date >= d && r.date < addDays(d, 7));
-    weeks.push({ date:d, n:rr.length, mi:rr.reduce((a, r) => a + (r.distMi ?? 0), 0) });
+    const ss = sportsBetween(d, addDays(d, 7));
+    weeks.push({ date:d, n:rr.length, mi:rr.reduce((a, r) => a + (r.distMi ?? 0), 0), g:ss.length, gH:sportMin(ss) / 60 });
   }
   const totMi = runs.reduce((a, r) => a + (r.distMi ?? 0), 0), totJog = runs.reduce((a, r) => a + (r.runSec ?? 0), 0);
   page.innerHTML = band({
@@ -3602,6 +3644,9 @@ function renderProgress(){
     ${treadCard(ts)}
     <div class="section-label">Showing up</div>
     ${recapCard()}
+    ${weeks.some(w => w.g) ? `<div class="card" style="margin-top:16px"><div class="card-head"><div><h2>Games & sports${infoBtn}</h2>
+      <div class="card-sub">hours a week · on top of your runs</div></div></div>${explain('sports')}<div class="chart" id="c-sports"></div>
+      <ul class="sport-list">${sportsBetween(addDays(todayYmd(), -27)).slice(-6).reverse().map(sportRow).join('')}</ul></div>` : ''}
     ${crewCard() ? `<div style="margin-top:16px">${crewCard()}</div>` : ''}
     <div class="grid two" style="margin-top:16px">
       <div class="card"><div class="card-head"><h2>Consistency${infoBtn}</h2><span class="card-sub">runs per week · ${sinceTxt}</span></div>
@@ -3656,8 +3701,16 @@ function renderProgress(){
   chartColumns($('#c-weeks'), {
     cats: weeks, series: [{ key:'n', color:css('--series-1') }], max: wMax, ticks: niceTicks(0, wMax, 1),
     labelFmt: c => c.n || '',
-    tipFmt: c => `<b>Week of ${fmtDate(c.date)}</b><br>${c.n} run${c.n === 1 ? '' : 's'} · ${c.mi.toFixed(1)} mi${c.date === thisWk ? ' · so far' : ''}`,
+    tipFmt: c => `<b>Week of ${fmtDate(c.date)}</b><br>${c.n} run${c.n === 1 ? '' : 's'} · ${c.mi.toFixed(1)} mi${c.g ? ` · plus ${c.g} game${c.g === 1 ? '' : 's'}` : ''}${c.date === thisWk ? ' · so far' : ''}`,
   });
+  if (weeks.some(w => w.g)){
+    const gMax = Math.max(2, Math.ceil(Math.max(...weeks.map(w => w.gH))));
+    chartColumns($('#c-sports'), {
+      cats: weeks, series: [{ key:'gH', color:css('--series-1') }], max: gMax, ticks: niceTicks(0, gMax, 1),
+      labelFmt: c => c.gH ? c.gH.toFixed(1) : '',
+      tipFmt: c => `<b>Week of ${fmtDate(c.date)}</b><br>${c.g ? `${c.g} session${c.g === 1 ? '' : 's'} · ${fmtHm(Math.round(c.gH * 60))}` : 'None'}${c.date === thisWk ? ' · so far' : ''}`,
+    });
+  }
   if (effRuns.length) chartColumns($('#c-eff'), {
     cats: effRuns, series: [{ key:'effort', color:css('--series-1') }], max: 10, ticks: [0, 2, 4, 6, 8, 10],
     labelFmt: c => c.effort, onClick: openRun,
@@ -7562,6 +7615,18 @@ async function checkIntervals({ manual = false } = {}){
       }
       loc.ridesBack = true;
     }
+    // Games and sports: summary numbers only, like rides, but always on. Reach back once for earlier ones.
+    {
+      const sl = loc.sportsBack ? list : await (await icuGet(`/athlete/0/activities?oldest=${addDays(todayYmd(), -60)}&newest=${addDays(todayYmd(), 1)}`, key)).json();
+      for (const a of sl){
+        if (!ICU_SPORTS[a.type] || !a.start_date_local || doc.sports.some(s => s.id === 'is' + a.id)) continue;
+        doc.sports = [...doc.sports, { id:'is' + a.id, date:a.start_date_local.slice(0, 10), type:a.type, name:a.name || ICU_SPORTS[a.type],
+          min:Math.round((a.moving_time || a.elapsed_time || 0) / 60), avgHr:a.average_heartrate ?? null, maxHr:a.max_heartrate ?? null,
+          cal:a.calories ?? null, load:a.icu_training_load ?? null, device:deviceLabel(a.device_name) }];
+        bodyChanged = true;
+      }
+      loc.sportsBack = true;
+    }
     try {
       // stepsBack: steps were added later, so reach back once more for the days already imported without them.
       const wFrom = loc.wellnessAt && loc.stepsBack ? addDays(ymd(new Date(loc.wellnessAt)), -3) : addDays(todayYmd(), -180);
@@ -7584,7 +7649,7 @@ async function checkIntervals({ manual = false } = {}){
     icuUi.status = 'idle';
     icuUi.msg = added ? `${added} new run${added > 1 ? 's' : ''} just now` : problems ? `${problems} couldn’t be imported — see the log` : '';
     if (added){ await save(); toast(`${added} new run${added > 1 ? 's' : ''} from intervals.icu`); render(); enrichRuns(); crewPush().catch(() => {}); maybeMoment(); }
-    else if (bodyChanged){ await save(); if (['', '#today', '#body'].includes(location.hash)) render(); }
+    else if (bodyChanged){ await save(); if (['', '#today', '#body', '#progress'].includes(location.hash)) render(); }
     else if (manual) toast(problems ? 'Some runs couldn’t be imported' : 'No new runs');
   } catch (err){
     icuUi.status = 'error'; icuUi.msg = err.message;

@@ -114,6 +114,10 @@ data runs through it, so treat changes to data handling with care.
   belt speed (`run.beltMph` typed on the run page, else `beltEst()`: distance over timer time, to 0.1 mph). Runs with more than 15% walking are left out. Only the most-run
   speed is charted, so the line never joins two speeds; a table lists every speed's first vs latest.
 - **Strides recordings** (`run.drill`, "Strides or drills, not a run" on the run page): kept and listed with a Strides badge, but `sortedRuns()`, `runsOn()` and the week/plan counts skip them; `allRunsSorted()` includes them.
+- **Games & sports** (`ICU_SPORTS`, `sportsCard` on Today, a weekly-hours chart on Progress): `doc.sports` `{ id:'is…', date, type, name, min, avgHr,
+  maxHr, cal, load, device }`, summary numbers from intervals.icu for types like `Hockey` (always on, 60-day backfill once per device via
+  `loc.sportsBack`). Never counts as a run or touches the plan/gate. When games fill a 5+ day gap, the coach note says so instead of warning;
+  a game on a rest day makes Today read "Hockey done"; the 7-day strips tag game days.
 - **Sleep** (Body): hours per night plus `sleepLine()` (last night, Garmin's sleep score, the week's average).
 - **Undo toasts**: `toast(msg, undoFn)` shows an Undo button for 5 s (food, goals, logged lifts, workouts, program stop).
 - **Bike** (`bikeCard` on Today, `bikeSetupCard`, `bikeDays`): opt-in `doc.bike` `{ perWeek, min, lo, hi, ceil }`; `doc.rides` `{ id, date, min, avgHr, maxHr, name }`
