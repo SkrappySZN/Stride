@@ -882,6 +882,16 @@ table.lift-vol td:first-child{font-weight:600}
 .mv-fig{border-radius:var(--radius-sm); background:var(--surface-2); padding:4px}
 .mv-fig .fig{width:100%}
 .mv-card h2{margin:0; font-size:17px}
+.mus-line{margin:2px 0 6px; font-size:13px; color:var(--ink-2)}
+.mus-line span{color:var(--muted)}
+.cov{margin:4px 0 12px; padding:10px 12px; border:1px solid var(--line); border-radius:10px}
+.cov-h{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:6px}
+.cov .explain{margin:8px 0 0}
+.cov ul{list-style:none; margin:6px 0 0; padding:0; font-size:13px; line-height:1.5}
+.lift-list .cov li, .cov li{display:flex; flex-wrap:wrap; justify-content:flex-start; align-items:baseline; gap:2px 12px; padding:3px 0; border:0}
+.cov li b{min-width:72px; color:var(--ink)}
+.cov-yes{color:var(--ink)} .cov-some{color:var(--muted)} .cov-no{color:var(--crit-text); font-weight:600}
+.cov-unk{display:block; margin-top:6px; color:var(--muted); font-size:12px}
 .mv-cues{margin:6px 0 0; padding-left:18px; font-size:13px; line-height:1.45; color:var(--ink-2)}
 .mv-strip{display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; margin-top:12px}
 .mv-strip .fig{width:100%; border-radius:6px; background:var(--surface-2)}
@@ -2798,6 +2808,7 @@ const EXPLAIN = {
   journey: () => 'Your training as a timeline, left to right. Each dot is a run, and bigger means longer. Diamonds are milestones you’ve passed. The dashed line ahead runs to the end of your plan, split into its chapters, and the pulsing marker is you, today. It shows when things happened, not how fit you are; the charts further down show that. Tap a run to open it.',
   onerm: () => 'Your 1-rep max is the heaviest weight you’ve lifted for a single rep: a true max, not an estimate. Log one with “+ Log a 1-rep max”: pick the lift and enter the heaviest weight you got for one full rep. Warm up with a few lighter singles first, and use a spotter or safety arms. Max tests never change the weights Stride suggests for your normal sets. Everyday progress (best sets of several reps) is on the Best sets card. Body-weight and assisted moves aren’t listed: they go by reps or help instead.',
   liftVolume: () => 'Volume is how much weight you moved in total: weight × reps for every set, added up. Three sets of 10 at 100 lb is 3,000 lb. It’s a rough measure of how much work you did, so it’s most useful for comparing your own weeks: a steady climb means you’re doing more, and a sudden big jump is worth easing into. Dumbbell lifts count the weight of one dumbbell, as you log it. Pull-ups, chin-ups and dips lift your whole body, so they count your latest weight from the Body tab (plus anything added); assisted machines count your weight minus the help. Other body-weight moves like push-ups only count added weight.',
+  muscles: () => 'Each exercise has a main target (the muscle doing most of the work) and muscles that help. A ✓ means at least one exercise in this workout aims straight at that part, ~ means it only gets help-level work from another exercise, and ✗ means nothing here works it. Shoulders have three parts: the front delts (worked by every press), the side delts (lateral raises, which give shoulders their width) and the rear delts (rear delt flys, face pulls and rows; they balance all the pressing and help posture). Only the areas this workout touches are shown, so a push day won’t be marked down for skipping legs. A ✗ isn’t a problem if another day of your week covers it.',
   liftLive: () => '“Try today” comes from last time, counting only the sets at your heaviest weight: keep that weight and add one rep to each set, until every set reaches 12. Then go one step heavier and start back at 8 reps (one step less help on an assisted machine). Body-weight moves add a rep each set; holds add 5 seconds. It’s already filled in below. Change it with − and + before you lift. Tick ✓ when a set is done: it saves straight away and starts a rest timer, 2 minutes for big lifts and 75 seconds for smaller ones, with beeps at the end. When you finish, the summary’s “Lbs moved” is this workout’s volume: weight × reps added up over every set (the Volume card explains what counts). For dumbbells, the weight is one dumbbell. For barbell lifts, the plates line shows what to load on each side for the next set: the weight minus the bar, split in two. Most gym bars are 45 lb; tap it to switch to a 35 lb bar. “Your best” is your heaviest set before today (the most reps at that weight), and “Most reps” the set with the most reps at any weight. To beat your best, lift the same weight for one more rep, or more weight. The ✓ button says so when the set you’ve set up would beat it.',
   badges: () => 'Badges come from what you’ve already done, so older runs and lifts count too. Each one has tiers, from bronze to silver, gold and volt: the more you do, the higher it goes. The bar shows how close you are to the next tier; tap a badge to see every tier and the day you earned it. Runs live on Progress (counts, miles, longest run, steady weeks, fastest mile and 5K, early, late, cold and hot runs); lifting on Lift (lifting days, volume, steady weeks, PRs, pull-ups, run-and-lift days, and bench, squat and deadlift against your body weight, which use your latest weight from the Body tab). New ones show on Today and in the new-run scene.',
   e1rm: () => 'Each lift shows your best set: the heaviest weight you’ve done for a working set, with the reps you got. A new PR is more weight than ever, or the same weight for more reps. Tap a lift to see the heaviest weight from each workout on a chart, and your last few workouts underneath with what changed from the time before (↑ more weight or more reps, ↓ less). Body-weight moves like pull-ups go by the most reps in a set. Assisted machines go by the help: less help is stronger. Timed moves go by seconds (planks, hangs) or weight (carries). Singles you test as a max live on the 1-rep max card instead.',
@@ -3316,7 +3327,7 @@ function renderMoves(){
     return `<div class="mv-strip">${Array.from({ length:n }, (_, i) => { const P = poseAt(m, i / n); return figure({ ...m, a:P, b:P, seq:undefined }, { size:64, still:true, lift:'still', label:'frame' }); }).join('')}</div>`; };
   const card = (m, { lift, name, cues, sub }) => `<div class="card mv-card" id="mv-${lift ?? Object.keys(MOVES).find(k => MOVES[k] === m)}">
     <div class="mv-top"><div class="mv-fig">${figure(m, { size:150, ...(lift ? { lift, label:name } : {}) })}</div>
-      <div><h2>${esc(name)}</h2>${sub ? `<p class="card-sub" style="margin:2px 0 8px">${sub}</p>` : ''}<ol class="mv-cues">${cues.map(c => `<li>${c}</li>`).join('')}</ol></div></div>
+      <div><h2>${esc(name)}</h2>${sub ? `<p class="card-sub" style="margin:2px 0 8px">${sub}</p>` : ''}${lift ? muscleLine(liftDef(lift)) : ''}<ol class="mv-cues">${cues.map(c => `<li>${c}</li>`).join('')}</ol></div></div>
     ${strip(m)}</div>`;
   // Grouped so one is easy to find: lifts by body part, stretches by the routine they're first used in.
   const liftGroups = ['Legs', 'Push', 'Pull', 'Core', ...new Set(LIFTS.map(l => l.g))].filter((g, i, a) => a.indexOf(g) === i)
@@ -5022,85 +5033,85 @@ function standardsCard(){
    Lifting never changes the run plan; liftRunTips() only suggests. */
 // Ids are stored in people's logs: add exercises, never rename an id.
 const LIFTS = [
-  { id:'squat', name:'Back squat', g:'Legs', f:'squat', inc:10, legs:true },
-  { id:'fsquat', name:'Front squat', g:'Legs', f:'squat', inc:10, legs:true },
-  { id:'deadlift', name:'Deadlift', g:'Legs', f:'hinge', inc:10, legs:true },
-  { id:'rdl', name:'Romanian deadlift', g:'Legs', f:'hinge', inc:10, legs:true },
-  { id:'legpress', name:'Leg press', g:'Legs', f:'squat', inc:10, legs:true },
-  { id:'hacksquat', name:'Hack squat (machine)', g:'Legs', f:'squat', inc:10, legs:true },
-  { id:'smithsquat', name:'Smith machine squat', g:'Legs', f:'squat', inc:10, legs:true },
-  { id:'goblet', name:'Goblet squat', g:'Legs', f:'squat', inc:5, legs:true },
-  { id:'split', name:'Split squat (per dumbbell)', g:'Legs', f:'single', inc:5, legs:true },
-  { id:'lunge', name:'Lunge (per dumbbell)', g:'Legs', f:'single', inc:5, legs:true },
-  { id:'stepup', name:'Step-up (per dumbbell)', g:'Legs', f:'single', inc:5, legs:true },
-  { id:'hipthrust', name:'Hip thrust', g:'Legs', f:'hinge', inc:10, legs:true },
-  { id:'dbrdl', name:'Dumbbell RDL (per dumbbell)', g:'Legs', f:'hinge', inc:5, legs:true },
-  { id:'legcurl', name:'Leg curl', g:'Legs', f:'hamcurl', inc:5, legs:true },
-  { id:'nordic', name:'Nordic curl', g:'Legs', f:'hamcurl', inc:5, legs:true, bw:true },
-  { id:'legext', name:'Leg extension', g:'Legs', f:'quad', inc:5, legs:true },
-  { id:'abductor', name:'Hip abductor (machine)', g:'Legs', f:'abduct', inc:10 },
-  { id:'adductor', name:'Hip adductor (machine)', g:'Legs', f:'adduct', inc:10 },
-  { id:'hipkick', name:'Multi-hip: kickback', g:'Legs', f:'hipext', inc:5 },
-  { id:'hipraise', name:'Multi-hip: leg forward', g:'Legs', f:'hipflex', inc:5 },
-  { id:'hipabd', name:'Multi-hip: leg out (abduction)', g:'Legs', f:'abduct', inc:5 },
-  { id:'hipadd', name:'Multi-hip: leg in (adduction)', g:'Legs', f:'adduct', inc:5 },
-  { id:'calf', name:'Standing calf raise', g:'Legs', f:'calf', inc:10, legs:true },
-  { id:'seatcalf', name:'Seated calf raise (machine)', g:'Legs', f:'calf', inc:10, legs:true },
-  { id:'bench', name:'Bench press', g:'Push', f:'hpress', inc:5 },
-  { id:'incline', name:'Incline bench press', g:'Push', f:'ipress', inc:5 },
-  { id:'dbbench', name:'Dumbbell bench press (per dumbbell)', g:'Push', f:'hpress', inc:5 },
-  { id:'dbincline', name:'Incline dumbbell press (per dumbbell)', g:'Push', f:'ipress', inc:5 },
-  { id:'chestmachine', name:'Chest press (machine)', g:'Push', f:'hpress', inc:10 },
-  { id:'inclinemachine', name:'Incline chest press (machine)', g:'Push', f:'ipress', inc:10 },
-  { id:'press', name:'Overhead press', g:'Push', f:'vpress', inc:5 },
-  { id:'dbpress', name:'Dumbbell shoulder press (per dumbbell)', g:'Push', f:'vpress', inc:5 },
-  { id:'shouldermachine', name:'Shoulder press (machine)', g:'Push', f:'vpress', inc:10 },
-  { id:'fly', name:'Chest fly (machine / pec deck)', g:'Push', f:'fly', inc:5 },
-  { id:'dbfly', name:'Dumbbell fly (per dumbbell)', g:'Push', f:'fly', inc:5 },
-  { id:'lateral', name:'Lateral raise', g:'Push', f:'lateral', inc:5 },
-  { id:'latmachine', name:'Lateral raise machine', g:'Push', f:'lateral', inc:5 },
-  { id:'cablelat', name:'Single-arm cable lateral raise', g:'Push', f:'lateral', inc:5 },
-  { id:'pushdown', name:'Triceps pushdown (cable)', g:'Push', f:'triceps', inc:5 },
-  { id:'ohext', name:'Overhead triceps extension (dumbbell)', g:'Push', f:'triceps', inc:5 },
-  { id:'cableohext', name:'Cable overhead triceps extension (rope)', g:'Push', f:'triceps', inc:5 },
-  { id:'skull', name:'Skull crusher', g:'Push', f:'triceps', inc:5 },
-  { id:'dips', name:'Dips', g:'Push', f:'triceps', inc:5, bw:true, whole:true },
-  { id:'pushup', name:'Push-up', g:'Push', f:'hpress', inc:5, bw:true },
+  { id:'squat', name:'Back squat', g:'Legs', f:'squat', inc:10, m:'quads glutes', m2:'inner lowback', legs:true },
+  { id:'fsquat', name:'Front squat', g:'Legs', f:'squat', inc:10, m:'quads', m2:'glutes abs upback', legs:true },
+  { id:'deadlift', name:'Deadlift', g:'Legs', f:'hinge', inc:10, m:'glutes hams lowback', m2:'quads upback forearm', legs:true },
+  { id:'rdl', name:'Romanian deadlift', g:'Legs', f:'hinge', inc:10, m:'hams glutes', m2:'lowback forearm', legs:true },
+  { id:'legpress', name:'Leg press', g:'Legs', f:'squat', inc:10, m:'quads glutes', m2:'inner', legs:true },
+  { id:'hacksquat', name:'Hack squat (machine)', g:'Legs', f:'squat', inc:10, m:'quads', m2:'glutes', legs:true },
+  { id:'smithsquat', name:'Smith machine squat', g:'Legs', f:'squat', inc:10, m:'quads glutes', m2:'inner', legs:true },
+  { id:'goblet', name:'Goblet squat', g:'Legs', f:'squat', inc:5, m:'quads glutes', m2:'abs inner', legs:true },
+  { id:'split', name:'Split squat (per dumbbell)', g:'Legs', f:'single', inc:5, m:'quads glutes', m2:'inner', legs:true },
+  { id:'lunge', name:'Lunge (per dumbbell)', g:'Legs', f:'single', inc:5, m:'quads glutes', m2:'inner hams', legs:true },
+  { id:'stepup', name:'Step-up (per dumbbell)', g:'Legs', f:'single', inc:5, m:'quads glutes', m2:'hams calves', legs:true },
+  { id:'hipthrust', name:'Hip thrust', g:'Legs', f:'hinge', inc:10, m:'glutes', m2:'hams', legs:true },
+  { id:'dbrdl', name:'Dumbbell RDL (per dumbbell)', g:'Legs', f:'hinge', inc:5, m:'hams glutes', m2:'lowback forearm', legs:true },
+  { id:'legcurl', name:'Leg curl', g:'Legs', f:'hamcurl', inc:5, m:'hams', m2:'calves', legs:true },
+  { id:'nordic', name:'Nordic curl', g:'Legs', f:'hamcurl', inc:5, m:'hams', m2:'glutes calves', legs:true, bw:true },
+  { id:'legext', name:'Leg extension', g:'Legs', f:'quad', inc:5, m:'quads', legs:true },
+  { id:'abductor', name:'Hip abductor (machine)', g:'Legs', f:'abduct', inc:10, m:'outhip', m2:'glutes' },
+  { id:'adductor', name:'Hip adductor (machine)', g:'Legs', f:'adduct', inc:10, m:'inner' },
+  { id:'hipkick', name:'Multi-hip: kickback', g:'Legs', f:'hipext', inc:5, m:'glutes', m2:'hams' },
+  { id:'hipraise', name:'Multi-hip: leg forward', g:'Legs', f:'hipflex', inc:5, m:'hipflex', m2:'abs' },
+  { id:'hipabd', name:'Multi-hip: leg out (abduction)', g:'Legs', f:'abduct', inc:5, m:'outhip', m2:'glutes' },
+  { id:'hipadd', name:'Multi-hip: leg in (adduction)', g:'Legs', f:'adduct', inc:5, m:'inner' },
+  { id:'calf', name:'Standing calf raise', g:'Legs', f:'calf', inc:10, m:'calves', legs:true },
+  { id:'seatcalf', name:'Seated calf raise (machine)', g:'Legs', f:'calf', inc:10, m:'calves', legs:true },
+  { id:'bench', name:'Bench press', g:'Push', f:'hpress', inc:5, m:'lchest', m2:'fdelt triceps' },
+  { id:'incline', name:'Incline bench press', g:'Push', f:'ipress', inc:5, m:'uchest fdelt', m2:'triceps' },
+  { id:'dbbench', name:'Dumbbell bench press (per dumbbell)', g:'Push', f:'hpress', inc:5, m:'lchest', m2:'fdelt triceps' },
+  { id:'dbincline', name:'Incline dumbbell press (per dumbbell)', g:'Push', f:'ipress', inc:5, m:'uchest fdelt', m2:'triceps' },
+  { id:'chestmachine', name:'Chest press (machine)', g:'Push', f:'hpress', inc:10, m:'lchest', m2:'fdelt triceps' },
+  { id:'inclinemachine', name:'Incline chest press (machine)', g:'Push', f:'ipress', inc:10, m:'uchest fdelt', m2:'triceps' },
+  { id:'press', name:'Overhead press', g:'Push', f:'vpress', inc:5, m:'fdelt', m2:'sdelt triceps abs' },
+  { id:'dbpress', name:'Dumbbell shoulder press (per dumbbell)', g:'Push', f:'vpress', inc:5, m:'fdelt', m2:'sdelt triceps' },
+  { id:'shouldermachine', name:'Shoulder press (machine)', g:'Push', f:'vpress', inc:10, m:'fdelt', m2:'sdelt triceps' },
+  { id:'fly', name:'Chest fly (machine / pec deck)', g:'Push', f:'fly', inc:5, m:'lchest', m2:'uchest fdelt' },
+  { id:'dbfly', name:'Dumbbell fly (per dumbbell)', g:'Push', f:'fly', inc:5, m:'lchest', m2:'uchest fdelt' },
+  { id:'lateral', name:'Lateral raise', g:'Push', f:'lateral', inc:5, m:'sdelt', m2:'upback' },
+  { id:'latmachine', name:'Lateral raise machine', g:'Push', f:'lateral', inc:5, m:'sdelt', m2:'upback' },
+  { id:'cablelat', name:'Single-arm cable lateral raise', g:'Push', f:'lateral', inc:5, m:'sdelt', m2:'upback' },
+  { id:'pushdown', name:'Triceps pushdown (cable)', g:'Push', f:'triceps', inc:5, m:'triceps' },
+  { id:'ohext', name:'Overhead triceps extension (dumbbell)', g:'Push', f:'triceps', inc:5, m:'triceps' },
+  { id:'cableohext', name:'Cable overhead triceps extension (rope)', g:'Push', f:'triceps', inc:5, m:'triceps' },
+  { id:'skull', name:'Skull crusher', g:'Push', f:'triceps', inc:5, m:'triceps' },
+  { id:'dips', name:'Dips', g:'Push', f:'triceps', inc:5, m:'lchest triceps', m2:'fdelt', bw:true, whole:true },
+  { id:'pushup', name:'Push-up', g:'Push', f:'hpress', inc:5, m:'lchest', m2:'fdelt triceps abs', bw:true },
   // Assisted machines: the weight logged is the help, so less is stronger.
-  { id:'adips', name:'Assisted dip (machine)', g:'Push', f:'triceps', inc:5, assist:true },
-  { id:'pullup', name:'Pull-up', g:'Pull', f:'vpull', inc:5, bw:true, whole:true },
-  { id:'chinup', name:'Chin-up', g:'Pull', f:'vpull', inc:5, bw:true, whole:true },
-  { id:'apullup', name:'Assisted pull-up (machine)', g:'Pull', f:'vpull', inc:5, assist:true },
-  { id:'pulldown', name:'Lat pulldown', g:'Pull', f:'vpull', inc:5 },
-  { id:'row', name:'Barbell row', g:'Pull', f:'hpull', inc:5 },
-  { id:'tbarrow', name:'T-bar row (chest-supported machine)', g:'Pull', f:'hpull', inc:10 },
-  { id:'dbrow', name:'Dumbbell row (per dumbbell)', g:'Pull', f:'hpull', inc:5 },
-  { id:'cablerow', name:'Seated cable row', g:'Pull', f:'hpull', inc:5 },
-  { id:'invrow', name:'Inverted row', g:'Pull', f:'hpull', inc:5, bw:true },
-  { id:'facepull', name:'Face pull', g:'Pull', f:'reardelt', inc:5 },
-  { id:'reardelt', name:'Rear delt fly', g:'Pull', f:'reardelt', inc:5 },
-  { id:'curl', name:'Barbell curl', g:'Pull', f:'biceps', inc:5 },
-  { id:'dbcurl', name:'Dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
-  { id:'hammer', name:'Hammer curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
-  { id:'twistcurl', name:'Twist curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
-  { id:'cablecurl', name:'Cable curl (straight bar)', g:'Pull', f:'biceps', inc:5 },
-  { id:'vbarcurl', name:'Cable curl (V-bar)', g:'Pull', f:'biceps', inc:5 },
-  { id:'seatcurl', name:'Seated dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5 },
-  { id:'twist', name:'Forearm twist (dumbbell)', g:'Pull', f:'forearm', inc:2.5 },
-  { id:'wristcurl', name:'Wrist curl (palms up)', g:'Pull', f:'forearm', inc:5 },
-  { id:'revwrist', name:'Reverse wrist curl (palms down)', g:'Pull', f:'forearm', inc:5 },
-  { id:'revcurl', name:'Reverse curl (barbell, palms down)', g:'Pull', f:'forearm', inc:5 },
+  { id:'adips', name:'Assisted dip (machine)', g:'Push', f:'triceps', inc:5, m:'lchest triceps', m2:'fdelt', assist:true },
+  { id:'pullup', name:'Pull-up', g:'Pull', f:'vpull', inc:5, m:'lats', m2:'biceps upback rdelt forearm', bw:true, whole:true },
+  { id:'chinup', name:'Chin-up', g:'Pull', f:'vpull', inc:5, m:'lats biceps', m2:'upback forearm', bw:true, whole:true },
+  { id:'apullup', name:'Assisted pull-up (machine)', g:'Pull', f:'vpull', inc:5, m:'lats', m2:'biceps upback', assist:true },
+  { id:'pulldown', name:'Lat pulldown', g:'Pull', f:'vpull', inc:5, m:'lats', m2:'biceps upback' },
+  { id:'row', name:'Barbell row', g:'Pull', f:'hpull', inc:5, m:'upback lats', m2:'rdelt biceps lowback' },
+  { id:'tbarrow', name:'T-bar row (chest-supported machine)', g:'Pull', f:'hpull', inc:10, m:'upback lats', m2:'rdelt biceps' },
+  { id:'dbrow', name:'Dumbbell row (per dumbbell)', g:'Pull', f:'hpull', inc:5, m:'lats upback', m2:'rdelt biceps' },
+  { id:'cablerow', name:'Seated cable row', g:'Pull', f:'hpull', inc:5, m:'upback lats', m2:'rdelt biceps' },
+  { id:'invrow', name:'Inverted row', g:'Pull', f:'hpull', inc:5, m:'upback', m2:'lats rdelt biceps', bw:true },
+  { id:'facepull', name:'Face pull', g:'Pull', f:'reardelt', inc:5, m:'rdelt upback' },
+  { id:'reardelt', name:'Rear delt fly', g:'Pull', f:'reardelt', inc:5, m:'rdelt', m2:'upback' },
+  { id:'curl', name:'Barbell curl', g:'Pull', f:'biceps', inc:5, m:'biceps', m2:'forearm' },
+  { id:'dbcurl', name:'Dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5, m:'biceps', m2:'forearm' },
+  { id:'hammer', name:'Hammer curl (per dumbbell)', g:'Pull', f:'biceps', inc:5, m:'biceps forearm' },
+  { id:'twistcurl', name:'Twist curl (per dumbbell)', g:'Pull', f:'biceps', inc:5, m:'biceps', m2:'forearm' },
+  { id:'cablecurl', name:'Cable curl (straight bar)', g:'Pull', f:'biceps', inc:5, m:'biceps', m2:'forearm' },
+  { id:'vbarcurl', name:'Cable curl (V-bar)', g:'Pull', f:'biceps', inc:5, m:'biceps', m2:'forearm' },
+  { id:'seatcurl', name:'Seated dumbbell curl (per dumbbell)', g:'Pull', f:'biceps', inc:5, m:'biceps', m2:'forearm' },
+  { id:'twist', name:'Forearm twist (dumbbell)', g:'Pull', f:'forearm', inc:2.5, m:'forearm' },
+  { id:'wristcurl', name:'Wrist curl (palms up)', g:'Pull', f:'forearm', inc:5, m:'forearm' },
+  { id:'revwrist', name:'Reverse wrist curl (palms down)', g:'Pull', f:'forearm', inc:5, m:'forearm' },
+  { id:'revcurl', name:'Reverse curl (barbell, palms down)', g:'Pull', f:'forearm', inc:5, m:'forearm', m2:'biceps' },
   // secs: the reps box holds seconds (holds and carries).
-  { id:'deadhang', name:'Dead hang', g:'Pull', f:'grip', inc:5, bw:true, secs:true },
-  { id:'farmer', name:'Farmer’s carry (per dumbbell)', g:'Core', f:'grip', inc:5, secs:true },
-  { id:'shrug', name:'Shrug', g:'Pull', f:'shrug', inc:10 },
-  { id:'legraise', name:'Hanging leg raise', g:'Core', f:'core', inc:5, bw:true },
-  { id:'crunch', name:'Cable crunch', g:'Core', f:'core', inc:5 },
-  { id:'abmachine', name:'Ab crunch machine', g:'Core', f:'core', inc:5 },
-  { id:'backext', name:'Back extension', g:'Core', f:'core', inc:5, bw:true },
-  { id:'pallof', name:'Pallof press (cable, each side)', g:'Core', f:'core', inc:5 },
-  { id:'abwheel', name:'Ab wheel rollout', g:'Core', f:'core', inc:5, bw:true },
-  { id:'plank', name:'Plank', g:'Core', f:'plank', inc:5, bw:true, secs:true },
+  { id:'deadhang', name:'Dead hang', g:'Pull', f:'grip', inc:5, m:'forearm', m2:'lats upback', bw:true, secs:true },
+  { id:'farmer', name:'Farmer’s carry (per dumbbell)', g:'Core', f:'grip', inc:5, m:'forearm upback', m2:'abs obliques', secs:true },
+  { id:'shrug', name:'Shrug', g:'Pull', f:'shrug', inc:10, m:'upback', m2:'forearm' },
+  { id:'legraise', name:'Hanging leg raise', g:'Core', f:'core', inc:5, m:'abs hipflex', m2:'forearm', bw:true },
+  { id:'crunch', name:'Cable crunch', g:'Core', f:'core', inc:5, m:'abs', m2:'obliques' },
+  { id:'abmachine', name:'Ab crunch machine', g:'Core', f:'core', inc:5, m:'abs', m2:'obliques' },
+  { id:'backext', name:'Back extension', g:'Core', f:'core', inc:5, m:'lowback glutes', m2:'hams', bw:true },
+  { id:'pallof', name:'Pallof press (cable, each side)', g:'Core', f:'core', inc:5, m:'obliques abs' },
+  { id:'abwheel', name:'Ab wheel rollout', g:'Core', f:'core', inc:5, m:'abs', m2:'obliques lats', bw:true },
+  { id:'plank', name:'Plank', g:'Core', f:'plank', inc:5, m:'abs', m2:'obliques lowback', bw:true, secs:true },
 ];
 const exOptions = (sel, withNew) => {
   const opt = l => `<option value="${l.id}"${l.id === sel ? ' selected' : ''}>${esc(l.name)}</option>`;
@@ -5115,6 +5126,69 @@ const LIFT_PROGS = {
     days:{ A:[['squat', 3, 6], ['split', 3, 8], ['calf', 3, 12], ['bench', 3, 8]], B:[['rdl', 3, 8], ['split', 3, 8], ['press', 3, 8], ['row', 3, 8]] } },
 };
 const liftDef = id => LIFTS.find(l => l.id === id) ?? doc.liftEx.find(l => l.id === id) ?? { id, name:id, inc:5 };
+/* Muscles each exercise works, at the level that shows gaps: a shoulder
+   day with only presses misses the side and rear delts. `m` is the main
+   target, `m2` what helps. Area parts in `opt` count when hit but are never
+   flagged as missing (few workouts aim at them on purpose). */
+const MUSCLES = {
+  fdelt:['Front delts', 'front'], sdelt:['Side delts', 'side'], rdelt:['Rear delts', 'rear'],
+  uchest:['Upper chest', 'upper'], lchest:['Middle & lower chest', 'middle & lower'],
+  lats:['Lats', 'lats'], upback:['Upper back & traps', 'upper back'],
+  biceps:['Biceps', 'biceps'], triceps:['Triceps', 'triceps'], forearm:['Forearms & grip', 'forearms'],
+  quads:['Quads', 'quads'], hams:['Hamstrings', 'hamstrings'], glutes:['Glutes', 'glutes'], calves:['Calves', 'calves'],
+  inner:['Inner thighs', 'inner thighs'], outhip:['Outer hips', 'outer hips'], hipflex:['Hip flexors', 'hip flexors'],
+  abs:['Abs', 'abs'], obliques:['Obliques (sides of your waist)', 'obliques'], lowback:['Lower back', 'lower back'],
+};
+const MUSCLE_AREAS = [
+  ['Shoulders', ['fdelt', 'sdelt', 'rdelt']], ['Chest', ['uchest', 'lchest']], ['Back', ['lats', 'upback']],
+  ['Arms', ['biceps', 'triceps', 'forearm']], ['Legs', ['quads', 'hams', 'glutes', 'calves'], ['inner', 'outhip', 'hipflex']],
+  ['Core', ['abs', 'obliques', 'lowback']],
+];
+// Custom exercises carry no muscles, so guess from the name; first match wins.
+const MUSCLE_GUESS = [
+  [/rear delt|reverse fly|face pull/, 'rdelt', 'upback'], [/lateral|side raise|upright row/, 'sdelt', 'upback'], [/front raise/, 'fdelt', ''],
+  [/shoulder|overhead press|military|arnold/, 'fdelt', 'sdelt triceps'], [/incline/, 'uchest fdelt', 'triceps'],
+  [/fly|pec/, 'lchest', 'uchest fdelt'], [/bench|chest|push-?up/, 'lchest', 'fdelt triceps'], [/dip/, 'lchest triceps', 'fdelt'],
+  [/tricep|pushdown|skull|kickback/, 'triceps', ''], [/wrist|forearm|grip|carry/, 'forearm', ''], [/hammer/, 'biceps forearm', ''],
+  [/curl/, /leg|ham/, 'biceps', 'forearm'], [/pull-?up|chin|pulldown|lat /, 'lats', 'biceps upback'], [/row/, 'upback lats', 'rdelt biceps'],
+  [/shrug|trap/, 'upback', 'forearm'], [/calf/, 'calves', ''], [/ham|leg curl|nordic/, 'hams', ''], [/leg ext/, 'quads', ''],
+  [/deadlift|rdl|good morning/, 'hams glutes', 'lowback'], [/hip thrust|glute|bridge/, 'glutes', 'hams'], [/abduct/, 'outhip', 'glutes'],
+  [/adduct/, 'inner', ''], [/squat|lunge|leg press|step/, 'quads glutes', 'inner'], [/back ext|hyper/, 'lowback glutes', 'hams'],
+  [/oblique|twist|pallof|side/, 'obliques', 'abs'], [/crunch|sit-?up|\babs?\b|plank|leg raise|core/, 'abs', 'obliques'],
+];
+function musclesOf(def){
+  const sp = s => (s || '').split(' ').filter(Boolean);
+  if (def.m) return { m:sp(def.m), m2:sp(def.m2) };
+  const n = (def.name || '').toLowerCase();
+  for (const g of MUSCLE_GUESS){
+    // A curl means biceps unless it's a leg or hamstring curl.
+    if (g[1] instanceof RegExp){ if (g[0].test(n) && !g[1].test(n)) return { m:sp(g[2]), m2:sp(g[3]) }; continue; }
+    if (g[0].test(n)) return { m:sp(g[1]), m2:sp(g[2]), guess:true };
+  }
+  return { m:[], m2:[] };
+}
+// "Side delts · also helps: upper back" for one exercise.
+function muscleLine(def){
+  const { m, m2 } = musclesOf(def); if (!m.length) return '';
+  return `<p class="mus-line"><b>Works:</b> ${m.map(k => MUSCLES[k][0]).join(', ')}${m2.length ? ` <span>· also ${m2.map(k => MUSCLES[k][0].toLowerCase()).join(', ')}</span>` : ''}</p>`;
+}
+// Per area a workout touches: each part ✓ main target, ~ only helped, ✗ missed.
+function muscleCover(exIds){
+  const hit = {}, unk = [];
+  for (const ex of exIds){ const d = liftDef(ex), { m, m2 } = musclesOf(d);
+    if (!m.length) unk.push(d.name);
+    m.forEach(k => hit[k] = 2); m2.forEach(k => hit[k] = Math.max(hit[k] || 0, 1)); }
+  // An area shows once one of its main parts is worked: leg raises touching hip flexors don't make it a leg day.
+  const rows = MUSCLE_AREAS.filter(([, ks]) => ks.some(k => hit[k])).map(([area, ks, opt = []]) => {
+    const parts = [...ks, ...opt.filter(k => hit[k])];
+    const missed = ks.filter(k => !hit[k]).length;
+    return `<li class="${missed ? 'cov-gap' : 'cov-full'}"><b>${area}</b>${parts.map(k => {
+      const h = hit[k] || 0, t = MUSCLES[k][1];
+      return `<span class="cov-${h === 2 ? 'yes' : h ? 'some' : 'no'}" title="${h === 2 ? 'main target' : h ? 'helped by another exercise' : 'not worked'}">${t} ${h === 2 ? '✓' : h ? '~' : '✗'}</span>`; }).join('')}</li>`; });
+  if (!rows.length) return '';
+  return `<div class="cov explain-scope"><div class="cov-h">Muscles this works${infoBtn}</div>${explain('muscles')}<ul>${rows.join('')}</ul>
+    ${unk.length ? `<small class="cov-unk">Not counted (muscles unknown): ${unk.map(esc).join(', ')}</small>` : ''}</div>`;
+}
 // Epley's estimated one-rep max, so 5 × 225 and 3 × 240 compare fairly.
 const e1rm = s => s.reps <= 1 ? s.lb : Math.round(s.lb * (1 + s.reps / 30));
 // Assisted lifts count what you actually moved: body weight minus the machine's help.
@@ -5363,6 +5437,7 @@ function woList(){
       return `<li class="wo-row${open ? ' open' : ''}"><button class="wo-tap" data-wo-open="${w.id}" aria-expanded="${open}"><span><b>${esc(w.name)}</b>
         <small>${w.extra ? 'extra day · ' : ''}${items.length} exercise${items.length === 1 ? '' : 's'} · ${last ? `last ${fmtDate(last.date).slice(4)}` : 'not done yet'}</small></span><span class="pr-chev" aria-hidden="true">▾</span></button>
         ${open ? `<div class="wo-detail"><ol>${items.map(it => { const d = liftDef(it.ex); return `<li>${esc(d.name)}${it.sets ? ` <small>${it.sets} × ${it.reps || '?'}${d.secs ? ' s' : ''}</small>` : ''}</li>`; }).join('')}</ol>
+          ${muscleCover(items.map(it => it.ex))}
           ${w.vary ? '<p class="card-sub" style="margin:0 0 10px">Mixes up variations each time.</p>' : ''}
           <div class="btn-row"><button class="btn small primary" data-wo-start="${w.id}">Start</button><button class="btn small" data-wo-edit="${w.id}">Edit</button></div></div>` : ''}</li>`; }).join('')}</ul>` : ''}
     <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-new">+ New workout</button>${doc.workouts.length ? '<button class="btn small" data-action="wo-share">Share with a friend</button>' : ''}${doc.workouts.some(w => w.tpl === 'sap') ? '' : '<button class="btn small" data-action="wo-extra" data-tpl="sap">+ Shoulders, arms &amp; abs day</button>'}${loose ? `<button class="btn small" data-action="wo-from-day">Save ${date === todayYmd() ? 'today' : fmtDate(date).slice(4)} as a workout</button>` : ''}</div>
@@ -5571,7 +5646,7 @@ function renderLive(){
         ${LMOVES[it.ex] ? `<div class="lv-fig">${figure(LMOVES[it.ex], { size:96, lift:it.ex, label:def.name })}</div>` : '<span></span>'}
         <div><div class="eyebrow">Exercise ${LV.i + 1} of ${n} · ${left ? `${left} set${left > 1 ? 's' : ''} to go` : 'done ✓'}</div>
           <h1 class="gym-name">${esc(def.name)}</h1>
-          ${how ? `<p class="lv-eq">${how.eq}</p>` : ''}</div>
+          ${how ? `<p class="lv-eq">${how.eq}</p>` : ''}${muscleLine(def)}</div>
       </div>
       ${prevL ? `<div class="lv-last"><span>Last time · ${fmtDate(prevL.date)}</span><b>${fmtSets(prevL.sets, setMode(def), def.secs)}</b></div>` : ''}
       ${bb ? `<div class="lv-last lv-best"><span>Your best · ${fmtDate(bb.best.date).slice(4)}</span><b>${setLabel(def, bb.best)}</b>
@@ -5808,6 +5883,7 @@ function woEditor(){
       <span aria-hidden="true">×</span><input type="number" inputmode="numeric" data-wo-reps="${i}" value="${it.reps ?? ''}" placeholder="reps" aria-label="Exercise ${i + 1} reps">
       <button class="btn small wo-move" data-wo-move="${i}|-1" aria-label="Move exercise ${i + 1} up"${i ? '' : ' disabled'}>↑</button><button class="btn small wo-move" data-wo-move="${i}|1" aria-label="Move exercise ${i + 1} down"${i < n - 1 ? '' : ' disabled'}>↓</button>
       <button class="link-btn" data-wo-del="${i}" aria-label="Remove exercise ${i + 1}">remove</button></span></div>`).join('')}</div>
+    <div id="wo-cover">${muscleCover(e.items.map(it => it.ex))}</div>
     <label class="wo-vary"><input type="checkbox" id="wo-vary"${e.vary ? ' checked' : ''}> Mix up variations each time <small>(e.g. bench one week, dumbbell press the next)</small></label>
     <label class="wo-vary"><input type="checkbox" id="wo-extra"${e.extra ? ' checked' : ''}> Extra day <small>(like shoulders, arms &amp; abs: doesn’t change whether push, pull or legs is next)</small></label>
     <div class="btn-row" style="margin-top:12px"><button class="btn small" data-action="wo-add-ex">+ Exercise</button><button class="btn small primary" data-action="wo-save">Save</button><button class="btn small" data-action="wo-cancel">Cancel</button>${e.id ? '<button class="link-btn" data-action="wo-delete">delete workout</button>' : ''}</div>
@@ -8067,7 +8143,7 @@ document.addEventListener('click', async e => {
   if (rs){ startRoutine(rs.dataset.routineStart); return; }
   const ex = e.target.closest('[data-explain]');
   if (ex){
-    const box = ex.closest('.card, .kpi')?.querySelector('.explain'); if (!box) return;
+    const box = ex.closest('.explain-scope, .card, .kpi')?.querySelector('.explain'); if (!box) return;
     box.hidden = !box.hidden; ex.setAttribute('aria-expanded', !box.hidden); return;
   }
   const gd = e.target.closest('[data-guide]');
@@ -8586,6 +8662,8 @@ document.addEventListener('keydown', e => {
 
 document.addEventListener('change', e => {
   if (e.target.id === 'g-type' || e.target.id === 'g-ex') syncGoalForm();
+  // Swapping an exercise in the editor updates which muscles the workout covers.
+  if (e.target.matches?.('[data-wo-ex]') && liftUi.edit){ readWoForm(); $('#wo-cover').innerHTML = muscleCover(liftUi.edit.items.map(it => it.ex)); }
 });
 document.addEventListener('change', e => {
   if ((e.target.id === 'past-date' || e.target.id === 'past-wo') && liftUi.past){
@@ -8724,7 +8802,7 @@ const fromLink = syncOn() ? consumeAuthHash() : null;
 if (syncOn()) loadSession();
 try { doc = await idb.get('doc', 'main'); }
 catch { storageOk = false; }
-doc = doc ? normalize(doc) : freshDoc();
+doc = normalize(doc ?? freshDoc());   // fresh docs too, so every default is there from the first open
 await saveLocal();
 if (!storageOk) toast('Storage is blocked here — changes won’t survive a reload');
 lastRoute = location.hash;

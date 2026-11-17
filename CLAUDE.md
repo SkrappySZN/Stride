@@ -203,6 +203,10 @@ data runs through it, so treat changes to data handling with care.
   A custom exercise whose name matches a built-in one moves to the built-in id on load (`adoptBuiltIns`, in `normalize()`).
   Timed moves (`secs:true`: plank, dead hang, farmer's carry) keep seconds in `reps`: shown as "s", stepped by 5,
   left out of volume and 1-rep maxes; a hold's best is the longest time, a carry's the heaviest weight.
+  Muscles (`MUSCLES`, `MUSCLE_AREAS`, `musclesOf`): each `LIFTS` entry has `m` (main target) and `m2` (helps), space-separated
+  `MUSCLES` keys (front/side/rear delt, upper/lower chest, lats, upper back…); custom exercises are guessed from their name
+  (`MUSCLE_GUESS`). `muscleLine()` shows them in the live workout and on `#moves`; `muscleCover()` is the per-area ✓ / ~ / ✗
+  line in the workout detail and editor (areas show only when a main part is hit). Give every new exercise `m`.
   Extra days (`w.extra`, e.g. "Shoulders, arms & abs" from `EXTRA_DAYS`) sit outside push → pull → legs: `nextGroup`
   and `woNext` ignore them. A workout's `routine` shows a "Warm up first" link in the live workout until a set is ticked.
 - **Sharing workouts** (`shareLink`, `takeShare`, `fillCard`): "Share with a friend" under Your workouts makes a link
