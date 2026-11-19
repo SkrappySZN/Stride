@@ -4383,7 +4383,12 @@ async function checkInbox(){
       if (!(lbs > 50 && lbs < 600)) continue;
       doc.profile.weights = withWeight(doc.profile.weights, { date:d.date, lbs, when:d.when === 'pm' ? 'pm' : 'am', ...(d.note ? { note:String(d.note) } : {}) });
     }
-    await save();   // saved first: a failed delete only merges the same entries again
+    // Upload now and delete only once the account has it: a device whose upload fails
+    // (conflict, error, stale copy) must leave the rows for one that can. Re-merging is
+    // harmless (food by row id, weights by date + am/pm).
+    await save();
+    await pushRow();
+    if (SYNC.status !== 'ok' || doc.sync?.dirty) return;
     await sb(`/rest/v1/stride_inbox?id=in.(${rows.map(x => x.id).join(',')})`, { method:'DELETE' });
     const nf = rows.filter(x => x.kind === 'food').length, nw = rows.length - nf;
     toast([nw && `${nw} weigh-in${nw > 1 ? 's' : ''}`, nf && `${nf} food entr${nf > 1 ? 'ies' : 'y'}`].filter(Boolean).join(' and ') + ' added');
